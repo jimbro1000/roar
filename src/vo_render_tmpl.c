@@ -194,7 +194,7 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn, unsigned npixels
 
 	uint8_t const *src = data + vr->viewport.x;
 	VR_PTYPE *dest = vr->pixel;
-	unsigned p = !(vr->cmp.phase & 2);
+	unsigned p = (vr->cmp.phase == 0);
 	for (int i = vr->viewport.w >> 2; i; i--) {
 		VR_PTYPE p0, p1, p2, p3;
 		uint8_t c0 = *src;
@@ -240,7 +240,7 @@ static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels
 
 	uint8_t const *src = data + vr->viewport.x;
 	VR_PTYPE *dest = vr->pixel;
-	unsigned p = !(vr->cmp.phase & 2);
+	unsigned p = (vr->cmp.phase == 0);
 	unsigned ibwcount = 0;
 	unsigned aindex = 0;
 	uint8_t ibw0 = vr->cmp.is_black_or_white[*(src-6)];
