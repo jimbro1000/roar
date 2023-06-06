@@ -826,6 +826,13 @@ void vo_render_vsync(void *sptr) {
 	if (!vr)
 		return;
 	vr->pixel = vr->buffer;
+
+	_Bool is_60hz = (vr->scanline < 288);
+	if (is_60hz != vr->is_60hz) {
+		vr->is_60hz = is_60hz;
+		DELEGATE_SAFE_CALL(vr->notify_frame_rate, is_60hz);
+	}
+
 	vr->scanline = 0;
 	vr->viewport.x = vr->viewport.new_x;
 	vr->viewport.y = vr->viewport.new_y;

@@ -35,6 +35,7 @@
 
 #include <stdint.h>
 
+#include "delegate.h"
 #include "intfuncs.h"
 
 #include "ntsc.h"
@@ -318,6 +319,9 @@ struct vo_render {
 	// Current scanline - compared against viewport
 	int scanline;
 
+	// Current frame rate - used for notifying video module of change
+	_Bool is_60hz;
+
 	// Top-left of output buffer; where vo_render_vsync() will return pixel to
 	void *buffer;
 
@@ -332,6 +336,17 @@ struct vo_render {
 	int contrast;
 	int saturation;
 	int hue;
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	// Populated by video module
+
+	// Notify video module if frame rate changes, based on scanline count.
+	// Default assumption should be 50Hz.
+	//
+	//     _Bool is_60hz;  // false = 50Hz, true = 60Hz
+
+	DELEGATE_T1(void, bool) notify_frame_rate;
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
