@@ -176,12 +176,11 @@ struct vo_render *vo_render_new(int fmt) {
 	vo_render_set_cmp_system(vr, 1, VO_RENDER_SYSTEM_PAL_I);
 
 	vr->cmp.cha_phase = M_PI/2.;  // default 90°
-	vr->viewport.new_x = 190;
-	vr->viewport.new_y = 14;
-	vr->viewport.x = 190;
-	vr->viewport.y = 14;
+	// sensible defaults - updates viewport offset
 	vr->viewport.w = 640;
 	vr->viewport.h = 240;
+	vo_render_set_active_area(vr, 254, 63, 512, 512);
+
 	vr->t = 0;
 	vr->tmax = 4;
 	vr->brightness = 50;
@@ -591,6 +590,13 @@ static void update_cmp_system(struct vo_render *vr) {
 	}
 }
 
+// Update viewport offset based on viewport dimensions and active area
+
+static void update_viewport(struct vo_render *vr) {
+	vr->viewport.new_x = vr->active_area.x - (vr->viewport.w - vr->active_area.w) / 2;
+	vr->viewport.new_y = vr->active_area.y - (vr->viewport.h - vr->active_area.h) / 2;
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Used by UI to adjust viewing parameters
@@ -685,10 +691,11 @@ void vo_render_set_cmp_phase(void *sptr, int value) {
 
 void vo_render_set_active_area(void *sptr, int x, int y, int w, int h) {
 	struct vo_render *vr = sptr;
-	int xoff = x - (640 - w) / 2;
-	int yoff = y - (240 - h) / 2;
-	vr->viewport.new_x = xoff;
-	vr->viewport.new_y = yoff;
+	vr->active_area.x = x;
+	vr->active_area.y = y;
+	vr->active_area.w = w;
+	vr->active_area.h = h;
+	update_viewport(vr);
 }
 
 // Set sampling frequency (equal to pixel rate) to one of VO_RENDER_FS_*
