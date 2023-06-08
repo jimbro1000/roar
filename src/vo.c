@@ -36,6 +36,13 @@ static struct module * const default_vo_module_list[] = {
 
 struct module * const *vo_module_list = default_vo_module_list;
 
+const char *vo_picture_name[NUM_VO_PICTURE] = {
+	"Zoomed (512x384)",
+	"Title (640x480)",
+	"Action (720x540)",
+	"Underscan (736x552)"
+};
+
 struct xconfig_enum vo_cmp_ccr_list[] = {
 	{ XC_ENUM_INT("none", VO_CMP_CCR_PALETTE, "no cross-colour") },
 	{ XC_ENUM_INT("simple", VO_CMP_CCR_2BIT, "four colour palette") },
@@ -236,6 +243,8 @@ void vo_set_signal(struct vo_interface *vo, int signal) {
 	vo->signal = signal;
 	update_render_parameters(vo);
 }
+
+extern inline void vo_set_viewport(struct vo_interface *vo, int w, int h);
 
 // Select cross-colour renderer
 

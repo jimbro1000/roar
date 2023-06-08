@@ -37,7 +37,8 @@ struct vo_interface;
 struct xroar_timeout;
 
 // Convenient values for arguments to helper functions
-#define XROAR_QUERY (-3)  // query current setting
+#define XROAR_QUERY (-4)  // query current setting
+#define XROAR_PREV  (-3)
 #define XROAR_NEXT  (-2)  // cycle or toggle setting
 #define XROAR_AUTO  (-1)  // default, possible based on other settings
 #define XROAR_OFF    (0)
@@ -192,6 +193,7 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action);
 void xroar_set_ccr(_Bool notify, int action);
 void xroar_set_tv_input(_Bool notify, int action);
 void xroar_set_vdg_inverted_text(_Bool notify, int action);
+void xroar_set_picture(_Bool notify, int action);
 void xroar_set_ratelimit(int action);
 void xroar_set_ratelimit_latch(_Bool notify, int action);
 void xroar_set_pause(_Bool notify, int action);

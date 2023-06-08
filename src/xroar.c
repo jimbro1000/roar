@@ -164,6 +164,7 @@ struct private_cfg {
 		int frameskip;
 		int ccr;
 		_Bool vdg_inverted_text;
+		int picture;
 		int brightness;
 		int contrast;
 		int saturation;
@@ -219,6 +220,7 @@ static struct private_cfg private_cfg = {
 	.cart.autorun = ANY_AUTO,
 	.tape.fast = 1,
 	.tape.pad_auto = 1,
+	.vo.picture = VO_PICTURE_TITLE,
 	.vo.ccr = VO_CMP_CCR_5BIT,
 	.vo.brightness = 52,
 	.vo.contrast = 52,
@@ -1001,6 +1003,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (private_cfg.tape.ao_rate > 0)
 		tape_set_ao_rate(xroar_tape_interface, private_cfg.tape.ao_rate);
 
+	xroar_set_picture(1, private_cfg.vo.picture);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, private_cfg.vo.brightness);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, private_cfg.vo.contrast);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, private_cfg.vo.saturation);
@@ -1517,6 +1520,60 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 	_Bool state = xroar_machine->set_inverted_text(xroar_machine, action);
 	if (notify) {
 		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_vdg_inverse, state, NULL);
+	}
+}
+
+void xroar_set_picture(_Bool notify, int action) {
+	int picture = private_cfg.vo.picture;
+	switch (action) {
+	case XROAR_PREV:
+		picture--;
+		break;
+
+	case XROAR_NEXT:
+		picture++;
+		break;
+
+	default:
+		picture = action;
+		break;
+	}
+
+	if (picture < 0)
+		picture = 0;
+	if (picture >= NUM_VO_PICTURE)
+		picture = NUM_VO_PICTURE - 1;
+
+	private_cfg.vo.picture = picture;
+
+	int vw, vh;
+	switch (picture) {
+	case VO_PICTURE_ZOOMED:
+		vw = 512;
+		vh = 192;
+		break;
+
+	case VO_PICTURE_TITLE:
+	default:
+		vw = 640;
+		vh = 240;
+		break;
+
+	case VO_PICTURE_ACTION:
+		vw = 720;
+		vh = 270;
+		break;
+
+	case VO_PICTURE_UNDERSCAN:
+		vw = 736;
+		vh = 276;
+		break;
+	}
+
+	vo_set_viewport(xroar_vo_interface, vw, vh);
+
+	if (notify && xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_picture, picture, NULL);
 	}
 }
 
@@ -2404,6 +2461,15 @@ static struct xconfig_enum ao_format_list[] = {
 	{ XC_ENUM_END() }
 };
 
+// XXX make a proper enum for these magic numbers
+static struct xconfig_enum vo_viewport_list[] = {
+	{ XC_ENUM_INT("zoomed", 0, "512x384 (zoomed)") },
+	{ XC_ENUM_INT("title", 1, "640x480 (title safe)") },
+	{ XC_ENUM_INT("action", 2, "720x540 (action safe)") },
+	{ XC_ENUM_INT("underscan", 3, "736x552 (underscan)") },
+	{ XC_ENUM_END() }
+};
+
 /* Configuration directives */
 
 static union {
@@ -2512,6 +2578,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_ENUM("vo-pixel-fmt", &xroar_ui_cfg.vo_cfg.pixel_fmt, vo_pixel_fmt_list) },
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
+	{ XC_SET_ENUM("vo-picture", &private_cfg.vo.picture, vo_viewport_list) },
 	{ XC_SET_BOOL("invert-text", &private_cfg.vo.vdg_inverted_text) },
 	{ XC_SET_INT("vo-brightness", &private_cfg.vo.brightness) },
 	{ XC_SET_INT("vo-contrast", &private_cfg.vo.contrast) },
@@ -2726,6 +2793,7 @@ static void helptext(void) {
 "  -gl-filter FILTER     OpenGL texture filter (-gl-filter help for list)\n"
 "  -vo-pixel-fmt FMT     pixel format (-vo-pixel-fmt help for list)\n"
 "  -geometry WxH+X+Y     initial emulator geometry\n"
+"  -vo-picture P         initial picture area (-vo-picture help for list)\n"
 "  -invert-text          start with text mode inverted\n"
 "  -vo-brightness N      set TV brightness (0-100) [50]\n"
 "  -vo-contrast N        set TV contrast (0-100) [50]\n"
@@ -2884,6 +2952,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_enum(f, all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
 	xroar_cfg_print_enum(f, all, "vo-pixel-fmt", xroar_ui_cfg.vo_cfg.pixel_fmt, ANY_AUTO, vo_pixel_fmt_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
+	xroar_cfg_print_enum(f, all, "vo-picture", private_cfg.vo.picture, 0, vo_viewport_list);
 	xroar_cfg_print_bool(f, all, "invert-text", private_cfg.vo.vdg_inverted_text, 0);
 	xroar_cfg_print_int(f, all, "vo-brightness", private_cfg.vo.brightness, 50);
 	xroar_cfg_print_int(f, all, "vo-contrast", private_cfg.vo.contrast, 50);

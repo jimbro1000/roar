@@ -601,6 +601,15 @@ static void update_viewport(struct vo_render *vr) {
 
 // Used by UI to adjust viewing parameters
 
+// Set viewport dimensions
+//     int w, h;  // dimensions
+
+void vo_render_set_viewport(struct vo_render *vr, int w, int h) {
+	vr->viewport.w = w;
+	vr->viewport.h = h;
+	update_viewport(vr);
+}
+
 // Set brightness
 //     int brightness;  // 0-100
 

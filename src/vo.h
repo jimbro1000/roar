@@ -51,6 +51,18 @@ enum {
 	NUM_VO_SIGNAL
 };
 
+// Picture area
+
+enum {
+	VO_PICTURE_ZOOMED,
+	VO_PICTURE_TITLE,
+	VO_PICTURE_ACTION,
+	VO_PICTURE_UNDERSCAN,
+	NUM_VO_PICTURE
+};
+
+extern const char *vo_picture_name[NUM_VO_PICTURE];
+
 // Composite cross-colour renderer.
 
 enum {
@@ -122,6 +134,10 @@ struct vo_interface {
 	// Resize window
 	//     unsigned w, h;  // dimensions in pixels
 	DELEGATE_T2(void, unsigned, unsigned) resize;
+
+	// Configure viewport dimensions
+	//     int w, h;  // dimensions in pixels/scanlines
+	DELEGATE_T2(void, int, int) set_viewport;
 
 	// Configure active area (used to centre display)
 	//     int x, y;  // top-left of active area
@@ -222,6 +238,10 @@ void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr);
 //     int signal;  // VO_SIGNAL_*
 
 void vo_set_signal(struct vo_interface *vo, int signal);
+
+inline void vo_set_viewport(struct vo_interface *vo, int w, int h) {
+	DELEGATE_SAFE_CALL(vo->set_viewport, w, h);
+}
 
 // Select cross-colour renderer
 //     int ccr;  // VO_CMP_CCR_*

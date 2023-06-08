@@ -330,6 +330,14 @@ static void emulator_command(guint keyval, int shift) {
 		xroar_set_trace(XROAR_NEXT);  /* toggle */
 		break;
 #endif
+
+	case GDK_KEY_comma:
+		xroar_set_picture(1, XROAR_NEXT);
+		return;
+	case GDK_KEY_period:
+		xroar_set_picture(1, XROAR_PREV);
+		return;
+
 	default:
 		break;
 	}

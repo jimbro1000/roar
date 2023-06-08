@@ -156,7 +156,13 @@ static void zoom_1_1(GtkEntry *entry, gpointer user_data) {
 	(void)user_data;
 	if (!xroar_vo_interface)
 		return;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, 320, 240);
+
+	struct vo_render *vr = xroar_vo_interface->renderer;
+
+	int qw = vr->viewport.w / 4;
+	int qh = vr->viewport.h / 2;
+
+	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * 2, qh * 2);
 }
 
 static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
@@ -164,7 +170,13 @@ static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
 	(void)user_data;
 	if (!xroar_vo_interface)
 		return;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, 640, 480);
+
+	struct vo_render *vr = xroar_vo_interface->renderer;
+
+	int qw = vr->viewport.w / 4;
+	int qh = vr->viewport.h / 2;
+
+	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * 4, qh * 4);
 }
 
 static void zoom_in(GtkEntry *entry, gpointer user_data) {
@@ -172,9 +184,15 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	if (!xroar_vo_interface)
 		return;
-	int xscale = uigtk2->picture_area.w / 160;
-	int yscale = uigtk2->picture_area.h / 120;
-	int scale = 1;
+
+	struct vo_render *vr = xroar_vo_interface->renderer;
+
+	int qw = vr->viewport.w / 4;
+	int qh = vr->viewport.h / 2;
+
+	int xscale = uigtk2->picture_area.w / qw;
+	int yscale = uigtk2->picture_area.h / qh;
+	int scale;
 	if (xscale < yscale)
 		scale = yscale;
 	else if (xscale > yscale)
@@ -183,7 +201,7 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 		scale = xscale + 1;
 	if (scale < 1)
 		scale = 1;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, 160 * scale, 120 * scale);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * scale, qh * scale);
 }
 
 static void zoom_out(GtkEntry *entry, gpointer user_data) {
@@ -191,8 +209,14 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	if (!xroar_vo_interface)
 		return;
-	int xscale = uigtk2->picture_area.w / 160;
-	int yscale = uigtk2->picture_area.h / 120;
+
+	struct vo_render *vr = xroar_vo_interface->renderer;
+
+	int qw = vr->viewport.w / 4;
+	int qh = vr->viewport.h / 2;
+
+	int xscale = uigtk2->picture_area.w / qw;
+	int yscale = uigtk2->picture_area.h / qh;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = xscale;
@@ -202,7 +226,7 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 		scale = xscale - 1;
 	if (scale < 1)
 		scale = 1;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, 160 * scale, 120 * scale);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * scale, qh * scale);
 }
 
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {

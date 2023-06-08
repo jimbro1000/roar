@@ -36,9 +36,10 @@
 
 #include "sdl2/common.h"
 
-// TEX_BUF_WIDTH is the width of the buffer transferred to the texture.
+// MAX_VIEWPORT_* defines maximum viewport
 
-#define TEX_BUF_WIDTH (640)
+#define MAX_VIEWPORT_WIDTH  (800)
+#define MAX_VIEWPORT_HEIGHT (300)
 
 static void *new(void *cfg);
 
@@ -84,6 +85,7 @@ static const Uint32 renderer_flags[] = {
 };
 
 static void vo_sdl_free(void *sptr);
+static void set_viewport(void *sptr, int vp_w, int vp_h);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static void draw(void *sptr);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
@@ -134,34 +136,34 @@ static void *new(void *sptr) {
 	}
 
 	struct vo_render *vr = vo_render_new(vo_cfg->pixel_fmt);
-	vr->buffer_pitch = TEX_BUF_WIDTH;
 	vr->cmp.colour_killer = vo_cfg->colour_killer;
 
 	vo_set_renderer(vo, vr);
 
-	vosdl->texture.pixels = xmalloc(TEX_BUF_WIDTH * 240 * vosdl->texture.pixel_size);
+	vosdl->texture.pixels = xmalloc(MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vosdl->texture.pixel_size);
 	vo_render_set_buffer(vr, vosdl->texture.pixels);
-	memset(vosdl->texture.pixels, 0, TEX_BUF_WIDTH * 240 * vosdl->texture.pixel_size);
+	memset(vosdl->texture.pixels, 0, MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vosdl->texture.pixel_size);
 
 	vosdl->filter = vo_cfg->gl_filter;
 	vosdl->window_area.w = 640;
 	vosdl->window_area.h = 480;
 
-	vo->free = DELEGATE_AS0(void, vo_sdl_free, vo);
+	vo->free = DELEGATE_AS0(void, vo_sdl_free, vosdl);
 
 	// Used by UI to adjust viewing parameters
-	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
-	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
-	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
+	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, vosdl);
+	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vosdl);
+	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vosdl);
+	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vosdl);
 
 	// Used by machine to render video
-	vo->draw = DELEGATE_AS0(void, draw, vo);
+	vo->draw = DELEGATE_AS0(void, draw, vosdl);
 
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
 	if (vo_cfg->fullscreen) {
 		wflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
-	uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, wflags);
+	uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, vosdl->window_area.w, vosdl->window_area.h, wflags);
 	SDL_SetWindowMinimumSize(uisdl2->vo_window, 160, 120);
 	uisdl2->vo_window_id = SDL_GetWindowID(uisdl2->vo_window);
 	vo->show_menubar = 1;
@@ -199,11 +201,6 @@ static void *new(void *sptr) {
 		}
 	}
 
-	// The actual resolution specified here doesn't seem to matter, it's
-	// effectively setting an aspect ratio, meaning SDL determines what the
-	// Picture Area is for us.
-	SDL_RenderSetLogicalSize(vosdl->sdl_renderer, 640, 480);
-
 #ifdef WINDOWS32
 	// Need an event handler to prevent events backing up while menus are
 	// being used.
@@ -213,18 +210,71 @@ static void *new(void *sptr) {
 	// Initialise keyboard
 	sdl_os_keyboard_init(global_uisdl2->vo_window);
 
-	// Initial resize (dimensions actually ignored and taken from window)
-	// creates the texture.
-	resize(vosdl, 640, 480);
+	set_viewport(vosdl, 640, 240);
+	resize(vosdl, 0, 0);
 
 	return vo;
+}
+
+static void set_viewport(void *sptr, int vp_w, int vp_h) {
+	struct vo_sdl_interface *vosdl = sptr;
+	struct vo_interface *vo = &vosdl->public;
+	struct vo_render *vr = vo->renderer;
+
+	_Bool is_exact_multiple = 0;
+	int multiple = 1;
+	int mw = vr->viewport.w;
+	int mh = vr->viewport.h * 2;
+
+	if (mw > 0 && mh > 0) {
+		if ((vosdl->window_area.w % mw) == 0 &&
+		    (vosdl->window_area.h % mh) == 0) {
+			int wmul = vosdl->window_area.w / mw;
+			int hmul = vosdl->window_area.h / mh;
+			if (wmul == hmul && wmul > 0) {
+				is_exact_multiple = 1;
+				multiple = wmul;
+			}
+		}
+	}
+
+	if (vp_w < 16)
+		vp_w = 16;
+	if (vp_w > MAX_VIEWPORT_WIDTH)
+		vp_w = MAX_VIEWPORT_WIDTH;
+	if (vp_h < 6)
+		vp_h = 6;
+	if (vp_h > MAX_VIEWPORT_HEIGHT)
+		vp_h = MAX_VIEWPORT_HEIGHT;
+
+	vo_render_set_viewport(vr, vp_w, vp_h);
+	mw = vp_w;
+	mh = vp_h * 2;
+	SDL_RenderSetLogicalSize(vosdl->sdl_renderer, mw, mh);
+
+	if (is_exact_multiple) {
+		vosdl->window_area.w = multiple * mw;
+		vosdl->window_area.h = multiple * mh;
+		if (!vo->is_fullscreen) {
+			SDL_SetWindowSize(global_uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
+		} else {
+			resize(vosdl, 0, 0);
+		}
+	} else {
+		resize(vosdl, 0, 0);
+	}
 }
 
 static void resize(void *sptr, unsigned int w_ignored, unsigned int h_ignored) {
 	struct vo_sdl_interface *vosdl = sptr;
 	struct vo_interface *vo = &vosdl->public;
+	struct vo_render *vr = vo->renderer;
 	(void)w_ignored;
 	(void)h_ignored;
+
+	int hw = vr->viewport.w / 2;
+	int hh = vr->viewport.h;
+	vr->buffer_pitch = vr->viewport.w;
 
 	if (vosdl->texture.texture) {
 		SDL_DestroyTexture(vosdl->texture.texture);
@@ -259,9 +309,9 @@ static void resize(void *sptr, unsigned int w_ignored, unsigned int h_ignored) {
 #endif
 
 	if (!vo->is_fullscreen) {
-		if (w < 160 || h < 120) {
-			w = 160;
-			h = 120;
+		if (w < (hw / 2) || h < (hh / 2)) {
+			w = (hw / 2);
+			h = (hh / 2);
 			resize_again = 1;
 		}
 		vosdl->window_area.w = w;
@@ -274,7 +324,7 @@ static void resize(void *sptr, unsigned int w_ignored, unsigned int h_ignored) {
 
 	// Set scaling method according to options and window dimensions
 	if (vosdl->filter == UI_GL_FILTER_NEAREST
-	    || (vosdl->filter == UI_GL_FILTER_AUTO && (w % 320 == 0 && h % 240 == 0))) {
+	    || (vosdl->filter == UI_GL_FILTER_AUTO && (w % hw) == 0 && (h % hh) == 0)) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 	} else {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -285,7 +335,7 @@ static void resize(void *sptr, unsigned int w_ignored, unsigned int h_ignored) {
 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
 #endif
 
-	vosdl->texture.texture = SDL_CreateTexture(vosdl->sdl_renderer, vosdl->texture.format, SDL_TEXTUREACCESS_STREAMING, TEX_BUF_WIDTH, 240);
+	vosdl->texture.texture = SDL_CreateTexture(vosdl->sdl_renderer, vosdl->texture.format, SDL_TEXTUREACCESS_STREAMING, vr->viewport.w, vr->viewport.h);
 	if (!vosdl->texture.texture) {
 		LOG_ERROR("Failed to create texture\n");
 		abort();
@@ -370,7 +420,10 @@ static void vo_sdl_free(void *sptr) {
 
 static void draw(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
-	SDL_UpdateTexture(vosdl->texture.texture, NULL, vosdl->texture.pixels, TEX_BUF_WIDTH * vosdl->texture.pixel_size);
+	struct vo_interface *vo = &vosdl->public;
+	struct vo_render *vr = vo->renderer;
+
+	SDL_UpdateTexture(vosdl->texture.texture, NULL, vosdl->texture.pixels, vr->viewport.w * vosdl->texture.pixel_size);
 	SDL_RenderClear(vosdl->sdl_renderer);
 	SDL_RenderCopy(vosdl->sdl_renderer, vosdl->texture.texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->sdl_renderer);

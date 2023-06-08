@@ -44,6 +44,11 @@
 #include "vo_render.h"
 #include "xroar.h"
 
+// MAX_VIEWPORT_* defines maximum viewport
+
+#define MAX_VIEWPORT_WIDTH  (800)
+#define MAX_VIEWPORT_HEIGHT (300)
+
 // TEX_INT_PITCH is the pitch of the texture internally.  This used to be
 // best kept as a power of 2 - no idea how necessary that still is, but might
 // as well keep it that way.
@@ -51,7 +56,7 @@
 // TEX_BUF_WIDTH is the width of the buffer transferred to the texture.
 
 #define TEX_INT_PITCH (1024)
-#define TEX_INT_HEIGHT (256)
+#define TEX_INT_HEIGHT (384)
 #define TEX_BUF_WIDTH (640)
 #define TEX_BUF_HEIGHT (240)
 
@@ -129,14 +134,13 @@ void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 	}
 
 	struct vo_render *vr = vo_render_new(cfg->pixel_fmt);
-	vr->buffer_pitch = TEX_BUF_WIDTH;
 	vr->cmp.colour_killer = cfg->colour_killer;
 	vo_set_renderer(vo, vr);
 
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
 	vo->draw = DELEGATE_AS0(void, vo_opengl_draw, vogl);
 
-	vogl->texture.pixels = xmalloc(TEX_BUF_WIDTH * TEX_BUF_HEIGHT * vogl->texture.pixel_size);
+	vogl->texture.pixels = xmalloc(MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vogl->texture.pixel_size);
 	vo_render_set_buffer(vr, vogl->texture.pixels);
 
 	vogl->picture_area.x = vogl->picture_area.y = 0;
@@ -152,12 +156,12 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, struct vo_draw_ar
 	// Set up picture area
 	if (((double)w / (double)h) > (4.0 / 3.0)) {
 		vogl->picture_area.h = h;
-		vogl->picture_area.w = (((float)vogl->picture_area.h / 3.0) * 4.0) + 0.5;
+		vogl->picture_area.w = (((double)vogl->picture_area.h / 3.0) * 4.0) + 0.5;
 		vogl->picture_area.x = x + (w - vogl->picture_area.w) / 2;
 		vogl->picture_area.y = y;
 	} else {
 		vogl->picture_area.w = w;
-		vogl->picture_area.h = (((float)vogl->picture_area.w / 4.0) * 3.0) + 0.5;
+		vogl->picture_area.h = (((double)vogl->picture_area.w / 4.0) * 3.0) + 0.5;
 		vogl->picture_area.x = x;
 		vogl->picture_area.y = y + (h - vogl->picture_area.h)/2;
 	}
@@ -183,47 +187,12 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, struct vo_draw_ar
 	glGenTextures(1, &vogl->texture.num);
 	glBindTexture(GL_TEXTURE_2D, vogl->texture.num);
 	glTexImage2D(GL_TEXTURE_2D, 0, vogl->texture.internal_format, TEX_INT_PITCH, TEX_INT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	if (vogl->filter == UI_GL_FILTER_NEAREST
-	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->picture_area.w % 320) == 0 && (vogl->picture_area.h % 240) == 0)) {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	} else {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	}
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glColor4f(1.0, 1.0, 1.0, 1.0);
 
-	// OpenGL 4.4+ has glClearTexImage(), but for now let's just clear a
-	// line just to the right and just below the area in the texture we'll
-	// be updating.  This prevents weird fringing effects.
-	unsigned nclear = (TEX_INT_PITCH > TEX_INT_HEIGHT) ? TEX_INT_PITCH : TEX_INT_HEIGHT;
-	memset(vogl->texture.pixels, 0, nclear * vogl->texture.pixel_size);
-	if (TEX_INT_PITCH > TEX_BUF_WIDTH) {
-		glTexSubImage2D(GL_TEXTURE_2D, 0,
-				TEX_BUF_WIDTH, 0, 1, TEX_INT_HEIGHT,
-				vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
-	}
-	if (TEX_INT_HEIGHT > TEX_BUF_HEIGHT) {
-		glTexSubImage2D(GL_TEXTURE_2D, 0,
-				0, TEX_BUF_HEIGHT, TEX_INT_PITCH, 1,
-				vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
-	}
-
 	// The same vertex & texcoord lists will be used every draw,
 	// so configure them here rather than in vsync()
-
-	// Texture coordinates select a subset of the texture to update
-	vogl->tex_coords[0][0] = 0.0;
-	vogl->tex_coords[0][1] = 0.0;
-	vogl->tex_coords[1][0] = 0.0;
-	vogl->tex_coords[1][1] = (double)TEX_BUF_HEIGHT / (double)TEX_INT_HEIGHT;
-	vogl->tex_coords[2][0] = (double)TEX_BUF_WIDTH / (double)TEX_INT_PITCH;
-	vogl->tex_coords[2][1] = 0.0;
-	vogl->tex_coords[3][0] = (double)TEX_BUF_WIDTH / (double)TEX_INT_PITCH;
-	vogl->tex_coords[3][1] = (double)TEX_BUF_HEIGHT / (double)TEX_INT_HEIGHT;
-	glTexCoordPointer(2, GL_FLOAT, 0, vogl->tex_coords);
 
 	// Vertex array defines where in the window the texture will be rendered
 	vogl->vertices[0][0] = vogl->picture_area.x;
@@ -235,13 +204,57 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, struct vo_draw_ar
 	vogl->vertices[3][0] = w - vogl->picture_area.x;
 	vogl->vertices[3][1] = h - vogl->picture_area.y;
 	glVertexPointer(2, GL_FLOAT, 0, vogl->vertices);
+
+	vo_opengl_update_viewport(vogl);
+}
+
+void vo_opengl_update_viewport(struct vo_opengl_interface *vogl) {
+	struct vo_interface *vo = &vogl->vo;
+	struct vo_render *vr = vo->renderer;
+
+	int hw = vr->viewport.w / 2;
+	int hh = vr->viewport.h;
+
+	if (vogl->filter == UI_GL_FILTER_NEAREST
+	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->picture_area.w % hw) == 0 && (vogl->picture_area.h % hh) == 0)) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	} else {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	}
+
+	// Texture coordinates select a subset of the texture to update
+	vogl->tex_coords[0][0] = 0.0;
+	vogl->tex_coords[0][1] = 0.0;
+	vogl->tex_coords[1][0] = 0.0;
+	vogl->tex_coords[1][1] = (double)vr->viewport.h / (double)TEX_INT_HEIGHT;
+	vogl->tex_coords[2][0] = (double)vr->viewport.w / (double)TEX_INT_PITCH;
+	vogl->tex_coords[2][1] = 0.0;
+	vogl->tex_coords[3][0] = (double)vr->viewport.w / (double)TEX_INT_PITCH;
+	vogl->tex_coords[3][1] = (double)vr->viewport.h / (double)TEX_INT_HEIGHT;
+	glTexCoordPointer(2, GL_FLOAT, 0, vogl->tex_coords);
+
+	// OpenGL 4.4+ has glClearTexImage(), but for now let's just clear a
+	// line just to the right and just below the area in the texture we'll
+	// be updating.  This prevents weird fringing effects.
+	memset(vogl->texture.pixels, 0, TEX_INT_PITCH * vogl->texture.pixel_size);
+	glTexSubImage2D(GL_TEXTURE_2D, 0,
+			vr->viewport.w, 0, 1, TEX_INT_HEIGHT,
+			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
+	glTexSubImage2D(GL_TEXTURE_2D, 0,
+			0, vr->viewport.h, TEX_INT_PITCH, 1,
+			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
+
+	vr->buffer_pitch = vr->viewport.w;
 }
 
 void vo_opengl_draw(void *sptr) {
 	struct vo_opengl_interface *vogl = sptr;
+	struct vo_render *vr = vogl->vo.renderer;
 	glClear(GL_COLOR_BUFFER_BIT);
 	glTexSubImage2D(GL_TEXTURE_2D, 0,
-			0, 0, TEX_BUF_WIDTH, TEX_BUF_HEIGHT,
+			0, 0, vr->viewport.w, vr->viewport.h,
 			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }

@@ -235,8 +235,14 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
-	int xscale = uisdl2->draw_area.w / 160;
-	int yscale = uisdl2->draw_area.h / 120;
+	struct vo_interface *vo = uisdl2->public.vo_interface;
+	struct vo_render *vr = vo->renderer;
+
+	int qw = vr->viewport.w / 4;
+	int qh = vr->viewport.h / 2;
+
+	int xscale = uisdl2->draw_area.w / qw;
+	int yscale = uisdl2->draw_area.h / qh;
 	int scale;
 	if (xscale < yscale)
 		scale = yscale;
@@ -246,12 +252,18 @@ void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
 		scale = xscale + 1;
 	if (scale < 1)
 		scale = 1;
-	SDL_SetWindowSize(uisdl2->vo_window, 160*scale, 120*scale);
+	SDL_SetWindowSize(uisdl2->vo_window, qw * scale, qh * scale);
 }
 
 void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
-	int xscale = uisdl2->draw_area.w / 160;
-	int yscale = uisdl2->draw_area.h / 120;
+	struct vo_interface *vo = uisdl2->public.vo_interface;
+	struct vo_render *vr = vo->renderer;
+
+	int qw = vr->viewport.w / 4;
+	int qh = vr->viewport.h / 2;
+
+	int xscale = uisdl2->draw_area.w / qw;
+	int yscale = uisdl2->draw_area.h / qh;
 	int scale;
 	if (xscale < yscale)
 		scale = xscale;
@@ -261,5 +273,5 @@ void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
 		scale = xscale - 1;
 	if (scale < 1)
 		scale = 1;
-	SDL_SetWindowSize(uisdl2->vo_window, 160*scale, 120*scale);
+	SDL_SetWindowSize(uisdl2->vo_window, qw * scale, qh * scale);
 }

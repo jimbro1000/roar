@@ -73,6 +73,7 @@ enum ui_tag {
 	ui_tag_cmp_system,
 	ui_tag_cmp_colour_killer,
 	ui_tag_ccr,
+	ui_tag_picture,
 	ui_tag_tv_input,
 	ui_tag_fullscreen,
 	ui_tag_vdg_inverse,

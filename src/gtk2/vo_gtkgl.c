@@ -42,6 +42,13 @@
 
 #include "gtk2/common.h"
 
+// MAX_VIEWPORT_* defines maximum viewport
+
+#define MAX_VIEWPORT_WIDTH  (800)
+#define MAX_VIEWPORT_HEIGHT (300)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 static void *new(void *cfg);
 
 struct module vo_gtkgl_module = {
@@ -54,16 +61,26 @@ struct module vo_gtkgl_module = {
 struct vo_gtkgl_interface {
 	struct vo_opengl_interface vogl;
 
-	int woff, hoff;  // geometry offsets introduced by menubar
+	// Menus affect the size of the draw area, so we need to track how much
+	// to add to the window size to get the draw area we want.
+
+	int woff, hoff;
+
+	// However, OpenGL will render only into the draw area, so we don't
+	// need to keep track of any offsets for it, just the overall
+	// dimensions.  Therefore vo_window_area is suitable.
+
+	struct vo_window_area window_area;
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void vo_gtkgl_free(void *sptr);
-static void draw(void *sptr);
-static void resize(void *sptr, unsigned int w, unsigned int h);
-static int set_fullscreen(void *sptr, _Bool fullscreen);
-static void set_menubar(void *sptr, _Bool show_menubar);
+static void vo_gtkgl_free(void *);
+static void resize(void *, unsigned int w, unsigned int h);
+static int set_fullscreen(void *, _Bool fullscreen);
+static void set_menubar(void *, _Bool show_menubar);
+static void draw(void *);
+static void set_viewport(void *, int vp_w, int vp_h);
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
@@ -91,12 +108,15 @@ static void *new(void *sptr) {
 	vo->draw = DELEGATE_AS0(void, draw, vogl);
 
 	// Used by UI to adjust viewing parameters
-	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
-	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
-	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
+	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, vogtkgl);
+	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vogtkgl);
+	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vogtkgl);
+	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vogtkgl);
 
-	/* Configure drawing_area widget */
-	gtk_widget_set_size_request(global_uigtk2->drawing_area, 640, 480);
+	// Configure drawing_area widget
+	vogtkgl->window_area.w = 640;
+	vogtkgl->window_area.h = 480;
+	gtk_widget_set_size_request(global_uigtk2->drawing_area, vogtkgl->window_area.w, vogtkgl->window_area.h);
 	GdkGLConfig *glconfig = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGB | GDK_GL_MODE_DOUBLE);
 	if (!glconfig) {
 		LOG_ERROR("Failed to create OpenGL config\n");
@@ -131,6 +151,66 @@ static void vo_gtkgl_free(void *sptr) {
 	vo_opengl_free(vogl);
 }
 
+static void set_viewport(void *sptr, int vp_w, int vp_h) {
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+	struct vo_interface *vo = &vogl->vo;
+	struct vo_render *vr = vo->renderer;
+
+	GdkGLContext *glcontext = gtk_widget_get_gl_context(global_uigtk2->drawing_area);
+	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(global_uigtk2->drawing_area);
+
+	if (!gdk_gl_drawable_gl_begin(gldrawable, glcontext)) {
+		g_assert_not_reached();
+	}
+
+	_Bool is_exact_multiple = 0;
+	int multiple = 1;
+	int mw = vr->viewport.w;
+	int mh = vr->viewport.h * 2;
+
+	if (mw > 0 && mh > 0) {
+		if ((vogtkgl->window_area.w % mw) == 0 &&
+		    (vogtkgl->window_area.h % mh) == 0) {
+			int wmul = vogtkgl->window_area.w / mw;
+			int hmul = vogtkgl->window_area.h / mh;
+			if (wmul == hmul && wmul > 0) {
+				is_exact_multiple = 1;
+				multiple = wmul;
+			}
+		}
+	}
+
+	if (vp_w < 16)
+		vp_w = 16;
+	if (vp_w > MAX_VIEWPORT_WIDTH)
+		vp_w = MAX_VIEWPORT_WIDTH;
+	if (vp_h < 6)
+		vp_h = 6;
+	if (vp_h > MAX_VIEWPORT_HEIGHT)
+		vp_h = MAX_VIEWPORT_HEIGHT;
+
+	mw = vp_w;
+	mh = vp_h * 2;
+
+	if (is_exact_multiple) {
+		vogtkgl->window_area.w = multiple * mw;
+		vogtkgl->window_area.h = multiple * mh;
+		if (!vo->is_fullscreen) {
+			int w = vogtkgl->window_area.w + vogtkgl->woff;
+			int h = vogtkgl->window_area.h + vogtkgl->hoff;
+			gtk_window_resize(GTK_WINDOW(global_uigtk2->top_window), w, h);
+		}
+	}
+
+	vo_render_set_viewport(vr, vp_w, vp_h);
+	vo_opengl_update_viewport(vogl);
+
+	gdk_gl_drawable_gl_end(gldrawable);
+}
+
+// Manual resizing of window
+
 static void resize(void *sptr, unsigned int w, unsigned int h) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
@@ -158,10 +238,8 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	GtkAllocation win_allocation, draw_allocation;
 	gtk_widget_get_allocation(global_uigtk2->top_window, &win_allocation);
 	gtk_widget_get_allocation(global_uigtk2->drawing_area, &draw_allocation);
-	gint oldw = win_allocation.width;
-	gint oldh = win_allocation.height;
-	gint woff = oldw - draw_allocation.width;
-	gint hoff = oldh - draw_allocation.height;
+	int woff = win_allocation.width - draw_allocation.width;
+	int hoff = win_allocation.height - draw_allocation.height;
 	vogtkgl->woff = woff;
 	vogtkgl->hoff = hoff;
 	gtk_window_resize(GTK_WINDOW(global_uigtk2->top_window), w + woff, h + hoff);
@@ -227,6 +305,8 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 	return 0;
 }
 
+// Called whenever the window changes size (including when first created)
+
 static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data) {
 	struct vo_gtkgl_interface *vogtkgl = data;
 	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
@@ -249,18 +329,19 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 		vogtkgl->hoff = draw_allocation.y;
 	}
 
+	vogtkgl->window_area.w = draw_allocation.width;
+	vogtkgl->window_area.h = draw_allocation.height;
+
 	// Although GTK+ reports how the drawable is offset into the window,
 	// the OpenGL context will render with the drawable's origin, so set X
 	// and Y to 0.
-	struct vo_draw_area draw_area = {
-		.x = 0,
-		.y = 0,
-		.w = draw_allocation.width,
-		.h = draw_allocation.height
-	};
-	vo_opengl_setup_context(vogl, &draw_area);
+	global_uigtk2->draw_area.x = 0;
+	global_uigtk2->draw_area.y = 0;
+	global_uigtk2->draw_area.w = draw_allocation.width;
+	global_uigtk2->draw_area.h = draw_allocation.height;
+	vo_opengl_setup_context(vogl, &global_uigtk2->draw_area);
 
-	// Copy dimensions back out (for mouse calculations)
+	// Copy picture dimensions back out (for mouse calculations)
 	global_uigtk2->picture_area.x = vogl->picture_area.x;
 	global_uigtk2->picture_area.y = vogl->picture_area.y;
 	global_uigtk2->picture_area.w = vogl->picture_area.w;

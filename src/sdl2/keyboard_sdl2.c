@@ -303,6 +303,14 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 	case '+':
 		sdl_zoom_in(uisdl2);
 		return;
+
+	case ',':
+		xroar_set_picture(1, XROAR_NEXT);
+		return;
+	case '.':
+		xroar_set_picture(1, XROAR_PREV);
+		return;
+
 #endif
 	default:
 		break;

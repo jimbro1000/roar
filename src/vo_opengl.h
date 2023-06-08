@@ -89,6 +89,10 @@ void vo_opengl_configure(struct vo_opengl_interface *, struct vo_cfg *cfg);
 
 void vo_opengl_setup_context(struct vo_opengl_interface *, struct vo_draw_area *draw_area);
 
+// Change viewport.
+
+void vo_opengl_update_viewport(struct vo_opengl_interface *);
+
 // Update texture and draw it
 
 void vo_opengl_draw(void *);
