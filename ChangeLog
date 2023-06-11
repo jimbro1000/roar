@@ -1,3 +1,9 @@
+ * Add ability to change Picture Area, seeing more or less border
+ * New option -vo-picture
+ * Respect -geometry dimensions in SDL-based UIs
+ * Add optional 60Hz vertical scaling (on by default)
+ * New option -no-vo-scale-60hz disables 60Hz scaling
+
 Version 1.4.1, Tue  6 Jun 2023
 
  * Fix composite colour switching in -ccr simple and -ccr 5bit [Keith Palmer]
