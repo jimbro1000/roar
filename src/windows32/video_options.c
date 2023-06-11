@@ -40,6 +40,7 @@ static HWND vo_brightness = NULL;
 static HWND vo_contrast = NULL;
 static HWND vo_saturation = NULL;
 static HWND vo_hue = NULL;
+static HWND cbt_picture = NULL;
 static HWND cbt_cmp_fs = NULL;
 static HWND cbt_cmp_fsc = NULL;
 static HWND cbt_cmp_system = NULL;
@@ -68,6 +69,11 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	vo_hue = GetDlgItem(vo_window, IDC_SPIN_HUE);
 	SendMessage(vo_hue, UDM_SETRANGE, 0, MAKELPARAM(180, -179));
 	SendMessage(vo_hue, UDM_SETPOS, 0, 0);
+
+	cbt_picture = GetDlgItem(vo_window, IDC_CB_PICTURE);
+	for (unsigned i = 0; i < NUM_VO_PICTURE; i++) {
+		SendMessage(cbt_picture, CB_ADDSTRING, 0, (LPARAM)vo_picture_name[i]);
+	}
 
 	cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
 	for (unsigned i = 0; i < NUM_VO_RENDER_FS; i++) {
@@ -119,6 +125,11 @@ void windows32_vo_update_saturation(struct ui_sdl2_interface *uisdl2, int value)
 void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
 	SendMessage(vo_hue, UDM_SETPOS, 0, value);
+}
+
+void windows32_vo_update_picture(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
+	SendMessage(cbt_picture, CB_SETCURSEL, value, 0);
 }
 
 void windows32_vo_update_cmp_fs(struct ui_sdl2_interface *uisdl2, int value) {
@@ -192,6 +203,10 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			int value = SendMessage(cb, CB_GETCURSEL, 0, 0);
 
 			switch (id) {
+			case IDC_CB_PICTURE:
+				xroar_set_picture(0, value);
+				break;
+
 			case IDC_CB_FS:
 				if (xroar_vo_interface) {
 					vo_set_cmp_fs(xroar_vo_interface, 0, value);

@@ -548,6 +548,10 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		windows32_vo_update_hue(uisdl2, value);
 		break;
 
+	case ui_tag_picture:
+		windows32_vo_update_picture(uisdl2, value);
+		break;
+
 	case ui_tag_cmp_fs:
 		windows32_vo_update_cmp_fs(uisdl2, value);
 		break;

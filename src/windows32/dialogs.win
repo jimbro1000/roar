@@ -59,6 +59,8 @@ tr td text Colour
    td id=SATURATION spinbox
 tr td text Hue
    td id=HUE spinbox
+tr td text Picture Area
+   td width=78 id=PICTURE combobox
 end table
 
 h1 Composite Video
