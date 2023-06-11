@@ -36,8 +36,8 @@
         <menuitem action='zoom_in'/>
         <menuitem action='zoom_out'/>
         <separator/>
-        <menuitem action='zoom_320x240'/>
-        <menuitem action='zoom_640x480'/>
+        <menuitem action='zoom_1_1'/>
+        <menuitem action='zoom_2_1'/>
         <separator/>
         <menuitem action='zoom_reset'/>
       </menu>
