@@ -1503,6 +1503,8 @@ to show for it.
 @tab Pixel format to use.  @option{-vo-pixel-fmt help} for a list.
 @item @option{-gl-filter @var{filter}}
 @tab Filtering method to use when scaling the screen.  One of @samp{linear}, @samp{nearest} or @samp{auto} (the default).  OpenGL output modules only.
+@item @option{-vo-picture @var{picture}}
+@tab Initial picture area.  @option{-vo-picture help} for a list.
 @item @option{-invert-text}
 @tab Start up with inverted text mode.
 @item @option{-ccr @var{renderer}}
@@ -1522,6 +1524,14 @@ to show for it.
 The pixel format, specified with @option{-vo-pixel-fmt}, defaults to RGBA with
 8 bits per channel, but you may find other pixel layouts or lower bit depths
 render faster on your machine.
+
+The default picture area is 640x480 (emulated) pixels, equivalent to
+@option{-vo-picture title}, which is enough to show normal VDG output with a
+reasonable border.  You can change this to one of a set of defined areas:
+@option{-vo-picture action} and @option{-vo-picture underscan} show more of the
+picture, and may be more suitable when emulating a CoCo 3 which has some larger
+video modes.  @option{-vo-picture zoomed} crops to 512x384; enough to show
+standard VDG output with no borders at all.
 
 Various levels of composite video rendering precision can be selected with
 @option{-ccr}, trading off CPU with accuracy.  @option{-ccr simulated} is the
@@ -2333,6 +2343,8 @@ to this machine (the default is to try).
 @tab Pixel format to use.  @option{-vo-pixel-fmt help} for a list.
 @item @option{-gl-filter @var{filter}}
 @tab Filtering method to use when scaling the screen.  One of @samp{linear}, @samp{nearest} or @samp{auto} (the default).  OpenGL output modules only.
+@item @option{-vo-picture @var{picture}}
+@tab Initial picture area.  @option{-vo-picture help} for a list.
 @item @option{-invert-text}
 @tab Start up with inverted text mode.
 @item @option{-ccr @var{renderer}}
