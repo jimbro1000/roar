@@ -75,6 +75,7 @@
 #define TAG_FULLSCREEN (9 << 24)
 #define TAG_VDG_INVERSE (16 << 24)
 #define TAG_TV_INPUT (10 << 24)
+#define TAG_TV_PICTURE (24 << 24)
 #define TAG_CCR (18 << 24)
 #define TAG_CMP_FS (20 << 24)
 #define TAG_CMP_FSC (21 << 24)
@@ -131,8 +132,9 @@ static NSString *get_application_name(void) {
 	return app_name;
 }
 
-static int current_ccr = 0;
+static int current_picture = 0;
 static int current_cc = 0;
+static int current_ccr = 0;
 static int current_machine = 0;
 static int current_cartridge = 0;
 static int current_keymap = 0;
@@ -319,6 +321,10 @@ int cocoa_super_all_keys = 0;
 		current_cc = tag;
 		xroar_set_tv_input(0, tag_value);
 		break;
+	case TAG_TV_PICTURE:
+		current_picture = tag;
+		xroar_set_picture(0, tag_value);
+		break;
 	case TAG_CCR:
 		current_ccr = tag;
 		xroar_set_ccr(0, tag_value);
@@ -410,6 +416,9 @@ int cocoa_super_all_keys = 0;
 		break;
 	case TAG_TV_INPUT:
 		[item setState:((tag == current_cc) ? NSOnState : NSOffState)];
+		break;
+	case TAG_TV_PICTURE:
+		[item setState:((tag == current_picture) ? NSOnState : NSOffState)];
 		break;
 	case TAG_CCR:
 		[item setState:((tag == current_ccr) ? NSOnState : NSOffState)];
@@ -685,6 +694,23 @@ static void setup_view_menu(void) {
 	}
 
 	item = [[NSMenuItem alloc] initWithTitle:@"TV Input" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[view_menu addItem:item];
+	[item release];
+
+	submenu = [[NSMenu alloc] initWithTitle:@"Picture Area"];
+
+	for (i = 0; i < NUM_VO_PICTURE; i++) {
+		NSString *s = [[NSString alloc] initWithUTF8String:vo_picture_name[i]];
+		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:(TAG_TV_PICTURE | i)];
+		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+		[submenu addItem:item];
+		[item release];
+		[s release];
+	}
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Picture Area" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
@@ -1263,12 +1289,16 @@ void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
 		vdg_inverted = value ? 1 : 0;
 		break;
 
-	case ui_tag_ccr:
-		current_ccr = TAG_CCR | value;
-		break;
-
 	case ui_tag_tv_input:
 		current_cc = TAG_TV_INPUT | value;
+		break;
+
+	case ui_tag_picture:
+		current_picture = TAG_TV_PICTURE | value;
+		break;
+
+	case ui_tag_ccr:
+		current_ccr = TAG_CCR | value;
 		break;
 
 	/* Keyboard */
