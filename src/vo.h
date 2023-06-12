@@ -215,6 +215,21 @@ struct vo_interface {
 	DELEGATE_T0(void) draw;
 };
 
+// Geometry handling
+
+#define VO_GEOMETRY_W (1 << 0)
+#define VO_GEOMETRY_H (1 << 1)
+#define VO_GEOMETRY_X (1 << 2)
+#define VO_GEOMETRY_Y (1 << 3)
+#define VO_GEOMETRY_XNEGATIVE (1 << 4)
+#define VO_GEOMETRY_YNEGATIVE (1 << 5)
+
+struct vo_geometry {
+	unsigned flags;
+	int w, h;
+	int x, y;
+};
+
 extern struct xconfig_enum vo_cmp_ccr_list[];
 extern struct xconfig_enum vo_pixel_fmt_list[];
 
@@ -282,5 +297,9 @@ inline void vo_vsync(struct vo_interface *vo, _Bool draw) {
 inline void vo_refresh(struct vo_interface *vo) {
 	DELEGATE_SAFE_CALL(vo->draw);
 }
+
+// Helper function to parse geometry string
+
+void vo_parse_geometry(const char *str, struct vo_geometry *geometry);
 
 #endif

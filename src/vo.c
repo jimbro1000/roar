@@ -260,3 +260,54 @@ extern inline void vo_set_cmp_colour_killer(struct vo_interface *vo, _Bool notif
 
 extern inline void vo_vsync(struct vo_interface *vo, _Bool draw);
 extern inline void vo_refresh(struct vo_interface *vo);
+
+// Helper function to parse geometry string
+
+void vo_parse_geometry(const char *str, struct vo_geometry *geometry) {
+	while (*str == '=')
+		str++;
+
+	geometry->flags = 0;
+
+	while (*str) {
+		_Bool is_x = (*str == 'x' || *str == 'X');
+		if (is_x)
+			str++;
+		char *next;
+		int val = strtol(str, &next, 0);
+		if (str == next)
+			break;
+
+		if (*str == '+' || *str == '-') {
+			_Bool is_negative = (*str == '-');
+			str++;
+			if (!(geometry->flags & VO_GEOMETRY_X)) {
+				geometry->flags |= VO_GEOMETRY_X;
+				if (is_negative)
+					geometry->flags |= VO_GEOMETRY_XNEGATIVE;
+				geometry->x = val;
+			} else if (!(geometry->flags & VO_GEOMETRY_Y)) {
+				geometry->flags |= VO_GEOMETRY_Y;
+				if (is_negative)
+					geometry->flags |= VO_GEOMETRY_YNEGATIVE;
+				geometry->y = val;
+			} else {
+				geometry->flags = 0;
+				break;
+			}
+		} else if (is_x) {
+			if (!(geometry->flags & VO_GEOMETRY_H)) {
+				geometry->flags |= VO_GEOMETRY_H;
+				geometry->h = val;
+			} else {
+				geometry->flags = 0;
+				break;
+			}
+		} else {
+			geometry->flags |= VO_GEOMETRY_W;
+			geometry->w = val;
+		}
+
+		str = next;
+	}
+}
