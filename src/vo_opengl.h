@@ -63,6 +63,9 @@ struct vo_opengl_interface {
 	} texture;
 
 	struct vo_picture_area picture_area;
+	struct vo_viewport viewport;
+
+	_Bool scale_60hz;
 
 	int filter;
 
@@ -91,7 +94,8 @@ void vo_opengl_setup_context(struct vo_opengl_interface *, struct vo_draw_area *
 
 // Change viewport.
 
-void vo_opengl_update_viewport(struct vo_opengl_interface *);
+void vo_opengl_set_viewport(struct vo_opengl_interface *, int w, int h);
+void vo_opengl_set_frame_rate(struct vo_opengl_interface *, _Bool is_60hz);
 
 // Update texture and draw it
 

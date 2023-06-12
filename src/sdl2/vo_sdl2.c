@@ -69,6 +69,7 @@ struct vo_sdl_interface {
 	int filter;
 
 	struct vo_window_area window_area;
+	_Bool scale_60hz;
 
 #ifdef WINDOWS32
 	_Bool showing_menu;
@@ -90,6 +91,8 @@ static void resize(void *sptr, unsigned int w, unsigned int h);
 static void draw(void *sptr);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
 static void set_menubar(void *sptr, _Bool show_menubar);
+
+static void notify_frame_rate(void *, _Bool is_60hz);
 
 static void *new(void *sptr) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
@@ -155,6 +158,8 @@ static void *new(void *sptr) {
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vosdl);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vosdl);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vosdl);
+
+	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, vosdl);
 
 	// Used by machine to render video
 	vo->draw = DELEGATE_AS0(void, draw, vosdl);
@@ -256,7 +261,10 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	if (vp_h > MAX_VIEWPORT_HEIGHT)
 		vp_h = MAX_VIEWPORT_HEIGHT;
 
-	vo_render_set_viewport(vr, vp_w, vp_h);
+	int rvp_w = vp_w;
+	int rvp_h = vosdl->scale_60hz ? ((vp_h * 5) / 6) : vp_h;
+	vo_render_set_viewport(vr, rvp_w, rvp_h);
+
 	mw = vp_w;
 	mh = vp_h * 2;
 	SDL_RenderSetLogicalSize(vosdl->sdl_renderer, mw, mh);
@@ -272,6 +280,15 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	} else {
 		resize(vosdl, 0, 0);
 	}
+}
+
+static void notify_frame_rate(void *sptr, _Bool is_60hz) {
+	struct vo_sdl_interface *vosdl = sptr;
+	struct vo_interface *vo = &vosdl->public;
+	struct vo_render *vr = vo->renderer;
+	vosdl->scale_60hz = is_60hz;
+	set_viewport(vosdl, vr->viewport.w, vr->viewport.h);
+	resize(vosdl, 0, 0);
 }
 
 static void resize(void *sptr, unsigned int w_ignored, unsigned int h_ignored) {

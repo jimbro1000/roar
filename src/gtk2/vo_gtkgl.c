@@ -82,6 +82,8 @@ static void set_menubar(void *, _Bool show_menubar);
 static void draw(void *);
 static void set_viewport(void *, int vp_w, int vp_h);
 
+static void notify_frame_rate(void *, _Bool is_60hz);
+
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 static void vo_gtkgl_set_vsync(int val);
@@ -107,11 +109,15 @@ static void *new(void *sptr) {
 	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vogtkgl);
 	vo->draw = DELEGATE_AS0(void, draw, vogl);
 
+	struct vo_render *vr = vo->renderer;
+
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, vogtkgl);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vogtkgl);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vogtkgl);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vogtkgl);
+
+	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, vogtkgl);
 
 	// Configure drawing_area widget
 	vogtkgl->window_area.w = 640;
@@ -203,10 +209,15 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 		}
 	}
 
-	vo_render_set_viewport(vr, vp_w, vp_h);
-	vo_opengl_update_viewport(vogl);
+	vo_opengl_set_viewport(vogl, vp_w, vp_h);
 
 	gdk_gl_drawable_gl_end(gldrawable);
+}
+
+static void notify_frame_rate(void *sptr, _Bool is_60hz) {
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+	vo_opengl_set_frame_rate(vogl, is_60hz);
 }
 
 // Manual resizing of window

@@ -144,7 +144,77 @@ void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 	vo_render_set_buffer(vr, vogl->texture.pixels);
 
 	vogl->picture_area.x = vogl->picture_area.y = 0;
+	vogl->viewport.w = 640;
+	vogl->viewport.h = 240;
 	vogl->filter = cfg->gl_filter;
+}
+
+static void update_viewport(struct vo_opengl_interface *vogl) {
+	struct vo_interface *vo = &vogl->vo;
+	struct vo_render *vr = vo->renderer;
+
+	int vp_w = vogl->viewport.w;
+	int vp_h = vogl->viewport.h;
+
+	if (vogl->scale_60hz) {
+		vp_h = (vp_h * 5) / 6;
+	}
+
+	vo_render_set_viewport(vr, vp_w, vp_h);
+
+	int hw = vp_w / 2;
+	int hh = vp_h;
+
+	glDeleteTextures(1, &vogl->texture.num);
+	glGenTextures(1, &vogl->texture.num);
+	glBindTexture(GL_TEXTURE_2D, vogl->texture.num);
+	glTexImage2D(GL_TEXTURE_2D, 0, vogl->texture.internal_format, TEX_INT_PITCH, TEX_INT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	if ((vogl->filter == UI_GL_FILTER_NEAREST) ||
+	    (vogl->filter == UI_GL_FILTER_AUTO && (vogl->picture_area.w % hw) == 0 && (vogl->picture_area.h % hh) == 0)) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	} else {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	}
+
+	// Texture coordinates select a subset of the texture to update
+	vogl->tex_coords[0][0] = 0.0;
+	vogl->tex_coords[0][1] = 0.0;
+	vogl->tex_coords[1][0] = 0.0;
+	vogl->tex_coords[1][1] = (double)vp_h / (double)TEX_INT_HEIGHT;
+	vogl->tex_coords[2][0] = (double)vp_w / (double)TEX_INT_PITCH;
+	vogl->tex_coords[2][1] = 0.0;
+	vogl->tex_coords[3][0] = (double)vp_w / (double)TEX_INT_PITCH;
+	vogl->tex_coords[3][1] = (double)vp_h / (double)TEX_INT_HEIGHT;
+	glTexCoordPointer(2, GL_FLOAT, 0, vogl->tex_coords);
+
+	// OpenGL 4.4+ has glClearTexImage(), but for now let's just clear a
+	// line just to the right and just below the area in the texture we'll
+	// be updating.  This prevents weird fringing effects.
+	memset(vogl->texture.pixels, 0, TEX_INT_PITCH * vogl->texture.pixel_size);
+	glTexSubImage2D(GL_TEXTURE_2D, 0,
+			vp_w, 0, 1, TEX_INT_HEIGHT,
+			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
+	glTexSubImage2D(GL_TEXTURE_2D, 0,
+			0, vp_h, TEX_INT_PITCH, 1,
+			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
+
+	vr->buffer_pitch = vp_w;
+}
+
+void vo_opengl_set_viewport(struct vo_opengl_interface *vogl, int vp_w, int vp_h) {
+	vogl->viewport.w = vp_w;
+	vogl->viewport.h = vp_h;
+	update_viewport(vogl);
+}
+
+void vo_opengl_set_frame_rate(struct vo_opengl_interface *vogl, _Bool is_60hz) {
+	vogl->scale_60hz = is_60hz;
+	update_viewport(vogl);
 }
 
 void vo_opengl_setup_context(struct vo_opengl_interface *vogl, struct vo_draw_area *draw_area) {
@@ -183,12 +253,6 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, struct vo_draw_ar
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClearDepth(1.0f);
 
-	glDeleteTextures(1, &vogl->texture.num);
-	glGenTextures(1, &vogl->texture.num);
-	glBindTexture(GL_TEXTURE_2D, vogl->texture.num);
-	glTexImage2D(GL_TEXTURE_2D, 0, vogl->texture.internal_format, TEX_INT_PITCH, TEX_INT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glColor4f(1.0, 1.0, 1.0, 1.0);
 
 	// The same vertex & texcoord lists will be used every draw,
@@ -205,48 +269,7 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, struct vo_draw_ar
 	vogl->vertices[3][1] = h - vogl->picture_area.y;
 	glVertexPointer(2, GL_FLOAT, 0, vogl->vertices);
 
-	vo_opengl_update_viewport(vogl);
-}
-
-void vo_opengl_update_viewport(struct vo_opengl_interface *vogl) {
-	struct vo_interface *vo = &vogl->vo;
-	struct vo_render *vr = vo->renderer;
-
-	int hw = vr->viewport.w / 2;
-	int hh = vr->viewport.h;
-
-	if (vogl->filter == UI_GL_FILTER_NEAREST
-	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->picture_area.w % hw) == 0 && (vogl->picture_area.h % hh) == 0)) {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	} else {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	}
-
-	// Texture coordinates select a subset of the texture to update
-	vogl->tex_coords[0][0] = 0.0;
-	vogl->tex_coords[0][1] = 0.0;
-	vogl->tex_coords[1][0] = 0.0;
-	vogl->tex_coords[1][1] = (double)vr->viewport.h / (double)TEX_INT_HEIGHT;
-	vogl->tex_coords[2][0] = (double)vr->viewport.w / (double)TEX_INT_PITCH;
-	vogl->tex_coords[2][1] = 0.0;
-	vogl->tex_coords[3][0] = (double)vr->viewport.w / (double)TEX_INT_PITCH;
-	vogl->tex_coords[3][1] = (double)vr->viewport.h / (double)TEX_INT_HEIGHT;
-	glTexCoordPointer(2, GL_FLOAT, 0, vogl->tex_coords);
-
-	// OpenGL 4.4+ has glClearTexImage(), but for now let's just clear a
-	// line just to the right and just below the area in the texture we'll
-	// be updating.  This prevents weird fringing effects.
-	memset(vogl->texture.pixels, 0, TEX_INT_PITCH * vogl->texture.pixel_size);
-	glTexSubImage2D(GL_TEXTURE_2D, 0,
-			vr->viewport.w, 0, 1, TEX_INT_HEIGHT,
-			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
-	glTexSubImage2D(GL_TEXTURE_2D, 0,
-			0, vr->viewport.h, TEX_INT_PITCH, 1,
-			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
-
-	vr->buffer_pitch = vr->viewport.w;
+	update_viewport(vogl);
 }
 
 void vo_opengl_draw(void *sptr) {
