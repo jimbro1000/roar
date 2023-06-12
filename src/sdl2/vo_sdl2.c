@@ -159,6 +159,15 @@ static void *new(void *sptr) {
 	// Used by machine to render video
 	vo->draw = DELEGATE_AS0(void, draw, vosdl);
 
+	if (vo_cfg->geometry) {
+		struct vo_geometry geometry;
+		vo_parse_geometry(vo_cfg->geometry, &geometry);
+		if (geometry.flags & VO_GEOMETRY_W)
+			vosdl->window_area.w = geometry.w;
+		if (geometry.flags & VO_GEOMETRY_H)
+			vosdl->window_area.h = geometry.h;
+	}
+
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
 	if (vo_cfg->fullscreen) {
 		wflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
