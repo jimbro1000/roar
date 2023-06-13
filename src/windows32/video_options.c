@@ -41,6 +41,7 @@ static HWND vo_contrast = NULL;
 static HWND vo_saturation = NULL;
 static HWND vo_hue = NULL;
 static HWND cbt_picture = NULL;
+static HWND tb_ntsc_scaling = NULL;
 static HWND cbt_cmp_fs = NULL;
 static HWND cbt_cmp_fsc = NULL;
 static HWND cbt_cmp_system = NULL;
@@ -74,6 +75,8 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	for (unsigned i = 0; i < NUM_VO_PICTURE; i++) {
 		SendMessage(cbt_picture, CB_ADDSTRING, 0, (LPARAM)vo_picture_name[i]);
 	}
+
+	tb_ntsc_scaling = GetDlgItem(vo_window, IDC_BN_NTSC_SCALING);
 
 	cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
 	for (unsigned i = 0; i < NUM_VO_RENDER_FS; i++) {
@@ -130,6 +133,11 @@ void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value) {
 void windows32_vo_update_picture(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
 	SendMessage(cbt_picture, CB_SETCURSEL, value, 0);
+}
+
+void windows32_vo_update_ntsc_scaling(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
+	SendMessage(tb_ntsc_scaling, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 void windows32_vo_update_cmp_fs(struct ui_sdl2_interface *uisdl2, int value) {
@@ -231,6 +239,13 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			int id = LOWORD(wParam);
 
 			switch (id) {
+			case IDC_BN_NTSC_SCALING:
+				if (xroar_vo_interface) {
+					int value = !(SendMessage(tb_ntsc_scaling, BM_GETCHECK, 0, 0) == BST_CHECKED);
+					vo_set_ntsc_scaling(xroar_vo_interface, 1, value);
+				}
+				return FALSE;
+
 			case IDC_BN_COLOUR_KILLER:
 				if (xroar_vo_interface) {
 					int value = !(SendMessage(tb_cmp_colour_killer, BM_GETCHECK, 0, 0) == BST_CHECKED);
