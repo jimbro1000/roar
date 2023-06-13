@@ -165,6 +165,7 @@ struct private_cfg {
 		int ccr;
 		_Bool vdg_inverted_text;
 		int picture;
+		_Bool ntsc_scaling;
 		int brightness;
 		int contrast;
 		int saturation;
@@ -221,6 +222,7 @@ static struct private_cfg private_cfg = {
 	.tape.fast = 1,
 	.tape.pad_auto = 1,
 	.vo.picture = VO_PICTURE_TITLE,
+	.vo.ntsc_scaling = 1,
 	.vo.ccr = VO_CMP_CCR_5BIT,
 	.vo.brightness = 52,
 	.vo.contrast = 52,
@@ -1004,6 +1006,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		tape_set_ao_rate(xroar_tape_interface, private_cfg.tape.ao_rate);
 
 	xroar_set_picture(1, private_cfg.vo.picture);
+	vo_set_ntsc_scaling(xroar_vo_interface, 1, private_cfg.vo.ntsc_scaling);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, private_cfg.vo.brightness);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, private_cfg.vo.contrast);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, private_cfg.vo.saturation);
@@ -2579,6 +2582,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_ENUM("vo-picture", &private_cfg.vo.picture, vo_viewport_list) },
+	{ XC_SET_BOOL("vo-scale-60hz", &private_cfg.vo.ntsc_scaling) },
 	{ XC_SET_BOOL("invert-text", &private_cfg.vo.vdg_inverted_text) },
 	{ XC_SET_INT("vo-brightness", &private_cfg.vo.brightness) },
 	{ XC_SET_INT("vo-contrast", &private_cfg.vo.contrast) },
@@ -2794,6 +2798,7 @@ static void helptext(void) {
 "  -vo-pixel-fmt FMT     pixel format (-vo-pixel-fmt help for list)\n"
 "  -geometry WxH+X+Y     initial emulator geometry\n"
 "  -vo-picture P         initial picture area (-vo-picture help for list)\n"
+"  -no-vo-scale-60hz     disable vertical scaling for 60Hz video\n"
 "  -invert-text          start with text mode inverted\n"
 "  -vo-brightness N      set TV brightness (0-100) [50]\n"
 "  -vo-contrast N        set TV contrast (0-100) [50]\n"
@@ -2953,6 +2958,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_enum(f, all, "vo-pixel-fmt", xroar_ui_cfg.vo_cfg.pixel_fmt, ANY_AUTO, vo_pixel_fmt_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
 	xroar_cfg_print_enum(f, all, "vo-picture", private_cfg.vo.picture, 0, vo_viewport_list);
+	xroar_cfg_print_bool(f, all, "vo-scale-60hz", private_cfg.vo.ntsc_scaling, 1);
 	xroar_cfg_print_bool(f, all, "invert-text", private_cfg.vo.vdg_inverted_text, 0);
 	xroar_cfg_print_int(f, all, "vo-brightness", private_cfg.vo.brightness, 50);
 	xroar_cfg_print_int(f, all, "vo-contrast", private_cfg.vo.contrast, 50);

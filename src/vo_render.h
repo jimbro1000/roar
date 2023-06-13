@@ -304,6 +304,9 @@ struct vo_render {
 	struct vo_viewport viewport;
 	struct vo_active_area active_area;
 
+	// Whether 60Hz scaling is enabled
+	_Bool ntsc_scaling;
+
 	// Current time, measured in pixels
 	unsigned t;
 
@@ -387,6 +390,7 @@ inline void vo_render_set_buffer(struct vo_render *vr, void *buffer) {
 // Used by UI to adjust viewing parameters
 
 void vo_render_set_viewport(struct vo_render *, int w, int h);
+void vo_render_set_ntsc_scaling(struct vo_render *, _Bool notify, _Bool enabled);
 void vo_render_set_brightness(void *, int value);
 void vo_render_set_contrast(void *, int value);
 void vo_render_set_saturation(void *, int value);

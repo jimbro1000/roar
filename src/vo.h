@@ -258,6 +258,10 @@ inline void vo_set_viewport(struct vo_interface *vo, int w, int h) {
 	DELEGATE_SAFE_CALL(vo->set_viewport, w, h);
 }
 
+inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool value) {
+	vo_render_set_ntsc_scaling(vo->renderer, notify, value);
+}
+
 // Select cross-colour renderer
 //     int ccr;  // VO_CMP_CCR_*
 

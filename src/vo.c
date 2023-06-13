@@ -245,6 +245,7 @@ void vo_set_signal(struct vo_interface *vo, int signal) {
 }
 
 extern inline void vo_set_viewport(struct vo_interface *vo, int w, int h);
+extern inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool value);
 
 // Select cross-colour renderer
 
