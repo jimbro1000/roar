@@ -725,7 +725,7 @@ static void setup_view_menu(void) {
 	item = [[NSMenuItem alloc] initWithTitle:@"60Hz Scaling" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 	[item setTag:TAG_NTSC_SCALING];
-	[submenu addItem:item];
+	[view_menu addItem:item];
 	[item release];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
