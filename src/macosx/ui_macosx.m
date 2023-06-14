@@ -76,6 +76,7 @@
 #define TAG_VDG_INVERSE (16 << 24)
 #define TAG_TV_INPUT (10 << 24)
 #define TAG_TV_PICTURE (24 << 24)
+#define TAG_NTSC_SCALING (25 << 24)
 #define TAG_CCR (18 << 24)
 #define TAG_CMP_FS (20 << 24)
 #define TAG_CMP_FSC (21 << 24)
@@ -325,6 +326,9 @@ int cocoa_super_all_keys = 0;
 		current_picture = tag;
 		xroar_set_picture(0, tag_value);
 		break;
+	case TAG_NTSC_SCALING:
+		vo_set_ntsc_scaling(xroar_vo_interface, 0, !xroar_vo_interface->renderer->ntsc_scaling);
+		break;
 	case TAG_CCR:
 		current_ccr = tag;
 		xroar_set_ccr(0, tag_value);
@@ -419,6 +423,9 @@ int cocoa_super_all_keys = 0;
 		break;
 	case TAG_TV_PICTURE:
 		[item setState:((tag == current_picture) ? NSOnState : NSOffState)];
+		break;
+	case TAG_NTSC_SCALING:
+		[item setState:((vr && vr->ntsc_scaling) ? NSOnState : NSOffState)];
 		break;
 	case TAG_CCR:
 		[item setState:((tag == current_ccr) ? NSOnState : NSOffState)];
@@ -713,6 +720,12 @@ static void setup_view_menu(void) {
 	item = [[NSMenuItem alloc] initWithTitle:@"Picture Area" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"60Hz Scaling" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
+	[item setTag:TAG_NTSC_SCALING];
+	[submenu addItem:item];
 	[item release];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
