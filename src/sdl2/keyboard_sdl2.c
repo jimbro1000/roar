@@ -305,9 +305,11 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		return;
 
 	case ',':
+	case '<':
 		xroar_set_picture(1, XROAR_NEXT);
 		return;
 	case '.':
+	case '>':
 		xroar_set_picture(1, XROAR_PREV);
 		return;
 
@@ -350,6 +352,8 @@ static void control_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysy
 	if (cmdkey == 0) switch (sym) {
 	case SDLK_MINUS: cmdkey = '-'; break;
 	case SDLK_PLUS: cmdkey = '+'; break;
+	case SDLK_LESS: cmdkey = '<'; break;
+	case SDLK_GREATER: cmdkey = '>'; break;
 	default: break;
 	}
 

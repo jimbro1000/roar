@@ -334,7 +334,11 @@ static void emulator_command(guint keyval, int shift) {
 	case GDK_KEY_comma:
 		xroar_set_picture(1, XROAR_NEXT);
 		return;
+	case GDK_KEY_less:
+		xroar_set_picture(1, shift ? XROAR_PREV : XROAR_NEXT);
+		return;
 	case GDK_KEY_period:
+	case GDK_KEY_greater:
 		xroar_set_picture(1, XROAR_PREV);
 		return;
 
