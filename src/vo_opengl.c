@@ -172,8 +172,11 @@ static void update_viewport(struct vo_opengl_interface *vogl) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	if ((vogl->filter == UI_GL_FILTER_NEAREST) ||
-	    (vogl->filter == UI_GL_FILTER_AUTO && (vogl->picture_area.w % hw) == 0 && (vogl->picture_area.h % hh) == 0)) {
+	// Set scaling method according to options and window dimensions
+	if (!vogl->scale_60hz && (vogl->filter == UI_GL_FILTER_NEAREST ||
+				  (vogl->filter == UI_GL_FILTER_AUTO &&
+				   (vogl->picture_area.w % hw) == 0 &&
+				   (vogl->picture_area.h % hh) == 0))) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	} else {

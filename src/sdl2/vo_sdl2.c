@@ -69,11 +69,8 @@ struct vo_sdl_interface {
 	int filter;
 
 	struct vo_window_area window_area;
+	struct vo_window_area picture_area;
 	_Bool scale_60hz;
-
-#ifdef WINDOWS32
-	_Bool showing_menu;
-#endif
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -87,7 +84,6 @@ static const Uint32 renderer_flags[] = {
 
 static void vo_sdl_free(void *sptr);
 static void set_viewport(void *sptr, int vp_w, int vp_h);
-static void resize(void *sptr, unsigned int w, unsigned int h);
 static void draw(void *sptr);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
 static void set_menubar(void *sptr, _Bool show_menubar);
@@ -148,14 +144,11 @@ static void *new(void *sptr) {
 	memset(vosdl->texture.pixels, 0, MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vosdl->texture.pixel_size);
 
 	vosdl->filter = vo_cfg->gl_filter;
-	vosdl->window_area.w = 640;
-	vosdl->window_area.h = 480;
 
 	vo->free = DELEGATE_AS0(void, vo_sdl_free, vosdl);
 
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, vosdl);
-	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vosdl);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vosdl);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vosdl);
 
@@ -164,6 +157,10 @@ static void *new(void *sptr) {
 	// Used by machine to render video
 	vo->draw = DELEGATE_AS0(void, draw, vosdl);
 
+	vosdl->window_area.w = 640;
+	vosdl->window_area.h = 480;
+	global_uisdl2->viewport.w = 640;
+	global_uisdl2->viewport.h = 240;
 	if (vo_cfg->geometry) {
 		struct vo_geometry geometry;
 		vo_parse_geometry(vo_cfg->geometry, &geometry);
@@ -173,6 +170,7 @@ static void *new(void *sptr) {
 			vosdl->window_area.h = geometry.h;
 	}
 
+	// Create window, setting fullscreen hint if appropriate
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
 	if (vo_cfg->fullscreen) {
 		wflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -180,9 +178,29 @@ static void *new(void *sptr) {
 	uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, vosdl->window_area.w, vosdl->window_area.h, wflags);
 	SDL_SetWindowMinimumSize(uisdl2->vo_window, 160, 120);
 	uisdl2->vo_window_id = SDL_GetWindowID(uisdl2->vo_window);
-	vo->show_menubar = 1;
+
+	// Add menubar if the created window is not fullscreen
+	vo->is_fullscreen = SDL_GetWindowFlags(uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
+	vo->show_menubar = !vo->is_fullscreen;
+#ifdef WINDOWS32
+	if (vo->show_menubar) {
+		sdl_windows32_add_menu(uisdl2->vo_window);
+		SDL_SetWindowSize(uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
+	}
+#endif
+	{
+		int w, h;
+		SDL_GetWindowSize(uisdl2->vo_window, &w, &h);
+		sdl_update_draw_area(uisdl2, w, h);
+	}
 
 	// Create renderer
+
+#ifdef WINDOWS32
+	// from https://github.com/libsdl-org/SDL/issues/5099
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
+#endif
+
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); i++) {
 		vosdl->sdl_renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, renderer_flags[i]);
 		if (vosdl->sdl_renderer)
@@ -224,10 +242,66 @@ static void *new(void *sptr) {
 	// Initialise keyboard
 	sdl_os_keyboard_init(global_uisdl2->vo_window);
 
-	set_viewport(vosdl, 640, 240);
-	resize(vosdl, 0, 0);
-
 	return vo;
+}
+
+// We need to recreate the texture whenever the viewport changes (it needs to
+// be a different size) or the window size changes (texture scaling argument
+// may change).
+
+static void recreate_texture(struct vo_sdl_interface *vosdl) {
+	struct vo_interface *vo = &vosdl->public;
+	struct vo_render *vr = vo->renderer;
+
+	// Destroy old
+	if (vosdl->texture.texture) {
+		SDL_DestroyTexture(vosdl->texture.texture);
+		vosdl->texture.texture = NULL;
+	}
+
+	int vp_w = vr->viewport.w;
+	int vp_h = vr->viewport.h;
+
+	// Set scaling method according to options and window dimensions
+	if (!vosdl->scale_60hz && (vosdl->filter == UI_GL_FILTER_NEAREST ||
+				   (vosdl->filter == UI_GL_FILTER_AUTO &&
+				    (vosdl->window_area.w % vp_w) == 0 &&
+				    (vosdl->window_area.h % vp_h) == 0))) {
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+	} else {
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	}
+
+	// Create new
+	vosdl->texture.texture = SDL_CreateTexture(vosdl->sdl_renderer, vosdl->texture.format, SDL_TEXTUREACCESS_STREAMING, vp_w, vp_h);
+	if (!vosdl->texture.texture) {
+		LOG_ERROR("Failed to create texture\n");
+		abort();
+	}
+
+	vr->buffer_pitch = vr->viewport.w;
+}
+
+// Update viewport based on requested dimensions and 60Hz scaling.
+
+static void update_viewport(struct vo_sdl_interface *vosdl) {
+	struct vo_interface *vo = &vosdl->public;
+	struct vo_render *vr = vo->renderer;
+
+	int vp_w = global_uisdl2->viewport.w;
+	int vp_h = global_uisdl2->viewport.h;
+
+	if (vosdl->scale_60hz) {
+		vp_h = (vp_h * 5) / 6;
+	}
+
+	vo_render_set_viewport(vr, vp_w, vp_h);
+
+	recreate_texture(vosdl);
+
+	int mw = global_uisdl2->viewport.w;
+	int mh = global_uisdl2->viewport.h * 2;
+	SDL_RenderSetLogicalSize(vosdl->sdl_renderer, mw, mh);
 }
 
 static void set_viewport(void *sptr, int vp_w, int vp_h) {
@@ -240,7 +314,7 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	int mw = vr->viewport.w;
 	int mh = vr->viewport.h * 2;
 
-	if (mw > 0 && mh > 0) {
+	if (!vo->is_fullscreen && mw > 0 && mh > 0) {
 		if ((vosdl->window_area.w % mw) == 0 &&
 		    (vosdl->window_area.h % mh) == 0) {
 			int wmul = vosdl->window_area.w / mw;
@@ -261,122 +335,42 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	if (vp_h > MAX_VIEWPORT_HEIGHT)
 		vp_h = MAX_VIEWPORT_HEIGHT;
 
-	int rvp_w = vp_w;
-	int rvp_h = vosdl->scale_60hz ? ((vp_h * 5) / 6) : vp_h;
-	vo_render_set_viewport(vr, rvp_w, rvp_h);
-
-	mw = vp_w;
-	mh = vp_h * 2;
-	SDL_RenderSetLogicalSize(vosdl->sdl_renderer, mw, mh);
+	global_uisdl2->viewport.w = vp_w;
+	global_uisdl2->viewport.h = vp_h;
 
 	if (is_exact_multiple) {
-		vosdl->window_area.w = multiple * mw;
-		vosdl->window_area.h = multiple * mh;
-		if (!vo->is_fullscreen) {
-			SDL_SetWindowSize(global_uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
-		} else {
-			resize(vosdl, 0, 0);
-		}
+		int new_w = multiple * vp_w;
+		int new_h = multiple * vp_h * 2;
+		SDL_SetWindowSize(global_uisdl2->vo_window, new_w, new_h);
 	} else {
-		resize(vosdl, 0, 0);
+		update_viewport(vosdl);
 	}
 }
 
 static void notify_frame_rate(void *sptr, _Bool is_60hz) {
 	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->public;
-	struct vo_render *vr = vo->renderer;
 	vosdl->scale_60hz = is_60hz;
-	set_viewport(vosdl, vr->viewport.w, vr->viewport.h);
-	resize(vosdl, 0, 0);
+	update_viewport(vosdl);
 }
 
-static void resize(void *sptr, unsigned int w_ignored, unsigned int h_ignored) {
-	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->public;
-	struct vo_render *vr = vo->renderer;
-	(void)w_ignored;
-	(void)h_ignored;
+void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) {
+	struct ui_interface *ui = &uisdl2->public;
+	struct vo_interface *vo = ui->vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 
-	int hw = vr->viewport.w / 2;
-	int hh = vr->viewport.h;
-	vr->buffer_pitch = vr->viewport.w;
-
-	if (vosdl->texture.texture) {
-		SDL_DestroyTexture(vosdl->texture.texture);
-		vosdl->texture.texture = NULL;
-	}
-
-	int w, h;
-	SDL_GetWindowSize(global_uisdl2->vo_window, &w, &h);
-
-	_Bool is_fullscreen = SDL_GetWindowFlags(global_uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
-
-	if (is_fullscreen != vo->is_fullscreen) {
-		vo->is_fullscreen = is_fullscreen;
-		vo->show_menubar = !is_fullscreen;
-	}
-
-	_Bool resize_again = 0;
-
-#ifdef WINDOWS32
-	// Also take the opportunity to add (windowed) or remove (fullscreen) a
-	// menubar under windows.
-	if (!vosdl->showing_menu && vo->show_menubar) {
-		sdl_windows32_add_menu(global_uisdl2->vo_window);
-		vosdl->showing_menu = 1;
-		// Adding menubar steals space from client area, so reset size
-		// to get that back.
-		resize_again = 1;
-	} else if (vosdl->showing_menu && !vo->show_menubar) {
-		sdl_windows32_remove_menu(global_uisdl2->vo_window);
-		vosdl->showing_menu = 0;
-	}
-#endif
-
-	if (!vo->is_fullscreen) {
-		if (w < (hw / 2) || h < (hh / 2)) {
-			w = (hw / 2);
-			h = (hh / 2);
-			resize_again = 1;
+	if (w != vosdl->window_area.w || h != vosdl->window_area.h) {
+		if (!vo->is_fullscreen) {
+			vosdl->window_area.w = w;
+			vosdl->window_area.h = h;
 		}
-		vosdl->window_area.w = w;
-		vosdl->window_area.h = h;
+		update_viewport(vosdl);
 	}
 
-	if (resize_again) {
-		SDL_SetWindowSize(global_uisdl2->vo_window, w, h);
-	}
-
-	// Set scaling method according to options and window dimensions
-	if (vosdl->filter == UI_GL_FILTER_NEAREST
-	    || (vosdl->filter == UI_GL_FILTER_AUTO && (w % hw) == 0 && (h % hh) == 0)) {
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-	} else {
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	}
-
-#ifdef WINDOWS32
-	// from https://github.com/libsdl-org/SDL/issues/5099
-	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
-#endif
-
-	vosdl->texture.texture = SDL_CreateTexture(vosdl->sdl_renderer, vosdl->texture.format, SDL_TEXTUREACCESS_STREAMING, vr->viewport.w, vr->viewport.h);
-	if (!vosdl->texture.texture) {
-		LOG_ERROR("Failed to create texture\n");
-		abort();
-	}
-
-	SDL_RenderClear(vosdl->sdl_renderer);
-	SDL_RenderPresent(vosdl->sdl_renderer);
-
-	global_uisdl2->draw_area.x = global_uisdl2->draw_area.y = 0;
-	global_uisdl2->draw_area.w = w;
-	global_uisdl2->draw_area.h = h;
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	struct vo_sdl_interface *vosdl = sptr;
+	struct vo_interface *vo = &vosdl->public;
 
 #ifdef HAVE_WASM
 	// Until WebAssembly fullscreen interaction becomes a little more
@@ -390,14 +384,20 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 		return 0;
 	}
 
-	SDL_SetWindowFullscreen(global_uisdl2->vo_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-
-	if (!fullscreen) {
-		// Testing under Wine, returning from fullscreen doesn't
-		// _always_ set it back to the original geometry.  I have no
-		// idea why, so force it:
-		SDL_SetWindowSize(global_uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
+	if (fullscreen && vo->show_menubar) {
+#ifdef WINDOWS32
+		sdl_windows32_remove_menu(global_uisdl2->vo_window);
+#endif
+		vo->show_menubar = 0;
+	} else if (!fullscreen && !vo->show_menubar) {
+#ifdef WINDOWS32
+		sdl_windows32_add_menu(global_uisdl2->vo_window);
+#endif
+		vo->show_menubar = 1;
 	}
+
+	vo->is_fullscreen = fullscreen;
+	SDL_SetWindowFullscreen(global_uisdl2->vo_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 
 	return 0;
 }
@@ -406,17 +406,21 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 	struct vo_sdl_interface *vosdl = sptr;
 	struct vo_interface *vo = &vosdl->public;
 
-	vo->show_menubar = show_menubar;
 #ifdef WINDOWS32
-	if (show_menubar && !vosdl->showing_menu) {
+	if (show_menubar && !vo->show_menubar) {
 		sdl_windows32_add_menu(global_uisdl2->vo_window);
-	} else if (!show_menubar && vosdl->showing_menu) {
+	} else if (!show_menubar && vo->show_menubar) {
 		sdl_windows32_remove_menu(global_uisdl2->vo_window);
 	}
 	if (!vo->is_fullscreen) {
 		SDL_SetWindowSize(global_uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
+	} else {
+		int w, h;
+		SDL_GetWindowSize(global_uisdl2->vo_window, &w, &h);
+		sdl_vo_notify_size_changed(global_uisdl2, w, h);
 	}
 #endif
+	vo->show_menubar = show_menubar;
 }
 
 static void vo_sdl_free(void *sptr) {

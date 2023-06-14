@@ -40,6 +40,8 @@ struct ui_sdl2_interface {
 
 	// Window geometry
 	struct vo_draw_area draw_area;
+	// Viewport size not modified by 60Hz scaling
+	struct vo_viewport viewport;
 
 	// Keyboard state
 	struct {
@@ -77,6 +79,9 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);
 void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);
 void sdl_js_physical_shutdown(void);
 
+void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h);
+
+void sdl_update_draw_area(struct ui_sdl2_interface *uisdl2, int w, int h);
 void sdl_zoom_in(struct ui_sdl2_interface *uisdl2);
 void sdl_zoom_out(struct ui_sdl2_interface *uisdl2);
 

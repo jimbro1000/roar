@@ -97,6 +97,20 @@ struct joystick_module * const sdl_js_modlist[] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+void sdl_update_draw_area(struct ui_sdl2_interface *uisdl2, int w, int h) {
+	if (((double)w / (double)h) > (4.0 / 3.0)) {
+		uisdl2->draw_area.h = h;
+		uisdl2->draw_area.w = (((double)uisdl2->draw_area.h / 3.0) * 4.0) + 0.5;
+		uisdl2->draw_area.x = (w - uisdl2->draw_area.w) / 2;
+		uisdl2->draw_area.y = 0;
+	} else {
+		uisdl2->draw_area.w = w;
+		uisdl2->draw_area.h = (((double)uisdl2->draw_area.w / 4.0) * 3.0) + 0.5;
+		uisdl2->draw_area.x = 0;
+		uisdl2->draw_area.y = (h - uisdl2->draw_area.h) / 2;
+	}
+}
+
 void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 	SDL_Event event;
 	while (SDL_PollEvent(&event) == 1) {
@@ -104,8 +118,8 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 		case SDL_WINDOWEVENT:
 			switch(event.window.event) {
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
-			case SDL_WINDOWEVENT_RESIZED:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->resize, event.window.data1, event.window.data2);
+				sdl_vo_notify_size_changed(uisdl2, event.window.data1, event.window.data2);
+				sdl_update_draw_area(uisdl2, event.window.data1, event.window.data2);
 				break;
 			}
 			break;
@@ -235,12 +249,8 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
-	struct vo_interface *vo = uisdl2->public.vo_interface;
-	struct vo_render *vr = vo->renderer;
-
-	int qw = vr->viewport.w / 4;
-	int qh = vr->viewport.h / 2;
-
+	int qw = uisdl2->viewport.w / 4;
+	int qh = uisdl2->viewport.h / 2;
 	int xscale = uisdl2->draw_area.w / qw;
 	int yscale = uisdl2->draw_area.h / qh;
 	int scale;
@@ -256,12 +266,8 @@ void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
 }
 
 void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
-	struct vo_interface *vo = uisdl2->public.vo_interface;
-	struct vo_render *vr = vo->renderer;
-
-	int qw = vr->viewport.w / 4;
-	int qh = vr->viewport.h / 2;
-
+	int qw = uisdl2->viewport.w / 4;
+	int qh = uisdl2->viewport.h / 2;
 	int xscale = uisdl2->draw_area.w / qw;
 	int yscale = uisdl2->draw_area.h / qh;
 	int scale;
