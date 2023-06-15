@@ -265,7 +265,7 @@ machine, and if you change the selection, you may need to select
 XRoar tries to make running programs easy; after all, it's probably why you
 installed an emulator in the first place.  Select @clicksequence{File @click{}
 Run} to open a file requester, and select the program media image; in the
-majority of cases, and so long as the program was intended for the machine you
+majority of cases, and so long as the program is intended for the machine you
 have selected, XRoar will ``do the right thing'' to try and start it.
 
 As with much automation, we can't foresee every eventuality, and sometimes
@@ -320,8 +320,8 @@ some and put them in the directory appropriate to your platform.
 
 You remember a program being in colour, but all you see is black and white.
 
-American software was often written to exploit cross-colour artefacts, where
-alternating patterns of black and white would ``trick'' the TV into displaying
+American software is often written to exploit cross-colour artefacts, where
+alternating patterns of black and white will ``trick'' the TV into displaying
 colour.  XRoar supports this, and should enable it by default when you choose
 an NTSC machine.  If you're running an NTSC game on a PAL machine, you can
 still force XRoar to render the colours by selecting a cross-colour option from
@@ -567,8 +567,8 @@ Architecture @samp{dragon64}. Built-in machine profiles: @samp{dragon64},
 An earlier (1980) Tandy machine made using Motorola's reference design,
 primarily marketed in the USA.  Sold at many price points, with 4K
 (originally), 16K, 32K or 64K of RAM and either with or without Extended Colour
-BASIC.  Later versions came with a new version of the VDG, the MC6847T1, which
-included true lowercase characters.
+BASIC.  Later versions come with a new version of the VDG, the MC6847T1, which
+includes true lowercase characters.
 
 Architecture @samp{coco}.  Built-in machine profiles: @samp{coco},
 @samp{cocous} (NTSC), @samp{coco2b} (T1), @samp{coco2bus} (NTSC, T1),
@@ -595,7 +595,7 @@ Architecture @samp{mc10}.  Built-in machine profile @samp{mc10}.
 Basically the same machine as an MC-10, but with a French keyboard, 50Hz
 display and a nice bright red case.  Unlike the MC-10, the Alice line actually
 continued, with the Alice 32 and Alice 90, though these are not supported by
-XRoar.
+XRoar, as their architectures differ significantly.
 
 Architecture @samp{mc10}.  Built-in machine profile @samp{alice}.
 
@@ -614,7 +614,7 @@ USA) graphics modes.
 
 The CoCo 3 generates different colours depending on whether you use the
 Composite Video or RGB outputs.  The NTSC version defaults to assuming
-Composite Video, while the PAL version always used the RGB output from the
+Composite Video, while the PAL version always uses the RGB output from the
 GIME.
 
 If you specify 1024K or 2048K RAM, this enables an optional DAT board function
@@ -677,8 +677,8 @@ cart mydos
 
 This will define a cartridge called @samp{mydos} as a DragonDOS cartridge with
 its ROM replaced with @file{sdose6.rom}, and an additional ROM called
-@file{dosdream.rom} (this was my setup in the 80s - DOS Dream is a very useful
-ROM-based editor/assembler/deugger that coexists with DragonDOS - advert over).
+@file{dosdream.rom} (DOS Dream is a very useful ROM-based
+editor/assembler/deugger that coexists with DragonDOS).
 
 XRoar will automatically attempt to find a disk interface relevant to the
 current machine unless a specific default has been configured for the machine
@@ -880,9 +880,9 @@ DriveWire@w{ }4.
 @section Cassettes
 
 Cassette tape was the primary method of loading software until floppy disk
-drives were available, and remained popular for games distribution even then as
-it served the largest market.  Data is encoded onto cassette tape as audio, all
-currently-emulated machines using the same format, where a single cycle
+drives became available, and remains popular for games distribution even since,
+as it serves the largest market.  Data is encoded onto cassette tape as audio,
+all currently-emulated machines using the same format, where a single cycle
 represents one bit of data, and its wavelength determines the bit's value.
 
 The Dragon and Tandy Colour Computers have a built-in cassette relay that can
@@ -912,7 +912,7 @@ Note: this feature is not supported by the MC-10.
 
 The tape used for writing is considered separate to the read tape (this is an
 emulator-friendly approach to prevent overwriting your programs, though it
-would have been possible with two cassette decks).
+is possible with two cassette decks).
 
 Under Mac OS X+, the @clicksequence{File @click{} Cassette} menu contains
 controls to insert or rewind the input and output tapes, play/pause and toggle
