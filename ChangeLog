@@ -3,6 +3,9 @@
  * Respect -geometry dimensions in SDL-based UIs
  * Add optional 60Hz vertical scaling (on by default)
  * New option -no-vo-scale-60hz disables 60Hz scaling
+ * Faster ROM intercept based printing on CoCo and MC-10
+ * GIME: respect X offset and HVEN in COCO mode
+ * MPI slot config moved from global to per-cart, included in -config-print
 
 Version 1.4.2, Tue 16 Jun 2023
 
