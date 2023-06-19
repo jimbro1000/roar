@@ -181,9 +181,13 @@ static void coco_print_byte(void *sptr) {
 	if (!pip->stream) open_stream(pip);
 	/* Print byte */
 	if (pip->is_6809) {
-		byte = MC6809_REG_A(((struct MC6809 *)pip->debug_cpu));
+		struct MC6809 *cpu = (struct MC6809 *)pip->debug_cpu;
+		byte = MC6809_REG_A(cpu);
+		cpu->reg_pc = 0xa2df;
 	} else {
-		byte = MC6801_REG_A(((struct MC6801 *)pip->debug_cpu));
+		struct MC6801 *cpu = (struct MC6801 *)pip->debug_cpu;
+		byte = MC6801_REG_A(cpu);
+		cpu->reg_pc = 0xf9f0;
 	}
 	if (pip->stream) {
 		fputc(byte, pip->stream);
