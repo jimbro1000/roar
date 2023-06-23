@@ -845,15 +845,13 @@ static void do_hs_fall(void *sptr) {
 					gime->B += gime->row_stride;
 				}
 			}
-			gime->Xoff = gime->COCO ? 0 : gime->X;
+			gime->Xoff = gime->X;
 		}
 		gime->beam_pos = TCC1014_LEFT_BORDER_START;
 	}
 	DELEGATE_CALL(gime->public.render_line, gime->burstn, TCC1014_LINE_DURATION, gime->pixel_data);
 
-	if (gime->COCO) {
-		gime->row_stride = gime->BPR;
-	} else if (gime->BP) {
+	if (gime->COCO || gime->BP) {
 		gime->row_stride = gime->HVEN ? 256 : gime->BPR;
 	} else {
 		gime->row_stride = gime->HVEN ? 256 : (gime->BPR << (gime->CRES & 1));
