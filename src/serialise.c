@@ -345,8 +345,12 @@ void ser_write_vuint32(struct ser_handle *sh, int tag, uint32_t v) {
 }
 
 void ser_write_string(struct ser_handle *sh, int tag, const char *s) {
-	size_t length = s ? strlen(s) : 0;
-	ser_write(sh, tag, s, length);
+	if (!s) {
+		char dummy = '\0';
+		ser_write(sh, tag, &dummy, 1);
+	} else {
+		ser_write(sh, tag, s, strlen(s));
+	}
 }
 
 void ser_write_sds(struct ser_handle *sh, int tag, const sds s) {
@@ -515,6 +519,10 @@ char *ser_read_string(struct ser_handle *sh) {
 	char *s = xmalloc(sh->length+1);
 	s_read(sh, s, sh->length);
 	s[sh->length] = 0;
+	if (sh->length == 1 && !*s) {
+		free(s);
+		s = NULL;
+	}
 	sh->length = 0;
 	return s;
 }
