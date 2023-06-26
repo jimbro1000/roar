@@ -43,6 +43,8 @@
 #include "xconfig.h"
 #include "xroar.h"
 
+#define CART_CONFIG_SER_MPI_LOAD_SLOT (9)
+
 static const struct ser_struct ser_struct_cart_config[] = {
 	SER_ID_STRUCT_ELEM(1, ser_type_string,   struct cart_config, description),
 	SER_ID_STRUCT_ELEM(2, ser_type_string,   struct cart_config, type),
@@ -51,12 +53,21 @@ static const struct ser_struct ser_struct_cart_config[] = {
 	SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct cart_config, becker_port),
 	SER_ID_STRUCT_ELEM(6, ser_type_int,      struct cart_config, autorun),
 	SER_ID_STRUCT_ELEM(7, ser_type_sds_list, struct cart_config, opts),
+	SER_ID_STRUCT_ELEM(8, ser_type_int,      struct cart_config, mpi.initial_slot),
+	SER_ID_STRUCT_UNHANDLED(CART_CONFIG_SER_MPI_LOAD_SLOT),
 };
+
+static _Bool cart_config_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool cart_config_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data cart_config_ser_struct_data = {
 	.elems = ser_struct_cart_config,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_cart_config),
+	.read_elem = cart_config_read_elem,
+	.write_elem = cart_config_write_elem,
 };
+
+#define CART_CONFIG_SER_MPI_LOAD_SLOT_NAME (1)
 
 #define CART_SER_CART_CONFIG (1)
 
@@ -110,6 +121,7 @@ struct cart_config *cart_config_new(void) {
 	*new = (struct cart_config){0};
 	new->id = next_id;
 	new->autorun = ANY_AUTO;
+	new->mpi.initial_slot = ANY_AUTO;
 	config_list = slist_append(config_list, new);
 	next_id++;
 	return new;
@@ -137,6 +149,60 @@ struct cart_config *cart_config_deserialise(struct ser_handle *sh) {
 	xroar_update_cartridge_menu();
 	free(name);
 	return cc;
+}
+
+static void deserialise_mpi_slot(struct cart_config *cc, struct ser_handle *sh, unsigned slot) {
+	if (cc->mpi.slot_cart_name[slot]) {
+		free(cc->mpi.slot_cart_name[slot]);
+		cc->mpi.slot_cart_name[slot] = NULL;
+	}
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_tag(sh)) > 0) {
+		switch (tag) {
+		case CART_CONFIG_SER_MPI_LOAD_SLOT_NAME:
+			{
+				cc->mpi.slot_cart_name[slot] = ser_read_string(sh);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+}
+
+static _Bool cart_config_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct cart_config *cc = sptr;
+	switch (tag) {
+	case CART_CONFIG_SER_MPI_LOAD_SLOT:
+		{
+			unsigned slot = ser_read_vuint32(sh);
+			if (slot >= 4) {
+				return 0;
+			}
+			deserialise_mpi_slot(cc, sh, slot);
+		}
+		break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+static _Bool cart_config_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct cart_config *cc = sptr;
+	switch (tag) {
+	case CART_CONFIG_SER_MPI_LOAD_SLOT:
+		for (unsigned i = 0; i < 4; i++) {
+			ser_write_open_vuint32(sh, CART_CONFIG_SER_MPI_LOAD_SLOT, i);
+			ser_write_string(sh, CART_CONFIG_SER_MPI_LOAD_SLOT_NAME, cc->mpi.slot_cart_name[i]);
+			ser_write_close_tag(sh);
+		}
+		break;
+	default:
+		return 0;
+	}
+	return 1;
 }
 
 struct cart_config *cart_config_by_id(int id) {
@@ -279,6 +345,15 @@ void cart_config_print_all(FILE *f, _Bool all) {
 		for (struct slist *i2 = cc->opts; i2; i2 = i2->next) {
 			const char *s = i2->data;
 			xroar_cfg_print_string(f, all, "cart-opt", s, NULL);
+		}
+		if (cc->mpi.initial_slot >= 0) {
+			xroar_cfg_print_int(f, all, "mpi-slot", cc->mpi.initial_slot, -1);
+		}
+		for (int i = 0; i < 4; i++) {
+			if (cc->mpi.slot_cart_name[i]) {
+				xroar_cfg_print_indent(f);
+				fprintf(f, "mpi-load-cart %d=%s\n", i, cc->mpi.slot_cart_name[i]);
+			}
 		}
 		xroar_cfg_print_dec_indent();
 		fprintf(f, "\n");

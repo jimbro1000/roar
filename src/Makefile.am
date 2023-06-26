@@ -114,7 +114,7 @@ xroar_SOURCES += \
 	ide.c ide.h \
 	idecart.c idecart.h \
 	mooh.c \
-	mpi.c mpi.h \
+	mpi.c \
 	nx32.c \
 	orch90.c \
 	rsdos.c \

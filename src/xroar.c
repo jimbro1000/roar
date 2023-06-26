@@ -55,7 +55,6 @@
 #include "logging.h"
 #include "machine.h"
 #include "module.h"
-#include "mpi.h"
 #include "part.h"
 #include "path.h"
 #include "printer.h"
@@ -127,6 +126,10 @@ struct private_cfg {
 		char *rom2;
 		int becker;
 		int autorun;
+		struct {
+			int initial_slot;
+			char *slot_cart_name[4];
+		} mpi;
 		struct slist *opts;
 	} cart;
 
@@ -219,6 +222,7 @@ static struct private_cfg private_cfg = {
 	.machine.vdg_type = -1,
 	.cart.becker = ANY_AUTO,
 	.cart.autorun = ANY_AUTO,
+	.cart.mpi.initial_slot = ANY_AUTO,
 	.tape.fast = 1,
 	.tape.pad_auto = 1,
 	.vo.picture = VO_PICTURE_TITLE,
@@ -1131,9 +1135,6 @@ void xroar_shutdown(void) {
 		xroar_machine = NULL;
 	}
 	joystick_shutdown();
-#ifdef WANT_CART_ARCH_DRAGON
-	mpi_shutdown();
-#endif
 	cart_config_remove_all();
 	machine_config_remove_all();
 	xroar_machine_config = NULL;
@@ -2175,6 +2176,16 @@ static void set_cart(const char *name) {
 			cc->autorun = private_cfg.cart.autorun;
 			private_cfg.cart.autorun = ANY_AUTO;
 		}
+		if (private_cfg.cart.mpi.initial_slot != ANY_AUTO) {
+			cc->mpi.initial_slot = private_cfg.cart.mpi.initial_slot;
+			private_cfg.cart.mpi.initial_slot = ANY_AUTO;
+		}
+		for (int i = 0; i < 4; i++) {
+			if (private_cfg.cart.mpi.slot_cart_name[i]) {
+				cc->mpi.slot_cart_name[i] = private_cfg.cart.mpi.slot_cart_name[i];
+				private_cfg.cart.mpi.slot_cart_name[i] = NULL;
+			}
+		}
 		if (private_cfg.cart.opts) {
 			cc->opts = slist_concat(cc->opts, private_cfg.cart.opts);
 			private_cfg.cart.opts = NULL;
@@ -2298,13 +2309,6 @@ static void set_gain(double gain) {
 	private_cfg.ao.volume = -1;
 }
 
-static void cfg_mpi_slot(int slot) {
-	(void)slot;
-#ifdef WANT_CART_ARCH_DRAGON
-	mpi_set_initial(slot);
-#endif
-}
-
 static void cfg_mpi_load_cart(const char *arg) {
 	(void)arg;
 #ifdef WANT_CART_ARCH_DRAGON
@@ -2316,7 +2320,14 @@ static void cfg_mpi_load_cart(const char *arg) {
 		slot = strtol(tmp, NULL, 0);
 		tmp = carg;
 	}
-	mpi_set_cart(slot, tmp);
+	if (slot < 0 || slot > 3) {
+		LOG_WARN("MPI: Invalid slot '%d'\n", slot);
+	} else {
+		if (private_cfg.cart.mpi.slot_cart_name[slot]) {
+			free(private_cfg.cart.mpi.slot_cart_name[slot]);
+		}
+		private_cfg.cart.mpi.slot_cart_name[slot] = xstrdup(tmp);
+	}
 	slot++;
 	free(arg_copy);
 #endif
@@ -2521,7 +2532,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING_LIST_NE("cart-opt", &private_cfg.cart.opts) },
 
 	/* Multi-Pak Interface: */
-	{ XC_CALL_INT("mpi-slot", &cfg_mpi_slot) },
+	{ XC_SET_INT("mpi-slot", &private_cfg.cart.mpi.initial_slot) },
 	{ XC_CALL_STRING("mpi-load-cart", &cfg_mpi_load_cart) },
 
 	/* Becker port: */
@@ -2706,18 +2717,17 @@ static void helptext(void) {
 "    -machine-cart NAME      default cartridge for selected machine\n"
 
 "\n Cartridges:\n"
-"  -cart NAME            create or modify named cartridge profile\n"
-"                        (-cart help for list)\n"
-"    -cart-desc TEXT       cartridge description\n"
-"    -cart-type TYPE       cartridge base type (-cart-type help for list)\n"
-"    -cart-rom NAME        ROM image to load ($C000-)\n"
-"    -cart-rom2 NAME       second ROM image to load ($E000-)\n"
-"    -cart-autorun         autorun cartridge\n"
-"    -cart-becker          enable becker port where supported\n"
-
-"\n Multi-Pak Interface:\n"
-"  -mpi-slot SLOT               initially select slot (0-3)\n"
-"  -mpi-load-cart [SLOT=]NAME   insert cartridge into next or numbered slot\n"
+"  -cart NAME              create or modify named cartridge profile\n"
+"                          (-cart help for list)\n"
+"    -cart-desc TEXT         cartridge description\n"
+"    -cart-type TYPE         cartridge base type (-cart-type help for list)\n"
+"    -cart-rom NAME          ROM image to load ($C000-)\n"
+"    -cart-rom2 NAME         second ROM image to load ($E000-)\n"
+"    -cart-autorun           autorun cartridge\n"
+"    -cart-becker            enable becker port where supported\n"
+"    -mpi-slot N             (MPI) initially select slot (0-3)\n"
+"    -mpi-load-cart [N=]NAME\n"
+"                            (MPI) insert cartridge into next or numbered slot\n"
 
 "\n Becker port:\n"
 "  -becker               prefer becker-enabled DOS (when picked automatically)\n"

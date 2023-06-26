@@ -43,6 +43,12 @@ struct cart_config {
 	char *rom2;
 	_Bool becker_port;
 	int autorun;
+
+	struct {
+		int initial_slot;
+		char *slot_cart_name[4];
+	} mpi;
+
 	struct slist *opts;
 };
 

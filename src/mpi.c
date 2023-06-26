@@ -44,7 +44,6 @@
 #include "cart.h"
 #include "delegate.h"
 #include "logging.h"
-#include "mpi.h"
 #include "part.h"
 #include "serialise.h"
 
@@ -91,11 +90,6 @@ static const struct ser_struct_data mpi_ser_struct_data = {
 /* Protect against chained MPI initialisation */
 
 static _Bool mpi_active = 0;
-
-/* Slot configuration */
-
-static char *slot_cart_name[4];
-static unsigned initial_slot = 0;
 
 /* Handle signals from cartridges */
 static void mpi_set_firq(void *, _Bool);
@@ -172,22 +166,22 @@ static void mpi_initialise(struct part *p, void *options) {
 
 	c->config = cc;
 
-	mpi->is_race = options && (strcmp((char *)options, "mpi-race") == 0);
+	mpi->is_race = options && (strcmp(cc->type, "mpi-race") == 0);
 	mpi->switch_enable = mpi->is_race ? 0 : 1;
 
 	char id[6];
 	for (int i = 0; i < 4; i++) {
 		snprintf(id, sizeof(id), "slot%d", i);
-		if (slot_cart_name[i]) {
-			part_add_component(&c->part, (struct part *)cart_create(slot_cart_name[i]), id);
+		if (cc->mpi.slot_cart_name[i]) {
+			part_add_component(&c->part, (struct part *)cart_create(cc->mpi.slot_cart_name[i]), id);
 		}
 	}
 
-	if (!mpi->is_race) {
-		select_slot(c, (initial_slot << 4) | initial_slot);
-	} else {
-		select_slot(c, 0);
-	}
+	int initial_slot = cc->mpi.initial_slot;
+	if (initial_slot < 0 || initial_slot > 3 || mpi->is_race)
+		initial_slot = 0;
+
+	select_slot(c, (initial_slot << 4) | initial_slot);
 }
 
 static _Bool mpi_finish(struct part *p) {
@@ -219,6 +213,7 @@ static void mpi_free(struct part *p) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mpi_reset(struct cart *c, _Bool hard) {
+	struct cart_config *cc = c->config;
 	struct mpi *mpi = (struct mpi *)c;
 	mpi->firq_state = 0;
 	mpi->nmi_state = 0;
@@ -231,11 +226,11 @@ static void mpi_reset(struct cart *c, _Bool hard) {
 	}
 	mpi->cart.EXTMEM = 0;
 
-	if (!mpi->is_race) {
-		select_slot(c, (initial_slot << 4) | initial_slot);
-	} else {
-		select_slot(c, 0);
-	}
+	int initial_slot = cc->mpi.initial_slot;
+	if (initial_slot < 0 || initial_slot > 3 || mpi->is_race)
+		initial_slot = 0;
+
+	select_slot(c, (initial_slot << 4) | initial_slot);
 }
 
 static void mpi_attach(struct cart *c) {
@@ -429,38 +424,4 @@ static void mpi_set_halt(void *sptr, _Bool value) {
 		mpi->halt_state &= ~halt_bit;
 	}
 	DELEGATE_CALL(mpi->cart.signal_halt, mpi->halt_state);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// MPI global configuration
-
-void mpi_set_initial(int slot) {
-	if (slot < 0 || slot > 3) {
-		LOG_WARN("MPI: Invalid slot '%d'\n", slot);
-		return;
-	}
-	initial_slot = slot;
-}
-
-void mpi_set_cart(int slot, const char *name) {
-	if (slot < 0 || slot > 3) {
-		LOG_WARN("MPI: Invalid slot '%d'\n", slot);
-		return;
-	}
-	if (slot_cart_name[slot]) {
-		free(slot_cart_name[slot]);
-	}
-	slot_cart_name[slot] = xstrdup(name);
-}
-
-// parts management frees attached carts, but for now there's still some
-// housekeeping to do:
-void mpi_shutdown(void) {
-	for (int i = 0; i < 4; i++) {
-		if (slot_cart_name[i]) {
-			free(slot_cart_name[i]);
-			slot_cart_name[i] = NULL;
-		}
-	}
 }

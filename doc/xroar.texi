@@ -839,9 +839,10 @@ Types @samp{mpi}, @samp{mpi-race}.  Built-in cartridge profiles: @samp{mpi},
 machine coco
   machine-cart mpi
 
-mpi-load-cart 0=orch90
-mpi-load-cart 3=rsdos
-mpi-slot 3
+cart mpi
+  mpi-load-cart 0=orch90
+  mpi-load-cart 3=rsdos
+  mpi-slot 3
 @end example
 
 @c
