@@ -160,7 +160,7 @@ static int read_v2_snapshot(const char *filename) {
 		return -1;
 	}
 	char *id = ser_read_string(sh);
-	if (strcmp(id, snapv2_header) != 0) {
+	if (!id || strcmp(id, snapv2_header) != 0) {
 		ser_close(sh);
 		return -1;
 	}
