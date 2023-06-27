@@ -1222,6 +1222,15 @@ void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool invert) {
 	gime->inverted_text = invert;
 }
 
+void tcc1014_notify_mode(struct TCC1014 *gimep) {
+	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
+	if (gime->COCO) {
+		DELEGATE_SAFE_CALL(gime->public.set_active_area, TCC1014_tWHS + TCC1014_tBP + gime->pLB, TCC1014_TOP_BORDER_START + gime->nTB, 512, gime->nAA);
+	} else {
+		DELEGATE_SAFE_CALL(gime->public.set_active_area, TCC1014_tWHS + TCC1014_tBP + gime->pLB, TCC1014_TOP_BORDER_START + gime->nTB, (gime->HRES & 1) ? 640 : 512, gime->nAA);
+	}
+}
+
 static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 	// Render scanline so far before changing modes
 	if (gime->frame == 0 && gime->vstate == tcc1014_vstate_active_area) {

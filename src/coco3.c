@@ -563,6 +563,8 @@ static _Bool coco3_finish(struct part *p) {
 	update_sound_mux_source(mcc3);
 	sound_set_mux_enabled(mcc3->snd, PIA_VALUE_CB2(mcc3->PIA1));
 
+	tcc1014_notify_mode(mcc3->GIME);
+
 	return 1;
 }
 
