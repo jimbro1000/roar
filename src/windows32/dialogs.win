@@ -173,7 +173,7 @@ end table
 
 table
 tr td id=DRIVE1_WE checkbox Write enable
-   td id=DRIVE1_WB checkbox Write back
+   width=84 td id=DRIVE1_WB checkbox Write back
    td id=DRIVE1_EJECT button Eject
    td id=DRIVE1_INSERT button Insert…
 end table
@@ -187,7 +187,7 @@ end table
 
 table
 tr td id=DRIVE2_WE checkbox Write enable
-   td id=DRIVE2_WB checkbox Write back
+   width=84 td id=DRIVE2_WB checkbox Write back
    td id=DRIVE2_EJECT button Eject
    td id=DRIVE2_INSERT button Insert…
 end table
@@ -201,7 +201,7 @@ end table
 
 table
 tr td id=DRIVE3_WE checkbox Write enable
-   td id=DRIVE3_WB checkbox Write back
+   width=84 td id=DRIVE3_WB checkbox Write back
    td id=DRIVE3_EJECT button Eject
    td id=DRIVE3_INSERT button Insert…
 end table
@@ -215,7 +215,7 @@ end table
 
 table
 tr td id=DRIVE4_WE checkbox Write enable
-   td id=DRIVE4_WB checkbox Write back
+   width=84 td id=DRIVE4_WB checkbox Write back
    td id=DRIVE4_EJECT button Eject
    td id=DRIVE4_INSERT button Insert…
 end table
