@@ -225,7 +225,7 @@ static struct private_cfg private_cfg = {
 	.cart.mpi.initial_slot = ANY_AUTO,
 	.tape.fast = 1,
 	.tape.pad_auto = 1,
-	.vo.picture = VO_PICTURE_TITLE,
+	.vo.picture = ANY_AUTO,
 	.vo.ntsc_scaling = 1,
 	.vo.ccr = VO_CMP_CCR_5BIT,
 	.vo.brightness = 52,
@@ -1009,7 +1009,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (private_cfg.tape.ao_rate > 0)
 		tape_set_ao_rate(xroar_tape_interface, private_cfg.tape.ao_rate);
 
-	xroar_set_picture(1, private_cfg.vo.picture);
 	vo_set_ntsc_scaling(xroar_vo_interface, 1, private_cfg.vo.ntsc_scaling);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, private_cfg.vo.brightness);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, private_cfg.vo.contrast);
@@ -1782,6 +1781,14 @@ void xroar_connect_machine(void) {
 	}
 	xroar_set_ccr(1, private_cfg.vo.ccr);
 	xroar_set_tv_input(1, xroar_machine_config->tv_input);
+
+	int old_picture = private_cfg.vo.picture;
+	int picture = old_picture;
+	if (picture == ANY_AUTO) {
+		picture = is_coco3 ? VO_PICTURE_ACTION : VO_PICTURE_TITLE;
+	}
+	xroar_set_picture(1, picture);
+	private_cfg.vo.picture = old_picture;
 }
 
 void xroar_configure_machine(struct machine_config *mc) {
