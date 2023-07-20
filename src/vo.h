@@ -125,6 +125,9 @@ struct vo_interface {
 	// Selected cross-colour renderer
 	int cmp_ccr;    // VO_CMP_CCR_*
 
+	// Current defined picture area
+	int picture;    // VO_PICTURE_*
+
 	// Called by vo_free before freeing the struct to handle
 	// module-specific allocations
 	DELEGATE_T0(void) free;
@@ -254,9 +257,9 @@ void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr);
 
 void vo_set_signal(struct vo_interface *vo, int signal);
 
-inline void vo_set_viewport(struct vo_interface *vo, int w, int h) {
-	DELEGATE_SAFE_CALL(vo->set_viewport, w, h);
-}
+// Set picture area
+
+void vo_set_viewport(struct vo_interface *vo, int picture);
 
 inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool value) {
 	vo_render_set_ntsc_scaling(vo->renderer, notify, value);

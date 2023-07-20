@@ -1527,7 +1527,7 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 }
 
 void xroar_set_picture(_Bool notify, int action) {
-	int picture = private_cfg.vo.picture;
+	int picture = xroar_vo_interface->picture;
 	switch (action) {
 	case XROAR_PREV:
 		picture--;
@@ -1549,31 +1549,7 @@ void xroar_set_picture(_Bool notify, int action) {
 
 	private_cfg.vo.picture = picture;
 
-	int vw, vh;
-	switch (picture) {
-	case VO_PICTURE_ZOOMED:
-		vw = 512;
-		vh = 192;
-		break;
-
-	case VO_PICTURE_TITLE:
-	default:
-		vw = 640;
-		vh = 240;
-		break;
-
-	case VO_PICTURE_ACTION:
-		vw = 720;
-		vh = 270;
-		break;
-
-	case VO_PICTURE_UNDERSCAN:
-		vw = 736;
-		vh = 276;
-		break;
-	}
-
-	vo_set_viewport(xroar_vo_interface, vw, vh);
+	vo_set_viewport(xroar_vo_interface, picture);
 
 	if (notify && xroar_ui_interface) {
 		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_picture, picture, NULL);

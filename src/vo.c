@@ -244,7 +244,35 @@ void vo_set_signal(struct vo_interface *vo, int signal) {
 	update_render_parameters(vo);
 }
 
-extern inline void vo_set_viewport(struct vo_interface *vo, int w, int h);
+void vo_set_viewport(struct vo_interface *vo, int picture) {
+	int vw, vh;
+	switch (picture) {
+	case VO_PICTURE_ZOOMED:
+		vw = 512;
+		vh = 192;
+		break;
+
+	case VO_PICTURE_TITLE:
+	default:
+		vw = 640;
+		vh = 240;
+		break;
+
+	case VO_PICTURE_ACTION:
+		vw = 720;
+		vh = 270;
+		break;
+
+	case VO_PICTURE_UNDERSCAN:
+		vw = 736;
+		vh = 276;
+		break;
+	}
+
+	DELEGATE_SAFE_CALL(vo->set_viewport, vw, vh);
+	vo->picture = picture;
+}
+
 extern inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool value);
 
 // Select cross-colour renderer
