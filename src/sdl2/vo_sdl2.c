@@ -358,14 +358,11 @@ void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) 
 	struct vo_interface *vo = ui->vo_interface;
 	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 
-	if (w != vosdl->window_area.w || h != vosdl->window_area.h) {
-		if (!vo->is_fullscreen) {
-			vosdl->window_area.w = w;
-			vosdl->window_area.h = h;
-		}
-		update_viewport(vosdl);
+	if (!vo->is_fullscreen) {
+		vosdl->window_area.w = w;
+		vosdl->window_area.h = h;
 	}
-
+	update_viewport(vosdl);
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
