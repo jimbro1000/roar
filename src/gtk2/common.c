@@ -116,6 +116,8 @@ gboolean gtk2_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpo
 static void clipboard_text_received(GtkClipboard *clipboard, const gchar *text, gpointer data) {
 	(void)clipboard;
 	(void)data;
+	if (!text)
+		return;
 	char *ntext = xstrdup(text);
 	if (!ntext)
 		return;
