@@ -346,9 +346,8 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 		int new_w = multiple * vp_w;
 		int new_h = multiple * vp_h * 2;
 		SDL_SetWindowSize(global_uisdl2->vo_window, new_w, new_h);
-	} else {
-		update_viewport(vosdl);
 	}
+	update_viewport(vosdl);
 }
 
 static void notify_frame_rate(void *sptr, _Bool is_60hz) {
