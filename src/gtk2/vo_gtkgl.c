@@ -175,6 +175,10 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	int mw = vr->viewport.w;
 	int mh = vr->viewport.h * 2;
 
+	if (vr->is_60hz) {
+		mh = (mh * 6) / 5;
+	}
+
 	if (mw > 0 && mh > 0) {
 		if ((vogtkgl->window_area.w % mw) == 0 &&
 		    (vogtkgl->window_area.h % mh) == 0) {
