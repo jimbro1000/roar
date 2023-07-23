@@ -168,6 +168,7 @@ static void *new(void *sptr) {
 			vosdl->window_area.w = geometry.w;
 		if (geometry.flags & VO_GEOMETRY_H)
 			vosdl->window_area.h = geometry.h;
+		global_uisdl2->user_specified_geometry = 1;
 	}
 
 	// Create window, setting fullscreen hint if appropriate
@@ -311,12 +312,8 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 
 	_Bool is_exact_multiple = 0;
 	int multiple = 1;
-	int mw = vr->viewport.w;
-	int mh = vr->viewport.h * 2;
-
-	if (vr->is_60hz) {
-		mh = (mh * 6) / 5;
-	}
+	int mw = global_uisdl2->viewport.w;
+	int mh = global_uisdl2->viewport.h * 2;
 
 	if (!vo->is_fullscreen && mw > 0 && mh > 0) {
 		if ((vosdl->window_area.w % mw) == 0 &&
@@ -342,7 +339,7 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	global_uisdl2->viewport.w = vp_w;
 	global_uisdl2->viewport.h = vp_h;
 
-	if (is_exact_multiple) {
+	if (is_exact_multiple && !global_uisdl2->user_specified_geometry) {
 		int new_w = multiple * vp_w;
 		int new_h = multiple * vp_h * 2;
 		SDL_SetWindowSize(global_uisdl2->vo_window, new_w, new_h);

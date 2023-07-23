@@ -42,6 +42,8 @@ struct ui_sdl2_interface {
 	struct vo_draw_area draw_area;
 	// Viewport size not modified by 60Hz scaling
 	struct vo_viewport viewport;
+	// User-specified geometry inhibits auto-resize
+	_Bool user_specified_geometry;
 
 	// Keyboard state
 	struct {

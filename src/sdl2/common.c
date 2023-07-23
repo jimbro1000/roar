@@ -249,10 +249,14 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
+	int ww, wh;
+	SDL_GetWindowSize(uisdl2->vo_window, &ww, &wh);
+
 	int qw = uisdl2->viewport.w / 4;
 	int qh = uisdl2->viewport.h / 2;
-	int xscale = uisdl2->draw_area.w / qw;
-	int yscale = uisdl2->draw_area.h / qh;
+
+	int xscale = ww / qw;
+	int yscale = wh / qh;
 	int scale;
 	if (xscale < yscale)
 		scale = yscale;
@@ -262,14 +266,19 @@ void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
 		scale = xscale + 1;
 	if (scale < 1)
 		scale = 1;
+	uisdl2->user_specified_geometry = 0;
 	SDL_SetWindowSize(uisdl2->vo_window, qw * scale, qh * scale);
 }
 
 void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
+	int ww, wh;
+	SDL_GetWindowSize(uisdl2->vo_window, &ww, &wh);
+
 	int qw = uisdl2->viewport.w / 4;
 	int qh = uisdl2->viewport.h / 2;
-	int xscale = uisdl2->draw_area.w / qw;
-	int yscale = uisdl2->draw_area.h / qh;
+
+	int xscale = ww / qw;
+	int yscale = wh / qh;
 	int scale;
 	if (xscale < yscale)
 		scale = xscale;
@@ -279,5 +288,6 @@ void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
 		scale = xscale - 1;
 	if (scale < 1)
 		scale = 1;
+	uisdl2->user_specified_geometry = 0;
 	SDL_SetWindowSize(uisdl2->vo_window, qw * scale, qh * scale);
 }

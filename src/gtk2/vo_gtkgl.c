@@ -203,7 +203,7 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	mw = vp_w;
 	mh = vp_h * 2;
 
-	if (is_exact_multiple) {
+	if (is_exact_multiple && !global_uigtk2->user_specified_geometry) {
 		vogtkgl->window_area.w = multiple * mw;
 		vogtkgl->window_area.h = multiple * mh;
 		if (!vo->is_fullscreen) {

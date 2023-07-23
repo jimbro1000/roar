@@ -152,8 +152,8 @@ static void do_hard_reset(GtkEntry *entry, gpointer user_data) {
 }
 
 static void zoom_1_1(GtkEntry *entry, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)entry;
-	(void)user_data;
 	if (!xroar_vo_interface)
 		return;
 
@@ -162,12 +162,13 @@ static void zoom_1_1(GtkEntry *entry, gpointer user_data) {
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
 
+	uigtk2->user_specified_geometry = 0;
 	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * 2, qh * 2);
 }
 
 static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)entry;
-	(void)user_data;
 	if (!xroar_vo_interface)
 		return;
 
@@ -176,6 +177,7 @@ static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
 
+	uigtk2->user_specified_geometry = 0;
 	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * 4, qh * 4);
 }
 
@@ -190,6 +192,10 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
 
+	if (vr->is_60hz) {
+		qh = (qh * 6) / 5;
+	}
+
 	int xscale = uigtk2->picture_area.w / qw;
 	int yscale = uigtk2->picture_area.h / qh;
 	int scale;
@@ -201,6 +207,7 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 		scale = xscale + 1;
 	if (scale < 1)
 		scale = 1;
+	uigtk2->user_specified_geometry = 0;
 	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * scale, qh * scale);
 }
 
@@ -215,6 +222,10 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
 
+	if (vr->is_60hz) {
+		qh = (qh * 6) / 5;
+	}
+
 	int xscale = uigtk2->picture_area.w / qw;
 	int yscale = uigtk2->picture_area.h / qh;
 	int scale = 1;
@@ -226,6 +237,7 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 		scale = xscale - 1;
 	if (scale < 1)
 		scale = 1;
+	uigtk2->user_specified_geometry = 0;
 	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * scale, qh * scale);
 }
 
@@ -591,6 +603,7 @@ static void *ui_gtk2_new(void *cfg) {
 	/* Parse initial geometry */
 	if (ui_cfg->vo_cfg.geometry) {
 		gtk_window_parse_geometry(GTK_WINDOW(uigtk2->top_window), ui_cfg->vo_cfg.geometry);
+		uigtk2->user_specified_geometry = 1;
 	}
 
 	gtk_builder_connect_signals(builder, NULL);
