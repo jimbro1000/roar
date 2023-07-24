@@ -43,6 +43,7 @@ xroar_SOURCES = \
 	path.c path.h \
 	printer.c printer.h \
 	romlist.c romlist.h \
+	screenshot.c screenshot.h \
 	serialise.c serialise.h \
 	snapshot.c snapshot.h \
 	sound.c sound.h \
