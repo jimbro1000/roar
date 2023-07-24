@@ -202,11 +202,6 @@ EXTRA_xroar_DEPENDENCIES = \
 endif
 EXTRA_DIST += wasm/exported_functions
 
-if ZLIB
-xroar_CFLAGS += $(ZLIB_CFLAGS)
-xroar_LDADD += $(ZLIB_LIBS)
-endif
-
 # Common OpenGL support
 
 if OPENGL
@@ -369,6 +364,17 @@ xroar_CFLAGS += $(SNDFILE_CFLAGS)
 xroar_LDADD += $(SNDFILE_LIBS)
 xroar_SOURCES += \
 	tape_sndfile.c
+endif
+
+# libpng support
+if PNG
+xroar_CFLAGS += $(PNG_CFLAGS)
+xroar_LDADD += $(PNG_LIBS)
+endif
+
+if ZLIB
+xroar_CFLAGS += $(ZLIB_CFLAGS)
+xroar_LDADD += $(ZLIB_LIBS)
 endif
 
 # Linux joysticks

@@ -132,6 +132,9 @@ AC_ARG_ENABLE([trace],
 AC_ARG_WITH([pthreads],
 	AS_HELP_STRING([--without-pthreads], [don't use POSIX threads]) )
 
+AC_ARG_WITH([libpng],
+	AS_HELP_STRING([--without-libpng], [don't use libpng]) )
+
 AC_ARG_WITH([zlib],
 	AS_HELP_STRING([--without-zlib], [don't use zlib]) )
 
@@ -290,6 +293,35 @@ int main(int argc, char **argv) { (void)argc; (void)argv; (void)crc32(0L, NULL, 
 
 AM_CONDITIONAL([ZLIB], [test -n "$have_zlib"])
 AM_COND_IF([ZLIB], [AC_DEFINE([HAVE_ZLIB], 1, [Have zlib])])
+
+### libpng
+
+AS_IF([test "x$with_libpng" != "xno"], [
+		AC_CHECK_LIB([png], [png_access_version_number], [PNG_LIBS="-lpng"])
+		AS_IF([test -z "$PNG_LIBS"], [
+			PKG_CHECK_MODULES([PNG], [libpng], :, :)
+			]) ])
+
+unset have_libpng
+AS_IF([test -n "$PNG_LIBS"], [
+		OLD_CFLAGS="$CFLAGS"
+		OLD_LIBS="$LIBS"
+		CFLAGS="$CFLAGS $PNG_CFLAGS $ZLIB_CFLAGS"
+		LIBS="$LIBS $PNG_LIBS $ZLIB_LIBS"
+		AC_MSG_CHECKING([if libpng is usable])
+		AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <png.h>
+int main(int argc, char **argv) { (void)argc; (void)argv; png_uint_32 libpng_vn = png_access_version_number(); return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			have_libpng=1
+			], [AC_MSG_RESULT([no])] )
+		CFLAGS="$OLD_CFLAGS"
+		LIBS="$OLD_LIBS"
+		])
+
+AM_CONDITIONAL([PNG], [test -n "$have_libpng"])
+AM_COND_IF([PNG], [AC_DEFINE([HAVE_PNG], 1, [Have libpng])])
 
 ### X11
 
