@@ -171,6 +171,11 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 
 	// Video
 
+	case ui_tag_fullscreen:
+		EM_ASM_({ ui_set_fullscreen($0); } ,value);
+		xroar_vo_interface->is_fullscreen = value;
+		break;
+
 	case ui_tag_ccr:
 		EM_ASM_({ ui_update_ccr($0); }, value);
 		break;

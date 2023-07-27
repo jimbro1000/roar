@@ -308,7 +308,6 @@ static void update_viewport(struct vo_sdl_interface *vosdl) {
 static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	struct vo_sdl_interface *vosdl = sptr;
 	struct vo_interface *vo = &vosdl->public;
-	struct vo_render *vr = vo->renderer;
 
 	_Bool is_exact_multiple = 0;
 	int multiple = 1;
@@ -358,10 +357,8 @@ void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) 
 	struct vo_interface *vo = ui->vo_interface;
 	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 
-	if (!vo->is_fullscreen) {
-		vosdl->window_area.w = w;
-		vosdl->window_area.h = h;
-	}
+	vosdl->window_area.w = w;
+	vosdl->window_area.h = h;
 	update_viewport(vosdl);
 }
 
