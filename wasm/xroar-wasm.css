@@ -13,15 +13,64 @@ input[type="file"] { display: none; }
 
 /* Make buttons look a bit more like Firefox's default drop-downs. */
 
-.button {
+.button,select {
 	display: inline-block;
 	padding: 4px 10px;
 	border-radius: 3px;
+	border: 1px solid #aaaaaa;
 	background-color: #eeeeee;
 	cursor: pointer;
 	font: caption;
+	font-size: 0.8rem;
 	margin-top: 1px;
 	margin-bottom: 1px;
 }
-.button:hover { background-color: #ffffff; }
+.button:hover,select:hover { background-color: #ffffff; }
 
+/* Tables with headers on the left */
+
+table.vheader th {
+	font-weight: normal;
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* Tabs.
+ *
+ * https://simonsc.medium.com/tabs-with-css-and-no-javascript-d829018e219a
+ */
+
+.tabs-container {
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.tabs-container > h3,p,table {
+	margin-top: 15px;
+}
+
+.tabs-container > input[type=radio] {
+	display: none;
+}
+
+.tabs-container > input[type=radio]:checked + .tab-label {
+	border: 2px solid black;
+	border-bottom: 0;
+	border-radius: 3px 3px 0 0;
+}
+
+.tabs-container > input[type=radio]:not(:checked) + .tab-label + .tab-content {
+	display: none;
+}
+
+.tabs-container .tab-label {
+	padding: 5px 5px;
+	border-top: 2px solid black;
+	border: 2px solid grey;
+}
+
+.tabs-container .tab-content {
+	order: 99;
+	width: 100%;
+	display: block;
+}

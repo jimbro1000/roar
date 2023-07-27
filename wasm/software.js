@@ -38,7 +38,7 @@ const software = [
 		'entries': [
 
 			{
-				'description': 'Dunjunz',
+				'name': 'Dunjunz',
 				'author': 'Ciaran Anscomb',
 				'machine': 'dragon64',
 				'autorun': 'dunjunz.cas',
@@ -54,7 +54,7 @@ const software = [
 			//     'kjoy0' (cursors+alt) or 'mjoy0' (mouse+button)
 
 			{
-				'description': 'NitrOS-9',
+				'name': 'NitrOS-9',
 				'machine': 'dragon64',
 				'cart': 'dragondos',
 				'disks': [ 'NOS9_6809_L1_80d.dsk' ],
