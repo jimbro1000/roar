@@ -165,6 +165,9 @@ static void TNAME(do_render_palette)(struct TNAME(vo_render) *vrt, unsigned npix
 
 static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct TNAME(vo_render) *vrt = sptr;
+	struct vo_render *vr = &vrt->generic;
+	if (!burstn && !vr->cmp.colour_killer)
+		burstn = 1;
 	VR_PTYPE *palette = burstn ? vrt->cmp.palette : vrt->cmp.mono_palette;
 	TNAME(do_render_palette)(vrt, npixels, palette, data);
 }
