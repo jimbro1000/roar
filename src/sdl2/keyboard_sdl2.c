@@ -437,10 +437,10 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 			return;
 		}
 		break;
+#ifndef HAVE_WASM
 	case SDLK_F11:
 		xroar_set_fullscreen(1, XROAR_NEXT);
 		return;
-#ifndef HAVE_WASM
 	case SDLK_F12:
 		if (shift) {
 			xroar_set_ratelimit_latch(1, XROAR_NEXT);

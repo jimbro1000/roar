@@ -180,6 +180,10 @@ static void *new(void *sptr) {
 	SDL_SetWindowMinimumSize(uisdl2->vo_window, 160, 120);
 	uisdl2->vo_window_id = SDL_GetWindowID(uisdl2->vo_window);
 
+#ifdef HAVE_WASM
+	SDL_SetEventFilter(filter_sdl_events, uisdl2);
+#endif
+
 	// Add menubar if the created window is not fullscreen
 	vo->is_fullscreen = SDL_GetWindowFlags(uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
 	vo->show_menubar = !vo->is_fullscreen;

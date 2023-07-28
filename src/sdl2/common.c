@@ -111,6 +111,22 @@ void sdl_update_draw_area(struct ui_sdl2_interface *uisdl2, int w, int h) {
 	}
 }
 
+#ifdef HAVE_WASM
+// This currently only filters out certain keypresses from being handled by SDL
+// in the WASM build.  It allows the normal browser action to occur for these
+// keys.
+
+int filter_sdl_events(void *userdata, SDL_Event *event) {
+	struct ui_sdl2_interface *uisdl2 = userdata;
+	(void)uisdl2;
+
+	if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_F11) {
+		return 0;
+	}
+	return 1;
+}
+#endif
+
 void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 	SDL_Event event;
 	while (SDL_PollEvent(&event) == 1) {
