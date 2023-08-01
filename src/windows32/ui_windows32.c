@@ -126,6 +126,8 @@ static void setup_file_menu(void) {
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save Snapshot...");
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_screenshot), "Screenshot to PNG...");
+	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_quit), "&Quit");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)file_menu, "&File");
@@ -328,6 +330,9 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 			break;
 		case ui_action_file_save_snapshot:
 			xroar_save_snapshot();
+			break;
+		case ui_action_file_screenshot:
+			xroar_screenshot();
 			break;
 		case ui_action_tape_input:
 			xroar_insert_input_tape();

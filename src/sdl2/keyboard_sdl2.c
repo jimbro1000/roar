@@ -274,7 +274,11 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		return;
 #ifndef HAVE_WASM
 	case 's':
-		xroar_save_snapshot();
+		if (shift) {
+			xroar_screenshot();
+		} else {
+			xroar_save_snapshot();
+		}
 		return;
 	case 'w':
 		xroar_insert_output_tape();

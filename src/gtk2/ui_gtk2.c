@@ -133,6 +133,14 @@ static void save_snapshot(GtkEntry *entry, gpointer user_data) {
 	g_idle_add(run_cpu, uigtk2->top_window);
 }
 
+static void save_screenshot(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	g_idle_remove_by_data(uigtk2->top_window);
+	xroar_screenshot();
+	g_idle_add(run_cpu, uigtk2->top_window);
+}
+
 static void do_quit(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	(void)user_data;
@@ -389,6 +397,9 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "SaveSnapshotAction", .stock_id = GTK_STOCK_SAVE_AS, .label = "_Save Snapshot",
 	  .accelerator = "<control>S",
 	  .callback = G_CALLBACK(save_snapshot) },
+	{ .name = "ScreenshotAction", .label = "Screenshot to PNG",
+	  .accelerator = "<control><shift>S",
+	  .callback = G_CALLBACK(save_screenshot) },
 	{ .name = "QuitAction", .stock_id = GTK_STOCK_QUIT, .label = "_Quit",
 	  .accelerator = "<control>Q",
 	  .tooltip = "Quit",

@@ -12,6 +12,8 @@
       <separator/>
       <menuitem name='SaveSnapshot' action='SaveSnapshotAction'/>
       <separator/>
+      <menuitem name='Screenshot' action='ScreenshotAction'/>
+      <separator/>
       <menuitem name='Quit' action='QuitAction'/>
     </menu>
     <menu name='ViewMenu' action='ViewMenuAction'>
