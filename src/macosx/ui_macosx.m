@@ -95,6 +95,7 @@ enum {
 	TAG_FILE_LOAD,
 	TAG_FILE_RUN,
 	TAG_FILE_SAVE_SNAPSHOT,
+	TAG_FILE_SCREENSHOT,
 	TAG_TAPE_INPUT,
 	TAG_TAPE_OUTPUT,
 	TAG_TAPE_INPUT_REWIND,
@@ -243,6 +244,9 @@ int cocoa_super_all_keys = 0;
 			break;
 		case TAG_FILE_SAVE_SNAPSHOT:
 			xroar_save_snapshot();
+			break;
+		case TAG_FILE_SCREENSHOT:
+			xroar_screenshot();
 			break;
 		case TAG_TAPE_INPUT:
 			xroar_insert_input_tape();
@@ -668,6 +672,17 @@ static void setup_file_menu(void) {
 	[file_menu addItem:item];
 	[item release];
 	[tmp release];
+
+#ifdef HAVE_PNG
+	[file_menu addItem:[NSMenuItem separatorItem]];
+
+	tmp = [NSString stringWithFormat:@"Screenshot to PNG%C", 0x2026];
+	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_SIMPLE_ACTION | TAG_FILE_SCREENSHOT)];
+	[file_menu addItem:item];
+	[item release];
+	[tmp release];
+#endif
 
 	file_menu_item = [[NSMenuItem alloc] initWithTitle:@"File" action:nil keyEquivalent:@""];
 	[file_menu_item setSubmenu:file_menu];
