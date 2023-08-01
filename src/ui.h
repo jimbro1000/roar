@@ -106,6 +106,7 @@ enum ui_action {
 	ui_action_file_load,
 	ui_action_file_run,
 	ui_action_file_save_snapshot,
+	ui_action_file_screenshot,
 	ui_action_tape_input,
 	ui_action_tape_output,
 	ui_action_tape_play_pause,
