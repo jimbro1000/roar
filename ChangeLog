@@ -6,6 +6,7 @@
  * Faster ROM intercept based printing on CoCo and MC-10
  * GIME: respect X offset and HVEN in COCO mode
  * MPI slot config moved from global to per-cart, included in -config-print
+ * Add screenshot to PNG from menu or Control+Shift+S
 
 Version 1.4.2, Tue 16 Jun 2023
 
