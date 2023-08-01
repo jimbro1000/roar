@@ -47,6 +47,7 @@
 #define TNAME(f) TNAME_(f, VR_SUFFIX)
 
 typedef VR_PTYPE (*TNAME(map_rgb_func))(struct vo_render *, int, int, int);
+typedef int_xyz (*TNAME(unmap_rgb_func))(struct vo_render *, VR_PTYPE);
 
 struct TNAME(vo_render) {
 	struct vo_render generic;
@@ -63,6 +64,7 @@ struct TNAME(vo_render) {
 	} rgb;
 
 	TNAME(map_rgb_func) map_rgb;
+	TNAME(unmap_rgb_func) unmap_rgb;
 };
 
 static void TNAME(set_palette_entry)(void *sptr, int palette, int index,
@@ -77,22 +79,25 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn,
 static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn,
 				   unsigned npixels, uint8_t const *data);
 static void TNAME(next_line)(struct vo_render *vr, unsigned npixels);
+static void TNAME(line_to_rgb)(struct vo_render *vr, int lno, uint8_t *dest);
 
 // Create an instance of the renderer for this basic type using the specified
 // colour mapping function.
 
-struct vo_render *TNAME(renderer_new)(TNAME(map_rgb_func) map_rgb) {
+struct vo_render *TNAME(renderer_new)(TNAME(map_rgb_func) map_rgb, TNAME(unmap_rgb_func) unmap_rgb) {
 	struct TNAME(vo_render) *vrt = xmalloc(sizeof(*vrt));
 	*vrt = (struct TNAME(vo_render)){0};
 	struct vo_render *vr = &vrt->generic;
 
 	vrt->map_rgb = map_rgb;
+	vrt->unmap_rgb = unmap_rgb;
 	vr->set_palette_entry = TNAME(set_palette_entry);
 	vr->render_cmp_palette = TNAME(render_cmp_palette);
 	vr->render_rgb_palette = TNAME(render_rgb_palette);
 	vr->render_cmp_2bit = TNAME(render_cmp_2bit);
 	vr->render_cmp_5bit = TNAME(render_cmp_5bit);
 	vr->next_line = TNAME(next_line);
+	vr->line_to_rgb = TNAME(line_to_rgb);
 
 	return vr;
 }
@@ -299,4 +304,16 @@ static void TNAME(next_line)(struct vo_render *vr, unsigned npixels) {
 	vr->pixel = (VR_PTYPE *)vr->pixel + vr->buffer_pitch;
 	vr->t = (vr->t + npixels) % vr->tmax;
 	vr->scanline++;
+}
+
+static void TNAME(line_to_rgb)(struct vo_render *vr, int lno, uint8_t *dest) {
+	struct TNAME(vo_render) *vrt = (struct TNAME(vo_render) *)vr;
+	VR_PTYPE *src = (VR_PTYPE *)vr->buffer + (lno * vr->buffer_pitch);
+	for (int i = vr->viewport.w; i; i--) {
+		int_xyz rgb = vrt->unmap_rgb(vr, *(src++));
+		*(dest) = rgb.x;
+		*(dest+1) = rgb.y;
+		*(dest+2) = rgb.z;
+		dest += 3;
+	}
 }

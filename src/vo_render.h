@@ -372,6 +372,9 @@ struct vo_render {
 	// Advance to next line
 	//     unsigned npixels;  // elapsed time in pixels
 	void (*next_line)(struct vo_render *, unsigned);
+
+	// Convert line into RGB (uint8s in that order) for screenshots
+	void (*line_to_rgb)(struct vo_render *, int, uint8_t *);
 };
 
 // Create a new renderer for the specified pixel format
