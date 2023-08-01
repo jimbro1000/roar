@@ -179,9 +179,25 @@ directory''):
 @multitable {Unix/Linux} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
 @headitem Platform @tab ROM path
 @item Unix/Linux @tab @file{~/.xroar/roms:@emph{prefix}/share/xroar/roms}
-@item Windows @tab @file{:~/Documents/XRoar/roms:~/AppData/Local/XRoar/roms:}@*@file{~/AppData/Roaming/XRoar/roms}
+@item Windows @tab @file{:~\AppData\Local\XRoar\roms:~\Documents\XRoar\roms:}@*@file{~\AppData\Roaming\XRoar\roms}
 @item Mac OS X+ @tab @file{~/Library/XRoar/roms:@emph{prefix}/share/xroar/roms}
 @end multitable
+
+A leading tilde character (@samp{~}) indicates the user's home directory: the
+@env{HOME} environment variable on Unix systems, or @env{%USERPROFILE%} on
+Windows.  @emph{prefix} is the installation prefix, which is usually
+@file{/usr/local}.
+
+Note the empty first path in the Windows default (nothing before the first
+@samp{:}) indicates the ``current working directory'' (i.e. you can put
+ROM image files into the directory from which you run XRoar).
+
+Under Windows, your ``home directory'' is usually obvious, and represented by
+the @env{%USERPROFILE%} environment variable.  The best place to store your ROM
+images if you don't want to have to move them around each time you upgrade is
+under @file{@env{%USERPROFILE%}\AppData\Local\roms}.  I am informed that
+default installs of Windows may move the other directories in the path, but
+does not transparently redirect accesses to files within them.
 
 Firmware ROM image files should have a @file{.rom} extension, and be headerless
 (so their file size will be an exact power of two bytes).  For most use cases,
@@ -384,18 +400,25 @@ for in a list of directories.  You can override this search path with the
 @multitable {Mac OS X+.} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
 @headitem Platform @tab Default @env{XROAR_CONF_PATH}
 @item Unix/Linux @tab @file{~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar}
-@item Mac OS X+ @tab @file{~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar}
 @item Windows @tab @file{:~\Documents\XRoar:~\AppData\Local\XRoar:~\AppData\Roaming\XRoar}
+@item Mac OS X+ @tab @file{~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar}
 @end multitable
 
-Note the leading @samp{:} in the Windows default indicates an empty entry,
-meaning it will look in the current working directory first (i.e. you can put
-@file{xroar.conf} into the directory from which you run XRoar).
-
 A leading tilde character (@samp{~}) indicates the user's home directory: the
-@env{HOME} environment variable on Unix systems, or @env{USERPROFILE} on
+@env{HOME} environment variable on Unix systems, or @env{%USERPROFILE%} on
 Windows.  @emph{prefix} is the installation prefix, which is usually
 @file{/usr/local}.
+
+Note the empty first path in the Windows default (nothing before the first
+@samp{:}) indicates the ``current working directory'' (i.e. you can put
+@file{xroar.conf} into the directory from which you run XRoar).
+
+Under Windows, your ``home directory'' is usually obvious, and represented by
+the @env{%USERPROFILE%} environment variable.  The best place to store your
+configuration file if you don't want to have to move it around each time you
+upgrade is as @file{@env{%USERPROFILE%}\AppData\Local\xroar.conf}.  I am
+informed that default installs of Windows may move the other directories in the
+path, but does not transparently redirect accesses to files within them.
 
 To bypass the search path and start XRoar using a specific configuration file,
 pass @option{-c @var{file}} as the very first option to XRoar.
@@ -1342,6 +1365,15 @@ snapshot format is deprecated, but can still be read for now.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+@node Screenshots
+@section Screenshots
+
+XRoar can save a screenshot in PNG format.  Press
+@kbd{@key{CTRL}+@kbd{SHIFT}+S} or select @clicksequence{File @click{}
+Screenshot to PNG}.
+
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 @node Binary files
 @section Binary files
 
@@ -1833,7 +1865,8 @@ named @file{~/Library/XRoar/roms/} (not the system directory,
 
 The Mac OS X+ build provides a menu for access to certain features, and often
 accepts the more familiar @kbd{@key{Command}+@var{key}} in place of the
-@kbd{@key{CTRL}+@var{key}} shortcuts listed in this manual.
+@kbd{@key{CTRL}+@var{key}} shortcuts listed in this manual.  It does not
+provide control dialog boxes.
 
 @c
 
@@ -1844,17 +1877,19 @@ Download and unzip the appropriate @file{.zip} distribution for your system.
 
 The easiest way forward is to simply put ROM images into the directory created
 when you unzip the distribution, and then run the @file{.exe} straight from
-there.  You can also put any configuration file (@file{xroar.conf}) here.
+there, or see @ref{Prerequisites} for information on keeping them in a location
+that should work after installing new versions.
 
-However, if you want to avoid having to move files around each time you
-upgrade, you can create @file{Documents/XRoar} to contain your configuration
-file, and a subdirectory of that, @file{Documents/XRoar/roms} for ROM images.
+You can also put any configuration file (@file{xroar.conf}) in the same
+directory.  Again, this can also be placed in a common location.  @xref{The
+configuration file}.
 
 Note when troubleshooting that the logging from the Windows binary is probably
 only going to be visible if you run it with the @option{-C} option (must be the
 first option) to allocate a console.
 
-The Windows build provides menu-based access to certain features.
+The Windows build provides a reasonably full user-interface, including menus
+and control dialogs.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1873,7 +1908,7 @@ you have their development files installed.  If you're using Debian, this can
 
 @example
 $ sudo apt install build-essential libsndfile1-dev libgtk2.0-dev \
-        libgtkglext1-dev libasound2-dev
+        libgtkglext1-dev libasound2-dev libpng-dev
 @end example
 
 Under Mac OS X+, first be sure to install Apple's
@@ -1990,6 +2025,7 @@ A summary of commonly available keyboard shortcuts.
 @item @kbd{@key{CTRL}+R} @tab Soft reset emulated machine.
 @item @kbd{@key{CTRL}+@key{SHIFT}+R} @tab Hard reset emulated machine.
 @item @kbd{@key{CTRL}+S} @tab Save a snapshot.
+@item @kbd{@key{CTRL}+@key{SHIFT}+S} @tab Write screenshot as PNG.
 @item @kbd{@key{CTRL}+T} @tab Open the tape control tool (GTK+ & Windows only).
 @item @kbd{@key{CTRL}+V} @tab Toggle trace mode.
 @item @kbd{@key{CTRL}+@key{SHIFT}+V} @tab Open TV controls window (GTK+ & Windows only).
