@@ -225,6 +225,7 @@ void xroar_eject_output_tape(void);
 void xroar_set_tape_playing(_Bool notify, _Bool play);
 void xroar_hard_reset(void);
 void xroar_soft_reset(void);
+void xroar_screenshot(void);
 
 /* Helper functions for config printing */
 void xroar_cfg_print_inc_indent(void);

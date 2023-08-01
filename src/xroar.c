@@ -59,6 +59,7 @@
 #include "path.h"
 #include "printer.h"
 #include "romlist.h"
+#include "screenshot.h"
 #include "snapshot.h"
 #include "sound.h"
 #include "tape.h"
@@ -623,6 +624,7 @@ static char const * const xroar_disk_exts[] = { "DMK", "JVC", "OS9", "VDK", "DSK
 static char const * const xroar_tape_exts[] = { "CAS", "C10", "K7", NULL };
 static char const * const xroar_snap_exts[] = { "SNA", NULL };
 /* static char const * const xroar_cart_exts[] = { "ROM", NULL }; */
+static char const * const xroar_screenshot_exts[] = { "PNG", NULL };
 
 static struct {
 	const char *ext;
@@ -1954,6 +1956,23 @@ void xroar_soft_reset(void) {
 
 void xroar_hard_reset(void) {
 	xroar_machine->reset(xroar_machine, RESET_HARD);
+}
+
+void xroar_screenshot(void) {
+#ifdef HAVE_PNG
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_screenshot_exts);
+	if (!filename)
+		return;
+
+	int r = screenshot_write_png(filename, xroar_vo_interface);
+	if (r != 0) {
+		if (r == -1) {
+			perror("screenshot");
+		} else {
+			LOG_WARN("screenshot: error writing file\n");
+		}
+	}
+#endif
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
