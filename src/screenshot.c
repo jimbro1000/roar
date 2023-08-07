@@ -77,6 +77,14 @@ int screenshot_write_png(const char *filename, struct vo_interface *vo) {
 	// set up and write header
 	png_init_io(png_ptr, f);
 	png_set_IHDR(png_ptr, info_ptr, width, height * 2, sample_depth, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_uint_32 res_x = 1;
+	png_uint_32 res_y = 1;
+	int unit_type = PNG_RESOLUTION_UNKNOWN;
+	if (vo->renderer->is_60hz) {
+		res_x = 6;
+		res_y = 5;
+	}
+	png_set_pHYs(png_ptr, info_ptr, res_x, res_y, unit_type);
 	png_write_info(png_ptr, info_ptr);
 
 	// write image data
