@@ -624,7 +624,9 @@ static char const * const xroar_disk_exts[] = { "DMK", "JVC", "OS9", "VDK", "DSK
 static char const * const xroar_tape_exts[] = { "CAS", "C10", "K7", NULL };
 static char const * const xroar_snap_exts[] = { "SNA", NULL };
 /* static char const * const xroar_cart_exts[] = { "ROM", NULL }; */
+#ifdef SCREENSHOT
 static char const * const xroar_screenshot_exts[] = { "PNG", NULL };
+#endif
 
 static struct {
 	const char *ext;
@@ -1958,6 +1960,7 @@ void xroar_hard_reset(void) {
 	xroar_machine->reset(xroar_machine, RESET_HARD);
 }
 
+#ifdef SCREENSHOT
 void xroar_screenshot(void) {
 #ifdef HAVE_PNG
 	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_screenshot_exts);
@@ -1974,6 +1977,7 @@ void xroar_screenshot(void) {
 	}
 #endif
 }
+#endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

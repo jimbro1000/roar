@@ -132,11 +132,11 @@ AC_ARG_ENABLE([trace],
 AC_ARG_WITH([pthreads],
 	AS_HELP_STRING([--without-pthreads], [don't use POSIX threads]) )
 
-AC_ARG_WITH([libpng],
-	AS_HELP_STRING([--without-libpng], [don't use libpng]) )
-
 AC_ARG_WITH([zlib],
 	AS_HELP_STRING([--without-zlib], [don't use zlib]) )
+
+AC_ARG_WITH([libpng],
+	AS_HELP_STRING([--without-libpng], [don't use libpng]) )
 
 AC_ARG_ENABLE([becker],
 	AS_HELP_STRING([--disable-becker], [don't include Becker port support]) )
@@ -241,6 +241,7 @@ AM_COND_IF([WASM], [
 		test -z "$with_tre" && with_tre=no
 		test -z "$with_pthreads" && with_pthreads=no
 		test -z "$with_zlib" && with_zlib=no
+		test -z "$with_libpng" && with_libpng=no
 		EXEEXT=".js"
 		])
 AC_SUBST(WASM_CFLAGS)
@@ -713,6 +714,9 @@ AM_CONDITIONAL([GDB], [test -n "$have_gdb_target"])
 AM_COND_IF([GDB], [AC_DEFINE([WANT_GDB_TARGET], 1, [GDB target])])
 
 ### Misc minor features
+
+AM_CONDITIONAL([SCREENSHOT], [test -n "$have_libpng"])
+AM_COND_IF([SCREENSHOT], [AC_DEFINE([SCREENSHOT], 1, [Screenshots supported])])
 
 AM_CONDITIONAL([AO_NULL], [test "x$enable_ao_null" != "xno"])
 AM_COND_IF([AO_NULL], [AC_DEFINE([HAVE_NULL_AUDIO], 1, [Include null audio driver])])

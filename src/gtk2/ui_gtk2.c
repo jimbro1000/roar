@@ -137,7 +137,9 @@ static void save_screenshot(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	g_idle_remove_by_data(uigtk2->top_window);
+#ifdef SCREENSHOT
 	xroar_screenshot();
+#endif
 	g_idle_add(run_cpu, uigtk2->top_window);
 }
 
