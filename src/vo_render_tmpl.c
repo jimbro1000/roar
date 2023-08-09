@@ -46,8 +46,8 @@
 #endif
 #define TNAME(f) TNAME_(f, VR_SUFFIX)
 
-typedef VR_PTYPE (*TNAME(map_rgb_func))(struct vo_render *, int, int, int);
-typedef int_xyz (*TNAME(unmap_rgb_func))(struct vo_render *, VR_PTYPE);
+typedef VR_PTYPE (*TNAME(map_rgb_func))(int, int, int);
+typedef int_xyz (*TNAME(unmap_rgb_func))(VR_PTYPE);
 
 struct TNAME(vo_render) {
 	struct vo_render generic;
@@ -105,15 +105,14 @@ struct vo_render *TNAME(renderer_new)(TNAME(map_rgb_func) map_rgb, TNAME(unmap_r
 static void TNAME(set_palette_entry)(void *sptr, int palette, int index,
 				     int R, int G, int B) {
 	struct TNAME(vo_render) *vrt = sptr;
-	struct vo_render *vr = &vrt->generic;
 
-	VR_PTYPE colour = vrt->map_rgb(vr, R, G, B);
+	VR_PTYPE colour = vrt->map_rgb(R, G, B);
 	int y = (int)(0.299 * (float)R + 0.587 * (float)G + 0.114 * (float)B);
 
 	switch (palette) {
 	case VO_RENDER_PALETTE_CMP:
 		vrt->cmp.palette[index & 0xff] = colour;
-		vrt->cmp.mono_palette[index & 0xff] = vrt->map_rgb(vr, y, y, y);
+		vrt->cmp.mono_palette[index & 0xff] = vrt->map_rgb(y, y, y);
 		break;
 	case VO_RENDER_PALETTE_RGB:
 		vrt->rgb.palette[index & 0xff] = colour;
@@ -310,7 +309,7 @@ static void TNAME(line_to_rgb)(struct vo_render *vr, int lno, uint8_t *dest) {
 	struct TNAME(vo_render) *vrt = (struct TNAME(vo_render) *)vr;
 	VR_PTYPE *src = (VR_PTYPE *)vr->buffer + (lno * vr->buffer_pitch);
 	for (int i = vr->viewport.w; i; i--) {
-		int_xyz rgb = vrt->unmap_rgb(vr, *(src++));
+		int_xyz rgb = vrt->unmap_rgb(*(src++));
 		*(dest) = rgb.x;
 		*(dest+1) = rgb.y;
 		*(dest+2) = rgb.z;
