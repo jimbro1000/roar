@@ -158,6 +158,10 @@ struct ui_interface {
 	 */
 	DELEGATE_T0(void) update_cartridge_menu;
 
+	/** \brief Interface to the file requester initialised by the UI.
+	 */
+	struct module *filereq_module;
+
 	/** \brief Interface to the video module initialised by the UI.
 	 */
 	struct vo_interface *vo_interface;

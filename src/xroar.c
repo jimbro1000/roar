@@ -971,10 +971,19 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		return NULL;
 	}
 	xroar_vo_interface = xroar_ui_interface->vo_interface;
-	xroar_filereq_interface = module_init(filereq_module, NULL);
+
+	// If UI interface flagged the selected filereq module as belonging to
+	// it, we can pass in the UI interface pointer for initialisation.
+	// Else pass NULL (file requester is to run standalone).
+	if (filereq_module == xroar_ui_interface->filereq_module) {
+		xroar_filereq_interface = module_init(filereq_module, xroar_ui_interface);
+	} else {
+		xroar_filereq_interface = module_init(filereq_module, NULL);
+	}
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
+
 	if (!(xroar_ao_interface = module_init_from_list(ao_module_list, ao_module, NULL))) {
 		LOG_ERROR("No audio module initialised.\n");
 		return NULL;
