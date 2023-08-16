@@ -72,6 +72,9 @@ void *vo_opengl_new(size_t isize) {
 
 void vo_opengl_free(void *sptr) {
 	struct vo_opengl_interface *vogl = sptr;
+	struct vo_interface *vo = &vogl->vo;
+	struct vo_render *vr = vo->renderer;
+	vo_render_free(vr);
 	glDeleteTextures(1, &vogl->texture.num);
 	free(vogl->texture.pixels);
 }

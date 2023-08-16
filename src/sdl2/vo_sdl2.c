@@ -423,6 +423,10 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 
 static void vo_sdl_free(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
+	struct vo_interface *vo = &vosdl->public;
+	struct vo_render *vr = vo->renderer;
+
+	vo_render_free(vr);
 
 	if (vosdl->texture.pixels) {
 		free(vosdl->texture.pixels);
