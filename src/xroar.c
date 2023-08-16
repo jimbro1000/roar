@@ -2188,6 +2188,9 @@ static void set_cart(const char *name) {
 		}
 		for (int i = 0; i < 4; i++) {
 			if (private_cfg.cart.mpi.slot_cart_name[i]) {
+				if (cc->mpi.slot_cart_name[i]) {
+					free(cc->mpi.slot_cart_name[i]);
+				}
 				cc->mpi.slot_cart_name[i] = private_cfg.cart.mpi.slot_cart_name[i];
 				private_cfg.cart.mpi.slot_cart_name[i] = NULL;
 			}

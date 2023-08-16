@@ -371,6 +371,11 @@ static void cart_config_free(struct cart_config *cc) {
 		free(cc->rom);
 	if (cc->rom2)
 		free(cc->rom2);
+	for (int i = 0; i < 4; i++) {
+		if (cc->mpi.slot_cart_name[i]) {
+			free(cc->mpi.slot_cart_name[i]);
+		}
+	}
 	slist_free_full(cc->opts, (slist_free_func)sdsfree);
 	free(cc);
 }
