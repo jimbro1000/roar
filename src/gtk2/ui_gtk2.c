@@ -65,38 +65,18 @@ static struct module * const gtk2_vo_module_list[] = {
 	NULL
 };
 
-// The GTK+ file-requester module can act standalone, but here we abstract it
-// to pass the UI's top window to its initialiser.
-
-// TODO: query UI module for appropriate interface and then try filereq
-// modules.
-
-static void *filereq_ui_gtk2_new(void *cfg);
-
-struct module filereq_ui_gtk2_module = {
-	.name = "gtk2", .description = "GTK+ 2 file requester",
-	.new = filereq_ui_gtk2_new
-};
 extern struct module filereq_gtk2_module;
 extern struct module filereq_cli_module;
 extern struct module filereq_null_module;
 
 static struct module * const gtk2_filereq_module_list[] = {
-	&filereq_ui_gtk2_module,
+	&filereq_gtk2_module,
 #ifdef HAVE_CLI
 	&filereq_cli_module,
 #endif
 	&filereq_null_module,
 	NULL
 };
-
-static void *filereq_ui_gtk2_new(void *cfg) {
-	(void)cfg;
-	// XXX External program structure means we don't get passed a handle
-	// here other than a generic configuration struct.  So we must use the
-	// globally-recorded handle:
-	return filereq_gtk2_module.new(global_uigtk2->top_window);
-}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -542,6 +522,9 @@ static void *ui_gtk2_new(void *cfg) {
 	ui->free = DELEGATE_AS0(void, ui_gtk2_free, uigtk2);
 	ui->run = DELEGATE_AS0(void, ui_gtk2_run, uigtk2);
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_set_state, uigtk2);
+
+	// Flag which file requester belongs to this UI
+	ui->filereq_module = &filereq_gtk2_module;
 
 	/* Fetch top level window */
 	uigtk2->top_window = GTK_WIDGET(gtk_builder_get_object(builder, "top_window"));

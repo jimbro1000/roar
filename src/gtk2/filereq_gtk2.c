@@ -35,6 +35,8 @@
 #include "module.h"
 #include "xroar.h"
 
+#include "gtk2/common.h"
+
 struct filereq_interface_gtk2 {
 	struct filereq_interface public;
 
@@ -54,16 +56,20 @@ struct module filereq_gtk2_module = {
 	.new = filereq_gtk2_new
 };
 
-static void *filereq_gtk2_new(void *cfg) {
+static void *filereq_gtk2_new(void *sptr) {
+	struct ui_gtk2_interface *ui_gtk2 = sptr;
+
 	struct filereq_interface_gtk2 *frgtk2 = xmalloc(sizeof(*frgtk2));
 	*frgtk2 = (struct filereq_interface_gtk2){0};
 	frgtk2->public.free = DELEGATE_AS0(void, filereq_gtk2_free, frgtk2);
 	frgtk2->public.load_filename = DELEGATE_AS1(charp, charcpcp, load_filename, frgtk2);
 	frgtk2->public.save_filename = DELEGATE_AS1(charp, charcpcp, save_filename, frgtk2);
-	// If running as part of the general GTK+ UI, cfg will be the top window
+
+	// If running as part of the general GTK+ UI, fetch its top window
 	// widget.  Otherwise, we need to initialise GTK+ here.
-	frgtk2->top_window = cfg;
-	if (cfg == NULL) {
+	if (ui_gtk2) {
+		frgtk2->top_window = ui_gtk2->top_window;
+	} else {
 		gtk_init(NULL, NULL);
 	}
 	return frgtk2;
