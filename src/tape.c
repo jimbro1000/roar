@@ -1434,15 +1434,19 @@ static struct machine_bp bp_list_rewrite[] = {
 	BP_DRAGON_ROM(.address = 0xb94d, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
 	BP_COCO_ROM(.address = 0xa719, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
 	BP_COCO3_ROM(.address = 0xa719, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
+	BP_MC10_ROM(.address = 0xfecc, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbdac, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
 	BP_COCO_ROM(.address = 0xa75c, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
 	BP_COCO3_ROM(.address = 0xa75c, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
+	BP_MC10_ROM(.address = 0xff2b, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbdeb, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
 	BP_COCO_ROM(.address = 0xa780, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
 	BP_COCO3_ROM(.address = 0xa780, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
+	BP_MC10_ROM(.address = 0xff50, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
 	BP_DRAGON_ROM(.address = 0xb97e, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
 	BP_COCO_ROM(.address = 0xa746, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
 	BP_COCO3_ROM(.address = 0xa746, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
+	BP_MC10_ROM(.address = 0xff10, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
 };
 
 static void set_breakpoints(struct tape_interface_private *tip) {
