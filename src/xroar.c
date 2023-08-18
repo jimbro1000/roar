@@ -51,6 +51,7 @@
 #include "fs.h"
 #include "gdb.h"
 #include "hexs19.h"
+#include "hkbd.h"
 #include "joystick.h"
 #include "keyboard.h"
 #include "logging.h"
@@ -1178,6 +1179,7 @@ void xroar_shutdown(void) {
 	}
 	vdrive_interface_free(xroar.vdrive_interface);
 	tape_interface_free(xroar.tape_interface);
+	hk_shutdown();
 	xconfig_shutdown(xroar_options);
 	if (xroar.ui_interface) {
 		DELEGATE_SAFE_CALL(xroar.ui_interface->free);

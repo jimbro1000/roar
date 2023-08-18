@@ -33,6 +33,8 @@ xroar_SOURCES = \
 	filter.c filter.h \
 	fs.c fs.h \
 	hexs19.c hexs19.h \
+	hkbd.c hkbd.h \
+	hkbd_joystick.c \
 	joystick.c joystick.h \
 	keyboard.c keyboard.h \
 	logging.c logging.h \
