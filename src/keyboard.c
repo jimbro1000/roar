@@ -58,9 +58,6 @@ struct auto_event {
 	} data;
 };
 
-/* Current chording mode - only affects how backslash is typed: */
-static enum keyboard_chord_mode chord_mode = keyboard_chord_mode_dragon_32k_basic;
-
 enum type_state {
 	type_state_normal,
 	type_state_esc,    // ESC seen
@@ -168,7 +165,6 @@ void keyboard_set_keymap(struct keyboard_interface *ki, int map) {
 }
 
 void keyboard_set_chord_mode(struct keyboard_interface *ki, enum keyboard_chord_mode mode) {
-	chord_mode = mode;
 	if (ki->keymap.layout == dkbd_layout_dragon) {
 		if (mode == keyboard_chord_mode_dragon_32k_basic) {
 			ki->keymap.unicode_to_dkey['\\'].dk_key = DSCAN_COMMA;
