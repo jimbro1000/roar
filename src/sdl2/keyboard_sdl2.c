@@ -429,14 +429,7 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		return;
 	}
 
-	// XXX surely SHIFT & CLEAR are handled by preemption here?
 	switch (sym) {
-	case SDLK_LSHIFT: case SDLK_RSHIFT:
-		KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
-		return;
-	case SDLK_CLEAR:
-		KEYBOARD_PRESS_CLEAR(xroar_keyboard_interface);
-		return;
 	case SDLK_LCTRL: case SDLK_RCTRL:
 		if (control) {
 			uisdl2->keyboard.control = 1;
@@ -549,11 +542,11 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 	switch (sym) {
 	case SDLK_LSHIFT: case SDLK_RSHIFT:
 		if (!shift) {
-			KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+			KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
 		}
 		return;
 	case SDLK_CLEAR:
-		KEYBOARD_RELEASE_CLEAR(xroar_keyboard_interface);
+		KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_CLEAR);
 		return;
 	case SDLK_LCTRL: case SDLK_RCTRL:
 		uisdl2->keyboard.control = 0;
@@ -573,9 +566,9 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		keyboard_unicode_release(xroar_keyboard_interface, unicode);
 		/* Put shift back the way it should be */
 		if (shift)
-			KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
+			KBD_MATRIX_PRESS(xroar_keyboard_interface, DSCAN_SHIFT);
 		else
-			KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+			KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
 		return;
 	}
 

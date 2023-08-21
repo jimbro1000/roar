@@ -224,13 +224,13 @@ void keyboard_unicode_press(struct keyboard_interface *ki, unsigned unicode) {
 	if (unicode >= DKBD_U_TABLE_SIZE)
 		return;
 	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_SHIFT)
-		KEYBOARD_PRESS_SHIFT(ki);
+		KBD_MATRIX_PRESS(ki, DSCAN_SHIFT);
 	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_UNSHIFT)
-		KEYBOARD_RELEASE_SHIFT(ki);
+		KBD_MATRIX_RELEASE(ki, DSCAN_SHIFT);
 	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_CLEAR)
-		KEYBOARD_PRESS_CLEAR(ki);
+		KBD_MATRIX_PRESS(ki, DSCAN_CLEAR);
 	int s = ki->keymap.unicode_to_dkey[unicode].dk_key;
-	keyboard_press_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
+	KBD_MATRIX_PRESS(ki, s);
 	DELEGATE_SAFE_CALL(ki->update);
 }
 
@@ -238,13 +238,13 @@ void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
 	if (unicode >= DKBD_U_TABLE_SIZE)
 		return;
 	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_SHIFT)
-		KEYBOARD_RELEASE_SHIFT(ki);
+		KBD_MATRIX_RELEASE(ki, DSCAN_SHIFT);
 	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_UNSHIFT)
-		KEYBOARD_PRESS_SHIFT(ki);
+		KBD_MATRIX_PRESS(ki, DSCAN_SHIFT);
 	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_CLEAR)
-		KEYBOARD_RELEASE_CLEAR(ki);
+		KBD_MATRIX_RELEASE(ki, DSCAN_CLEAR);
 	int s = ki->keymap.unicode_to_dkey[unicode].dk_key;
-	keyboard_release_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
+	KBD_MATRIX_RELEASE(ki, s);
 	DELEGATE_SAFE_CALL(ki->update);
 }
 

@@ -61,33 +61,28 @@ inline void keyboard_release_matrix(struct keyboard_interface *ki, int col, int 
 	ki->keyboard_row[row] |= 1<<(col);
 }
 
+#define KBD_MATRIX_PRESS(ki,s) keyboard_press_matrix((ki), (ki)->keymap.point[s].col, (ki)->keymap.point[s].row)
+#define KBD_MATRIX_RELEASE(ki,s) keyboard_release_matrix((ki), (ki)->keymap.point[s].col, (ki)->keymap.point[s].row)
+
 /* Press or release a key from the current keymap. */
 
 inline void keyboard_press(struct keyboard_interface *ki, int s) {
 	int mod = ki->keymap.point[s].mod;
 	if (mod) {
-		keyboard_press_matrix(ki, ki->keymap.point[mod].col, ki->keymap.point[mod].row);
+		KBD_MATRIX_PRESS(ki, mod);
 	}
-	keyboard_press_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
+	KBD_MATRIX_PRESS(ki, s);
 	DELEGATE_SAFE_CALL(ki->update);
 }
 
 inline void keyboard_release(struct keyboard_interface *ki, int s) {
 	int mod = ki->keymap.point[s].mod;
 	if (mod) {
-		keyboard_release_matrix(ki, ki->keymap.point[mod].col, ki->keymap.point[mod].row);
+		KBD_MATRIX_RELEASE(ki, mod);
 	}
-	keyboard_release_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
+	KBD_MATRIX_RELEASE(ki, s);
 	DELEGATE_SAFE_CALL(ki->update);
 }
-
-/* Shift and clear keys are at the same matrix point in both Dragon & CoCo
- * keymaps; indirection through the keymap can be bypassed. */
-
-#define KEYBOARD_PRESS_CLEAR(ki) keyboard_press_matrix((ki),1,6)
-#define KEYBOARD_RELEASE_CLEAR(ki) keyboard_release_matrix((ki),1,6)
-#define KEYBOARD_PRESS_SHIFT(ki) keyboard_press_matrix((ki),7,6)
-#define KEYBOARD_RELEASE_SHIFT(ki) keyboard_release_matrix((ki),7,6)
 
 /* Chord mode affects how special characters are typed (specifically, the
  * backslash character when in translation mode). */

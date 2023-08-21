@@ -404,11 +404,11 @@ gboolean gtk2_keyboard_handle_key_press(GtkWidget *widget, GdkEventKey *event, g
 	}
 
 	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
-		KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
+		KBD_MATRIX_PRESS(xroar_keyboard_interface, DSCAN_SHIFT);
 		return TRUE;
 	}
 	if (!shift) {
-		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+		KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
 	}
 	if (keyval == GDK_KEY_F12) {
 		if (shift) {
@@ -503,7 +503,7 @@ gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 	}
 
 	if (!shift) {
-		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+		KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
 	}
 
 	if (keyval == GDK_KEY_Control_L || keyval == GDK_KEY_Control_R) {
@@ -512,7 +512,7 @@ gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 	}
 
 	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
-		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+		KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
 		return FALSE;
 	}
 	if (keyval == GDK_KEY_F12) {
@@ -527,9 +527,9 @@ gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 		keyboard_unicode_release(xroar_keyboard_interface, unicode);
 		/* Put shift back the way it should be */
 		if (shift)
-			KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
+			KBD_MATRIX_PRESS(xroar_keyboard_interface, DSCAN_SHIFT);
 		else
-			KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+			KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
 		return FALSE;
 	}
 
