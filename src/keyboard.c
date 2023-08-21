@@ -2,7 +2,7 @@
  *
  *  \brief Dragon keyboard.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -37,7 +37,6 @@
 #include "mc6801/mc6801.h"
 #include "mc6809/mc6809.h"
 #include "part.h"
-#include "tape.h"
 #include "xroar.h"
 
 // Might want to make a more general automation interface out of this at some
@@ -46,8 +45,6 @@
 enum auto_type {
 	auto_type_basic_command,  // type a command into BASIC
 	auto_type_basic_file,     // type BASIC from a file
-	// keep these in order
-	auto_type_press_play,     // press play on tape
 };
 
 struct auto_event {
@@ -329,27 +326,6 @@ static void do_auto_event(void *sptr) {
 	if (next_event) {
 		kip->auto_event_list = slist_remove(kip->auto_event_list, ae);
 		kip->command_index = 0;
-		auto_event_free(ae);
-		ae = kip->auto_event_list ? kip->auto_event_list->data : NULL;
-	}
-
-	// Process all non-typing queued events that might follow - this allows
-	// us to press PLAY immediately after typing when the keyboard
-	// breakpoint won't be useful.
-
-	while (ae && ae->type >= auto_type_press_play) {
-		switch (ae->type) {
-
-		case auto_type_press_play:
-			// press play on tape
-			tape_set_playing(xroar_tape_interface, 1, 1);
-			break;
-
-		default:
-			break;
-		}
-
-		kip->auto_event_list = slist_remove(kip->auto_event_list, ae);
 		auto_event_free(ae);
 		ae = kip->auto_event_list ? kip->auto_event_list->data : NULL;
 	}
@@ -729,12 +705,5 @@ void keyboard_queue_basic_file(struct keyboard_interface *ki, const char *filena
 	ae->type = auto_type_basic_file;
 	ae->data.basic_file.fd = fd;
 	ae->data.basic_file.utf8 = 0;
-	queue_auto_event(kip, ae);
-}
-
-void keyboard_queue_press_play(struct keyboard_interface *ki) {
-	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
-	struct auto_event *ae = xmalloc(sizeof(*ae));
-	ae->type = auto_type_press_play;
 	queue_auto_event(kip, ae);
 }

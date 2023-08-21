@@ -2,7 +2,7 @@
  *
  *  \brief Cassette tape support.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -634,6 +634,22 @@ void tape_close_writing(struct tape_interface *ti) {
 // bufferful of data.  Tries to guess the filetype.  Returns -1 on error, 0 for
 // a BASIC program, 1 for data and 2 for M/C.
 
+// MC-10 has no remote control, so for autorun, support a rom hook to press
+// play at an appropriate time.
+
+static void press_play(void *sptr);
+
+static struct machine_bp bp_list_press_play[] = {
+	BP_MC10_ROM(.address = 0xff4e, .handler = DELEGATE_INIT(press_play, NULL) ),
+};
+
+static void press_play(void *sptr) {
+	struct tape_interface_private *tip = sptr;
+	struct tape_interface *ti = &tip->public;
+	tape_set_playing(ti, 1, 1);
+	machine_bp_remove_list(tip->machine, bp_list_press_play);
+}
+
 int tape_autorun(struct tape_interface *ti, const char *filename) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	if (filename == NULL)
@@ -694,7 +710,6 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 		switch (type) {
 			case 0:
 				keyboard_queue_basic(tip->keyboard_interface, "\\025CLOAD\\r");
-				keyboard_queue_press_play(tip->keyboard_interface);
 				keyboard_queue_basic(tip->keyboard_interface, "RUN\\r");
 				break;
 			case 2:
@@ -703,12 +718,13 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 				} else {
 					keyboard_queue_basic(tip->keyboard_interface, "\\025CLOADM\\r");
 				}
-				keyboard_queue_press_play(tip->keyboard_interface);
 				break;
 			default:
 				break;
 		}
 	}
+
+	machine_bp_add_list(tip->machine, bp_list_press_play, tip);
 
 	free(f);
 

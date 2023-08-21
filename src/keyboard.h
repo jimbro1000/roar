@@ -2,7 +2,7 @@
  *
  *  \brief Dragon keyboard.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -114,7 +114,5 @@ void keyboard_queue_basic_sds(struct keyboard_interface *ki, sds s);
 void keyboard_queue_basic(struct keyboard_interface *ki, const char *s);
 // Queue typing a BASIC file
 void keyboard_queue_basic_file(struct keyboard_interface *ki, const char *filename);
-// Schedule press play on tape
-void keyboard_queue_press_play(struct keyboard_interface *ki);
 
 #endif
