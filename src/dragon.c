@@ -434,9 +434,9 @@ static _Bool dragon_finish(struct part *p) {
 	struct machine_config *mc = m->config;
 
 	// Interfaces
-	md->vo = xroar_vo_interface;
-	md->snd = xroar_ao_interface->sound_interface;
-	md->tape_interface = xroar_tape_interface;
+	md->vo = xroar.vo_interface;
+	md->snd = xroar.ao_interface->sound_interface;
+	md->tape_interface = xroar.tape_interface;
 
 	md->tape_interface->default_paused = 0;
 
@@ -687,7 +687,7 @@ static _Bool dragon_finish(struct part *p) {
 		else if (md->is_dragon32)
 			valid_crc = crclist_match("@d32", md->crc_combined);
 
-		if (xroar_cfg.force_crc_match) {
+		if (xroar.cfg.force_crc_match) {
 			if (md->is_dragon64) {
 				md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
 				forced = 1;
@@ -712,7 +712,7 @@ static _Bool dragon_finish(struct part *p) {
 		if (md->is_dragon64)
 			valid_crc = crclist_match("@d64_2", md->crc_altbas);
 
-		if (xroar_cfg.force_crc_match) {
+		if (xroar.cfg.force_crc_match) {
 			if (md->is_dragon64) {
 				md->crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
 				forced = 1;
@@ -739,7 +739,7 @@ static _Bool dragon_finish(struct part *p) {
 			}
 		}
 
-		if (xroar_cfg.force_crc_match) {
+		if (xroar.cfg.force_crc_match) {
 			if (!md->is_dragon) {
 				if (mc->ram > 4) {
 					md->crc_bas = 0xd8f4d15e;  // CoCo BASIC 1.3
@@ -769,7 +769,7 @@ static _Bool dragon_finish(struct part *p) {
 			valid_crc = crclist_match("@cocoext", md->crc_extbas);
 		}
 
-		if (xroar_cfg.force_crc_match) {
+		if (xroar.cfg.force_crc_match) {
 			if (!md->is_dragon) {
 				md->crc_extbas = 0xa82a6254;  // CoCo Extended BASIC 1.1
 				forced = 1;
@@ -875,8 +875,8 @@ static _Bool dragon_finish(struct part *p) {
 
 #ifdef WANT_GDB_TARGET
 	// GDB
-	if (xroar_cfg.debug.gdb) {
-		md->gdb_interface = gdb_interface_new(xroar_cfg.debug.gdb_ip, xroar_cfg.debug.gdb_port, m, md->bp_session);
+	if (xroar.cfg.debug.gdb) {
+		md->gdb_interface = gdb_interface_new(xroar.cfg.debug.gdb_ip, xroar.cfg.debug.gdb_port, m, md->bp_session);
 	}
 #endif
 

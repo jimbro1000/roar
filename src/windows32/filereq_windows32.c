@@ -86,9 +86,9 @@ static char *load_filename(void *sptr, char const * const *extensions) {
 	int was_fullscreen;
 
 	(void)extensions;  /* unused */
-	was_fullscreen = xroar_vo_interface->is_fullscreen;
+	was_fullscreen = xroar.vo_interface->is_fullscreen;
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 0);
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 0);
 
 	memset(&ofn, 0, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
@@ -111,7 +111,7 @@ static char *load_filename(void *sptr, char const * const *extensions) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 1);
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 1);
 	return frw32->filename;
 }
 
@@ -122,9 +122,9 @@ static char *save_filename(void *sptr, char const * const *extensions) {
 	int was_fullscreen;
 
 	(void)extensions;  /* unused */
-	was_fullscreen = xroar_vo_interface->is_fullscreen;
+	was_fullscreen = xroar.vo_interface->is_fullscreen;
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 0);
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 0);
 
 	memset(&ofn, 0, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
@@ -147,6 +147,6 @@ static char *save_filename(void *sptr, char const * const *extensions) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 1);
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 1);
 	return frw32->filename;
 }

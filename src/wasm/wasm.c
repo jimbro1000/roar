@@ -173,7 +173,7 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 
 	case ui_tag_fullscreen:
 		EM_ASM_({ ui_set_fullscreen($0); } ,value);
-		xroar_vo_interface->is_fullscreen = value;
+		xroar.vo_interface->is_fullscreen = value;
 		break;
 
 	case ui_tag_ccr:
@@ -464,8 +464,8 @@ static void do_wasm_load_file(void *sptr) {
 		xroar_insert_disk_file(ev->drive, ev->filename);
 		break;
 	case wasm_load_file_type_text:
-		keyboard_queue_basic_file(xroar_keyboard_interface, ev->filename);
-		keyboard_queue_basic(xroar_keyboard_interface, "\\r");
+		keyboard_queue_basic_file(xroar.keyboard_interface, ev->filename);
+		keyboard_queue_basic(xroar.keyboard_interface, "\\r");
 		break;
 	}
 	free(ev->filename);
@@ -510,7 +510,7 @@ void wasm_set_joystick(int port, const char *value) {
 static void do_wasm_queue_basic(void *sptr) {
 	char *text = sptr;
 	WASM_DEBUG("do_wasm_queue_basic(%s)\n", text);
-	keyboard_queue_basic(xroar_keyboard_interface, text);
+	keyboard_queue_basic(xroar.keyboard_interface, text);
 	free(text);
 }
 

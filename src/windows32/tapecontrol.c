@@ -164,9 +164,9 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 	case WM_HSCROLL:
 		if ((HWND)lParam == tc_sbm_input_position) {
-			tc_seek(xroar_tape_interface->tape_input, LOWORD(wParam), HIWORD(wParam));
+			tc_seek(xroar.tape_interface->tape_input, LOWORD(wParam), HIWORD(wParam));
 		} else if ((HWND)lParam == tc_sbm_output_position) {
-			tc_seek(xroar_tape_interface->tape_output, LOWORD(wParam), HIWORD(wParam));
+			tc_seek(xroar.tape_interface->tape_output, LOWORD(wParam), HIWORD(wParam));
 		}
 		break;
 
@@ -196,7 +196,7 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				LPNMITEMACTIVATE lpnmitem = (LPNMITEMACTIVATE)lParam;
 				int iItem = lpnmitem->iItem;
-				tape_seek_to_file(xroar_tape_interface->tape_input, programs[iItem].file);
+				tape_seek_to_file(xroar.tape_interface->tape_input, programs[iItem].file);
 			}
 			break;
 
@@ -214,40 +214,40 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			case IDC_BN_TAPE_FAST:
 				{
 					int set = (SendMessage(tc_bn_tape_fast, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : TAPE_FAST;
-					int flags = (tape_get_state(xroar_tape_interface) & ~TAPE_FAST) | set;
-					tape_select_state(xroar_tape_interface, flags);
+					int flags = (tape_get_state(xroar.tape_interface) & ~TAPE_FAST) | set;
+					tape_select_state(xroar.tape_interface, flags);
 				}
 				break;
 
 			case IDC_BN_TAPE_PAD_AUTO:
 				{
 					int set = (SendMessage(tc_bn_tape_pad_auto, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : TAPE_PAD_AUTO;
-					int flags = (tape_get_state(xroar_tape_interface) & ~TAPE_PAD_AUTO) | set;
-					tape_select_state(xroar_tape_interface, flags);
+					int flags = (tape_get_state(xroar.tape_interface) & ~TAPE_PAD_AUTO) | set;
+					tape_select_state(xroar.tape_interface, flags);
 				}
 				break;
 
 			case IDC_BN_TAPE_REWRITE:
 				{
 					int set = (SendMessage(tc_bn_tape_rewrite, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : TAPE_REWRITE;
-					int flags = (tape_get_state(xroar_tape_interface) & ~TAPE_REWRITE) | set;
-					tape_select_state(xroar_tape_interface, flags);
+					int flags = (tape_get_state(xroar.tape_interface) & ~TAPE_REWRITE) | set;
+					tape_select_state(xroar.tape_interface, flags);
 				}
 				break;
 
 			// Input tape buttons
 
 			case IDC_BN_INPUT_PLAY:
-				tape_set_playing(xroar_tape_interface, 1, 1);
+				tape_set_playing(xroar.tape_interface, 1, 1);
 				break;
 
 			case IDC_BN_INPUT_PAUSE:
-				tape_set_playing(xroar_tape_interface, 0, 1);
+				tape_set_playing(xroar.tape_interface, 0, 1);
 				break;
 
 			case IDC_BN_INPUT_REWIND:
-				if (xroar_tape_interface->tape_input) {
-					tape_seek(xroar_tape_interface->tape_input, 0, SEEK_SET);
+				if (xroar.tape_interface->tape_input) {
+					tape_seek(xroar.tape_interface->tape_input, 0, SEEK_SET);
 				}
 				break;
 
@@ -262,16 +262,16 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			// Output tape buttons
 
 			case IDC_BN_OUTPUT_RECORD:
-				tape_set_playing(xroar_tape_interface, 1, 1);
+				tape_set_playing(xroar.tape_interface, 1, 1);
 				break;
 
 			case IDC_BN_OUTPUT_PAUSE:
-				tape_set_playing(xroar_tape_interface, 0, 1);
+				tape_set_playing(xroar.tape_interface, 0, 1);
 				break;
 
 			case IDC_BN_OUTPUT_REWIND:
-				if (xroar_tape_interface && xroar_tape_interface->tape_output) {
-					tape_seek(xroar_tape_interface->tape_output, 0, SEEK_SET);
+				if (xroar.tape_interface && xroar.tape_interface->tape_output) {
+					tape_seek(xroar.tape_interface->tape_output, 0, SEEK_SET);
 				}
 				break;
 
@@ -322,14 +322,14 @@ static void update_programlist(struct ui_sdl2_interface *uisdl2) {
 	(void)uisdl2;
 	if (have_programlist)
 		return;
-	if (!xroar_tape_interface || !xroar_tape_interface->tape_input)
+	if (!xroar.tape_interface || !xroar.tape_interface->tape_input)
 		return;
 	struct tape_file *file;
-	long old_offset = tape_tell(xroar_tape_interface->tape_input);
-	tape_rewind(xroar_tape_interface->tape_input);
+	long old_offset = tape_tell(xroar.tape_interface->tape_input);
+	tape_rewind(xroar.tape_interface->tape_input);
 	num_programs = 0;
-	while ((file = tape_file_next(xroar_tape_interface->tape_input, 1))) {
-		int ms = tape_to_ms(xroar_tape_interface->tape_input, file->offset);
+	while ((file = tape_file_next(xroar.tape_interface->tape_input, 1))) {
+		int ms = tape_to_ms(xroar.tape_interface->tape_input, file->offset);
 		programs = xrealloc(programs, (num_programs + 1) * sizeof(struct tc_program));
 		programs[num_programs].file = file;
 		programs[num_programs].filename = xstrdup(file->name);
@@ -343,7 +343,7 @@ static void update_programlist(struct ui_sdl2_interface *uisdl2) {
 		SendMessage(tc_lvs_input_programlist, LVM_INSERTITEM, 0, (LPARAM)&item);
 		num_programs++;
 	}
-	tape_seek(xroar_tape_interface->tape_input, old_offset, SEEK_SET);
+	tape_seek(xroar.tape_interface->tape_input, old_offset, SEEK_SET);
 	have_programlist = 1;
 }
 
@@ -353,9 +353,9 @@ static void update_tape_counters(void *sptr) {
 
 	static long imax = -1, ipos = -1;
 	long new_imax = 0, new_ipos = 0;
-	if (xroar_tape_interface->tape_input) {
-		new_imax = tape_to_ms(xroar_tape_interface->tape_input, xroar_tape_interface->tape_input->size);
-		new_ipos = tape_to_ms(xroar_tape_interface->tape_input, xroar_tape_interface->tape_input->offset);
+	if (xroar.tape_interface->tape_input) {
+		new_imax = tape_to_ms(xroar.tape_interface->tape_input, xroar.tape_interface->tape_input->size);
+		new_ipos = tape_to_ms(xroar.tape_interface->tape_input, xroar.tape_interface->tape_input->offset);
 	}
 	SCROLLINFO si = {
 		.cbSize = sizeof(SCROLLINFO),
@@ -379,9 +379,9 @@ static void update_tape_counters(void *sptr) {
 
 	static long omax = -1, opos = -1;
 	long new_omax = 0, new_opos = 0;
-	if (xroar_tape_interface->tape_output) {
-		new_omax = tape_to_ms(xroar_tape_interface->tape_output, xroar_tape_interface->tape_output->size);
-		new_opos = tape_to_ms(xroar_tape_interface->tape_output, xroar_tape_interface->tape_output->offset);
+	if (xroar.tape_interface->tape_output) {
+		new_omax = tape_to_ms(xroar.tape_interface->tape_output, xroar.tape_interface->tape_output->size);
+		new_opos = tape_to_ms(xroar.tape_interface->tape_output, xroar.tape_interface->tape_output->offset);
 	}
 	si.fMask = 0;
 	if (omax != new_omax) {

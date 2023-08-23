@@ -118,14 +118,14 @@ int read_snapshot(const char *filename) {
 int write_snapshot(const char *filename) {
 	if (xroar_filetype_by_ext(filename) == FILETYPE_RAM) {
 		// simple ram dump
-		if (!xroar_machine->dump_ram) {
+		if (!xroar.machine->dump_ram) {
 			LOG_WARN("Running machine does not support RAM dump.\n");
 			return -1;
 		}
 		FILE *fd = fopen(filename, "wb");
 		if (!fd)
 			return -1;
-		xroar_machine->dump_ram(xroar_machine, fd);
+		xroar.machine->dump_ram(xroar.machine, fd);
 		fclose(fd);
 		return 0;
 	}
@@ -138,9 +138,9 @@ int write_snapshot(const char *filename) {
 	ser_write_untagged(sh, snapv2_header, strlen(snapv2_header));
 
 	ser_write_open_string(sh, SNAPSHOT_SER_MACHINE, "machine");
-	part_serialise((struct part *)xroar_machine, sh);
+	part_serialise((struct part *)xroar.machine, sh);
 
-	vdrive_interface_serialise(xroar_vdrive_interface, sh, SNAPSHOT_SER_VDRIVE_INTF);
+	vdrive_interface_serialise(xroar.vdrive_interface, sh, SNAPSHOT_SER_VDRIVE_INTF);
 
 	ser_write_close_tag(sh);
 	ser_close(sh);
@@ -191,7 +191,7 @@ static int read_v2_snapshot(const char *filename) {
 				ser_set_error(sh, ser_error_format);
 				break;
 			}
-			vdrive_interface_deserialise(xroar_vdrive_interface, sh);
+			vdrive_interface_deserialise(xroar.vdrive_interface, sh);
 			break;
 
 		default:
@@ -218,11 +218,11 @@ static int read_v2_snapshot(const char *filename) {
 	// TODO: verify that any deserialised carts had their configs included
 	// earlier in the snapshot.
 
-	if (xroar_machine) {
-		part_free((struct part *)xroar_machine);
+	if (xroar.machine) {
+		part_free((struct part *)xroar.machine);
 	}
-	xroar_machine_config = m->config;
-	xroar_machine = m;
+	xroar.machine_config = m->config;
+	xroar.machine = m;
 	xroar_connect_machine();
 	xroar_connect_cart();
 
@@ -351,10 +351,10 @@ static int read_v1_snapshot(const char *filename) {
 	// Default to Dragon 64 for old snapshots
 	struct machine_config *mc = machine_config_by_arch(1);  // 1 == old ARCH_DRAGON64
 	xroar_configure_machine(mc);
-	xroar_machine->reset(xroar_machine, RESET_HARD);
+	xroar.machine->reset(xroar.machine, RESET_HARD);
 	// If old snapshot, buffer contains register dump
 	if (buffer[0] != 'X') {
-		old_set_registers(xroar_machine, buffer + 3);
+		old_set_registers(xroar.machine, buffer + 3);
 	}
 	struct cart_config *cart_config = NULL;
 	while ((section = fs_read_uint8(fd)) >= 0) {
@@ -371,7 +371,7 @@ static int read_v1_snapshot(const char *filename) {
 					free(mc->architecture);
 				mc->architecture = xstrdup(old_arch_mapping[tmp]);
 				xroar_configure_machine(mc);
-				xroar_machine->reset(xroar_machine, RESET_HARD);
+				xroar.machine->reset(xroar.machine, RESET_HARD);
 				size--;
 				break;
 			case ID_KEYBOARD_MAP:
@@ -385,7 +385,7 @@ static int read_v1_snapshot(const char *filename) {
 				// Deprecated
 				if (size < 14) break;
 				size -= fread(buffer, 1, 14, fd);
-				old_set_registers(xroar_machine, buffer);
+				old_set_registers(xroar.machine, buffer);
 				break;
 
 			case ID_MC6809_STATE:
@@ -396,7 +396,7 @@ static int read_v1_snapshot(const char *filename) {
 						LOG_WARN("Snapshot v1 read: CPU mismatch - skipping MC6809 chunk\n");
 						break;
 					}
-					struct MC6809 *cpu = (struct MC6809 *)part_component_by_id_is_a(&xroar_machine->part, "CPU", "MC6809");
+					struct MC6809 *cpu = (struct MC6809 *)part_component_by_id_is_a(&xroar.machine->part, "CPU", "MC6809");
 					if (!cpu) {
 						LOG_WARN("Snapshot v1 read: CPU not found - skipping MC6809 chunk\n");
 						break;
@@ -460,7 +460,7 @@ static int read_v1_snapshot(const char *filename) {
 						LOG_WARN("Snapshot v1 read: CPU mismatch - skipping HD6309 chunk\n");
 						break;
 					}
-					struct HD6309 *hcpu = (struct HD6309 *)part_component_by_id_is_a(&xroar_machine->part, "CPU", "HD6309");
+					struct HD6309 *hcpu = (struct HD6309 *)part_component_by_id_is_a(&xroar.machine->part, "CPU", "HD6309");
 					if (!hcpu) {
 						LOG_WARN("Snapshot v1 read: CPU not found - skipping HD6309 chunk\n");
 						break;
@@ -544,14 +544,14 @@ static int read_v1_snapshot(const char *filename) {
 					size--;
 				}
 				xroar_configure_machine(mc);
-				xroar_machine->reset(xroar_machine, RESET_HARD);
+				xroar.machine->reset(xroar.machine, RESET_HARD);
 				break;
 
 			case ID_PIA_REGISTERS:
 				for (int i = 0; i < 2; i++) {
 					char id[5];
 					snprintf(id, sizeof(id), "PIA%d", i);
-					struct MC6821 *pia = (struct MC6821 *)part_component_by_id_is_a(&xroar_machine->part, id, "MC6821");
+					struct MC6821 *pia = (struct MC6821 *)part_component_by_id_is_a(&xroar.machine->part, id, "MC6821");
 					if (!pia) {
 						LOG_WARN("Snapshot v1 read: %s not found - skipping PIA\n", id);
 						break;
@@ -573,7 +573,7 @@ static int read_v1_snapshot(const char *filename) {
 
 			case ID_RAM_PAGE0:
 				{
-					struct machine_memory *ram0 = xroar_machine->get_component(xroar_machine, "RAM0");
+					struct machine_memory *ram0 = xroar.machine->get_component(xroar.machine, "RAM0");
 					assert(ram0 != NULL);
 					ram0->size = (size < ram0->max_size) ? size : ram0->max_size;
 					size -= fread(ram0->data, 1, ram0->size, fd);
@@ -581,7 +581,7 @@ static int read_v1_snapshot(const char *filename) {
 				break;
 			case ID_RAM_PAGE1:
 				{
-					struct machine_memory *ram1 = xroar_machine->get_component(xroar_machine, "RAM1");
+					struct machine_memory *ram1 = xroar.machine->get_component(xroar.machine, "RAM1");
 					assert(ram1 != NULL);
 					ram1->size = (size < ram1->max_size) ? size : ram1->max_size;
 					size -= fread(ram1->data, 1, ram1->size, fd);
@@ -593,7 +593,7 @@ static int read_v1_snapshot(const char *filename) {
 				tmp = fs_read_uint16(fd);
 				size -= 2;
 				{
-					struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&xroar_machine->part, "SAM", "SN74LS783");
+					struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&xroar.machine->part, "SAM", "SN74LS783");
 					if (!sam) {
 						LOG_WARN("Snapshot v1 read: SAM not found - skipping SAM registers chunk\n");
 						break;
@@ -623,12 +623,12 @@ static int read_v1_snapshot(const char *filename) {
 					int drive;
 					size--;
 					drive = fs_read_uint8(fd);
-					vdrive_eject_disk(xroar_vdrive_interface, drive);
+					vdrive_eject_disk(xroar.vdrive_interface, drive);
 					if (size > 0) {
 						char *name = malloc(size);
 						if (name != NULL) {
 							size -= fread(name, 1, size, fd);
-							vdrive_insert_disk(xroar_vdrive_interface, drive, vdisk_load(name));
+							vdrive_insert_disk(xroar.vdrive_interface, drive, vdisk_load(name));
 						}
 					}
 				}

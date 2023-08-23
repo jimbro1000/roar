@@ -643,8 +643,8 @@ void vo_render_set_ntsc_scaling(struct vo_render *vr, _Bool notify, _Bool enable
 	if (!vr)
 		return;
 	vr->ntsc_scaling = enabled;
-	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_ntsc_scaling, enabled, NULL);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_ntsc_scaling, enabled, NULL);
 	}
 }
 
@@ -661,8 +661,8 @@ void vo_render_set_brightness(void *sptr, int value) {
 		update_rgb_palette(vr, c);
 	}
 	update_gamma_table(vr);
-	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_brightness, value, NULL);
+	if (xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_brightness, value, NULL);
 	}
 }
 
@@ -679,8 +679,8 @@ void vo_render_set_contrast(void *sptr, int value) {
 		update_rgb_palette(vr, c);
 	}
 	update_gamma_table(vr);
-	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_contrast, value, NULL);
+	if (xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_contrast, value, NULL);
 	}
 }
 
@@ -696,8 +696,8 @@ void vo_render_set_saturation(void *sptr, int value) {
 	for (unsigned c = 0; c < 256; c++) {
 		update_cmp_palette(vr, c);
 	}
-	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_saturation, value, NULL);
+	if (xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_saturation, value, NULL);
 	}
 }
 
@@ -714,8 +714,8 @@ void vo_render_set_hue(void *sptr, int value) {
 	for (unsigned i = 0; i < vr->cmp.nbursts; i++) {
 		update_cmp_burst(vr, i);
 	}
-	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_hue, value, NULL);
+	if (xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_hue, value, NULL);
 	}
 }
 
@@ -755,8 +755,8 @@ void vo_render_set_cmp_fs(struct vo_render *vr, _Bool notify, int fs) {
 	}
 	vr->cmp.fs = fs;
 	update_cmp_system(vr);
-	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cmp_fs, fs, NULL);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cmp_fs, fs, NULL);
 	}
 }
 
@@ -770,8 +770,8 @@ void vo_render_set_cmp_fsc(struct vo_render *vr, _Bool notify, int fsc) {
 	}
 	vr->cmp.fsc = fsc;
 	update_cmp_system(vr);
-	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cmp_fsc, fsc, NULL);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cmp_fsc, fsc, NULL);
 	}
 }
 
@@ -785,8 +785,8 @@ void vo_render_set_cmp_system(struct vo_render *vr, _Bool notify, int system) {
 	}
 	vr->cmp.system = system;
 	update_cmp_system(vr);
-	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cmp_system, system, NULL);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cmp_system, system, NULL);
 	}
 }
 
@@ -797,8 +797,8 @@ void vo_render_set_cmp_colour_killer(struct vo_render *vr, _Bool notify, _Bool v
 	if (!vr)
 		return;
 	vr->cmp.colour_killer = value;
-	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cmp_colour_killer, (int)value, NULL);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cmp_colour_killer, (int)value, NULL);
 	}
 }
 

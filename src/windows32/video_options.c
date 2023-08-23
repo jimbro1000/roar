@@ -173,29 +173,29 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		return TRUE;
 
 	case WM_NOTIFY:
-		if (xroar_vo_interface) {
+		if (xroar.vo_interface) {
 			UINT id = ((LPNMHDR)lParam)->idFrom;
 			switch (id) {
 			case IDC_SPIN_VOLUME:
-				if (xroar_ao_interface) {
-					sound_set_volume(xroar_ao_interface->sound_interface, (int16_t)SendMessage(vo_volume, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+				if (xroar.ao_interface) {
+					sound_set_volume(xroar.ao_interface->sound_interface, (int16_t)SendMessage(vo_volume, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 				}
 				break;
 
 			case IDC_SPIN_BRIGHTNESS:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, (int16_t)SendMessage(vo_brightness, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+				DELEGATE_SAFE_CALL(xroar.vo_interface->set_brightness, (int16_t)SendMessage(vo_brightness, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 				break;
 
 			case IDC_SPIN_CONTRAST:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, (int16_t)SendMessage(vo_contrast, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+				DELEGATE_SAFE_CALL(xroar.vo_interface->set_contrast, (int16_t)SendMessage(vo_contrast, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 				break;
 
 			case IDC_SPIN_SATURATION:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, (int16_t)SendMessage(vo_saturation, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+				DELEGATE_SAFE_CALL(xroar.vo_interface->set_saturation, (int16_t)SendMessage(vo_saturation, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 				break;
 
 			case IDC_SPIN_HUE:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->set_hue, (int16_t)SendMessage(vo_hue, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+				DELEGATE_SAFE_CALL(xroar.vo_interface->set_hue, (int16_t)SendMessage(vo_hue, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 				break;
 
 			default:
@@ -216,20 +216,20 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 				break;
 
 			case IDC_CB_FS:
-				if (xroar_vo_interface) {
-					vo_set_cmp_fs(xroar_vo_interface, 0, value);
+				if (xroar.vo_interface) {
+					vo_set_cmp_fs(xroar.vo_interface, 0, value);
 				}
 				break;
 
 			case IDC_CB_FSC:
-				if (xroar_vo_interface) {
-					vo_set_cmp_fsc(xroar_vo_interface, 0, value);
+				if (xroar.vo_interface) {
+					vo_set_cmp_fsc(xroar.vo_interface, 0, value);
 				}
 				break;
 
 			case IDC_CB_SYSTEM:
-				if (xroar_vo_interface) {
-					vo_set_cmp_system(xroar_vo_interface, 0, value);
+				if (xroar.vo_interface) {
+					vo_set_cmp_system(xroar.vo_interface, 0, value);
 				}
 				break;
 
@@ -240,16 +240,16 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 			switch (id) {
 			case IDC_BN_NTSC_SCALING:
-				if (xroar_vo_interface) {
+				if (xroar.vo_interface) {
 					int value = !(SendMessage(tb_ntsc_scaling, BM_GETCHECK, 0, 0) == BST_CHECKED);
-					vo_set_ntsc_scaling(xroar_vo_interface, 1, value);
+					vo_set_ntsc_scaling(xroar.vo_interface, 1, value);
 				}
 				return FALSE;
 
 			case IDC_BN_COLOUR_KILLER:
-				if (xroar_vo_interface) {
+				if (xroar.vo_interface) {
 					int value = !(SendMessage(tb_cmp_colour_killer, BM_GETCHECK, 0, 0) == BST_CHECKED);
-					vo_set_cmp_colour_killer(xroar_vo_interface, 1, value);
+					vo_set_cmp_colour_killer(xroar.vo_interface, 1, value);
 				}
 				return FALSE;
 			case IDOK:

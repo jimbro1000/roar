@@ -78,8 +78,8 @@ struct becker {
 
 struct becker *becker_open(void) {
 	struct addrinfo hints, *info = NULL;
-	const char *hostname = xroar_cfg.becker.ip ? xroar_cfg.becker.ip : BECKER_IP_DEFAULT;
-	const char *portname = xroar_cfg.becker.port ? xroar_cfg.becker.port : BECKER_PORT_DEFAULT;
+	const char *hostname = xroar.cfg.becker.ip ? xroar.cfg.becker.ip : BECKER_IP_DEFAULT;
+	const char *portname = xroar.cfg.becker.port ? xroar.cfg.becker.port : BECKER_PORT_DEFAULT;
 
 	int sockfd = -1;
 

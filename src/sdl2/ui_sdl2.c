@@ -195,8 +195,8 @@ static void sdl2_wasm_update_machine_menu(void *sptr) {
 		struct machine_config *mc = iter->data;
 		EM_ASM_({ ui_add_machine($0, $1); }, mc->id, mc->description);
 	}
-	if (xroar_machine_config) {
-		EM_ASM_({ ui_update_machine($0); }, xroar_machine_config->id);
+	if (xroar.machine_config) {
+		EM_ASM_({ ui_update_machine($0); }, xroar.machine_config->id);
 	}
 }
 
@@ -204,8 +204,8 @@ static void sdl2_wasm_update_cartridge_menu(void *sptr) {
 	(void)sptr;
 	// Get list of cart configs
 	struct slist *ccl = NULL;
-	if (xroar_machine) {
-		const struct machine_partdb_extra *mpe = xroar_machine->part.partdb->extra[0];
+	if (xroar.machine) {
+		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
                 const char *cart_arch = mpe->cart_arch;
                 ccl = cart_config_list_is_a(cart_arch);
 	}

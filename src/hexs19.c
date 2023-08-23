@@ -104,7 +104,7 @@ int intel_hex_read(const char *filename, int autorun) {
 			if (type == 0) {
 				if (logging.debug_file & LOG_FILE_BIN_DATA)
 					log_hexdump_byte(log_hex, data);
-				xroar_machine->write_byte(xroar_machine, addr & 0xffff, data);
+				xroar.machine->write_byte(xroar.machine, addr & 0xffff, data);
 				addr++;
 			}
 		}
@@ -127,7 +127,7 @@ int intel_hex_read(const char *filename, int autorun) {
 	if (exec != 0) {
 		struct debug_cpu *dcpu = NULL;
 		if (autorun) {
-			dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar_machine, "CPU", "DEBUG-CPU");
+			dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
 		}
 		if (autorun && dcpu) {
 			LOG_DEBUG_FILE(LOG_FILE_BIN, "Intel HEX: EXEC $%04x - autorunning\n", exec);
@@ -186,13 +186,13 @@ static int dragon_bin_load(FILE *fd, int autorun) {
 			LOG_WARN("Dragon BIN: short read\n");
 			break;
 		}
-		xroar_machine->write_byte(xroar_machine, (load + i) & 0xffff, data);
+		xroar.machine->write_byte(xroar.machine, (load + i) & 0xffff, data);
 		log_hexdump_byte(log_bin, data);
 	}
 	log_close(&log_bin);
 	struct debug_cpu *dcpu = NULL;
 	if (autorun) {
-		dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar_machine, "CPU", "DEBUG-CPU");
+		dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
 	}
 	if (autorun && dcpu) {
 		LOG_DEBUG_FILE(LOG_FILE_BIN, "Dragon BIN: EXEC $%04x - autorunning\n", exec);
@@ -228,7 +228,7 @@ static int coco_bin_load(FILE *fd, int autorun) {
 					LOG_WARN("CoCo BIN: short read in data chunk\n");
 					break;
 				}
-				xroar_machine->write_byte(xroar_machine, (load + i) & 0xffff, data);
+				xroar.machine->write_byte(xroar.machine, (load + i) & 0xffff, data);
 				log_hexdump_byte(log_bin, data);
 			}
 			log_close(&log_bin);
@@ -242,7 +242,7 @@ static int coco_bin_load(FILE *fd, int autorun) {
 			}
 			struct debug_cpu *dcpu = NULL;
 			if (autorun) {
-				dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar_machine, "CPU", "DEBUG-CPU");
+				dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
 			}
 			if (autorun && dcpu) {
 				LOG_DEBUG_FILE(LOG_FILE_BIN, "CoCo BIN: EXEC $%04x - autorunning\n", exec);

@@ -144,40 +144,40 @@ static void do_hard_reset(GtkEntry *entry, gpointer user_data) {
 static void zoom_1_1(GtkEntry *entry, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)entry;
-	if (!xroar_vo_interface)
+	if (!xroar.vo_interface)
 		return;
 
-	struct vo_render *vr = xroar_vo_interface->renderer;
+	struct vo_render *vr = xroar.vo_interface->renderer;
 
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
 
 	uigtk2->user_specified_geometry = 0;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * 2, qh * 2);
+	DELEGATE_SAFE_CALL(xroar.vo_interface->resize, qw * 2, qh * 2);
 }
 
 static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)entry;
-	if (!xroar_vo_interface)
+	if (!xroar.vo_interface)
 		return;
 
-	struct vo_render *vr = xroar_vo_interface->renderer;
+	struct vo_render *vr = xroar.vo_interface->renderer;
 
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
 
 	uigtk2->user_specified_geometry = 0;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * 4, qh * 4);
+	DELEGATE_SAFE_CALL(xroar.vo_interface->resize, qw * 4, qh * 4);
 }
 
 static void zoom_in(GtkEntry *entry, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)entry;
-	if (!xroar_vo_interface)
+	if (!xroar.vo_interface)
 		return;
 
-	struct vo_render *vr = xroar_vo_interface->renderer;
+	struct vo_render *vr = xroar.vo_interface->renderer;
 
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
@@ -198,16 +198,16 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 	if (scale < 1)
 		scale = 1;
 	uigtk2->user_specified_geometry = 0;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * scale, qh * scale);
+	DELEGATE_SAFE_CALL(xroar.vo_interface->resize, qw * scale, qh * scale);
 }
 
 static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)entry;
-	if (!xroar_vo_interface)
+	if (!xroar.vo_interface)
 		return;
 
-	struct vo_render *vr = xroar_vo_interface->renderer;
+	struct vo_render *vr = xroar.vo_interface->renderer;
 
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
@@ -228,7 +228,7 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	if (scale < 1)
 		scale = 1;
 	uigtk2->user_specified_geometry = 0;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, qw * scale, qh * scale);
+	DELEGATE_SAFE_CALL(xroar.vo_interface->resize, qw * scale, qh * scale);
 }
 
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
@@ -864,7 +864,7 @@ static void gtk2_update_machine_menu(void *sptr) {
 	int i = 0;
 	for (struct slist *iter = mcl; iter; iter = iter->next, i++) {
 		struct machine_config *mc = iter->data;
-		if (mc == xroar_machine_config)
+		if (mc == xroar.machine_config)
 			selected = mc->id;
 		names[i] = g_strdup_printf("machine%d", i+1);
 		radio_entries[i].name = names[i];
@@ -894,12 +894,12 @@ static void gtk2_update_cartridge_menu(void *sptr) {
 	struct slist *ccl = NULL;
 	int num_carts = 0;
 	struct cart *cart = NULL;
-	if (xroar_machine) {
-		const struct machine_partdb_extra *mpe = xroar_machine->part.partdb->extra[0];
+	if (xroar.machine) {
+		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
 		const char *cart_arch = mpe->cart_arch;
 		ccl = slist_reverse(cart_config_list_is_a(cart_arch));
 		num_carts = slist_length(ccl);
-		cart = (struct cart *)part_component_by_id(&xroar_machine->part, "cart");
+		cart = (struct cart *)part_component_by_id(&xroar.machine->part, "cart");
 	}
 
 	// Remove old entries

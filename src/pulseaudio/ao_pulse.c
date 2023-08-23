@@ -60,7 +60,7 @@ static void *new(void *cfg) {
 
 	ao->free = DELEGATE_AS0(void, ao_pulse_free, ao);
 
-	const char *device = xroar_cfg.ao.device;
+	const char *device = xroar.cfg.ao.device;
 	pa_sample_spec ss = {
 		.format = PA_SAMPLE_S16NE,
 	};
@@ -71,8 +71,8 @@ static void *new(void *cfg) {
 	};
 	int error;
 
-	unsigned rate = (xroar_cfg.ao.rate > 0) ? xroar_cfg.ao.rate : 48000;
-	unsigned nchannels = xroar_cfg.ao.channels;
+	unsigned rate = (xroar.cfg.ao.rate > 0) ? xroar.cfg.ao.rate : 48000;
+	unsigned nchannels = xroar.cfg.ao.channels;
 	if (nchannels < 1 || nchannels > 2)
 		nchannels = 2;
 	ss.rate = rate;
@@ -99,21 +99,21 @@ static void *new(void *cfg) {
 	 * into it.  Use any specified value as "tlength". */
 
 	int fragment_nframes;
-	if (xroar_cfg.ao.fragment_ms > 0) {
-		fragment_nframes = (rate * xroar_cfg.ao.fragment_ms) / 1000;
-	} else if (xroar_cfg.ao.fragment_nframes > 0) {
-		fragment_nframes = xroar_cfg.ao.fragment_nframes;
-	} else if (xroar_cfg.ao.buffer_ms > 0) {
-		fragment_nframes = (rate * xroar_cfg.ao.buffer_ms) / 1000;
-	} else if (xroar_cfg.ao.buffer_nframes > 0) {
-		fragment_nframes = xroar_cfg.ao.buffer_nframes;
+	if (xroar.cfg.ao.fragment_ms > 0) {
+		fragment_nframes = (rate * xroar.cfg.ao.fragment_ms) / 1000;
+	} else if (xroar.cfg.ao.fragment_nframes > 0) {
+		fragment_nframes = xroar.cfg.ao.fragment_nframes;
+	} else if (xroar.cfg.ao.buffer_ms > 0) {
+		fragment_nframes = (rate * xroar.cfg.ao.buffer_ms) / 1000;
+	} else if (xroar.cfg.ao.buffer_nframes > 0) {
+		fragment_nframes = xroar.cfg.ao.buffer_nframes;
 	} else {
 		fragment_nframes = 1024;
 	}
 
 	int nfragments = 2;
-	if (xroar_cfg.ao.fragments > 0) {
-		nfragments = xroar_cfg.ao.fragments;
+	if (xroar.cfg.ao.fragments > 0) {
+		nfragments = xroar.cfg.ao.fragments;
 	}
 	ba.tlength = fragment_nframes * nfragments * frame_nbytes;
 

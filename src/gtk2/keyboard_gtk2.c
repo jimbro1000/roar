@@ -227,7 +227,7 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 	}
 
 	// Apply user-supplied binds:
-	for (struct slist *iter = xroar_cfg.kbd.bind_list; iter; iter = iter->next) {
+	for (struct slist *iter = xroar.cfg.kbd.bind_list; iter; iter = iter->next) {
 		struct dkbd_bind *bind = (struct dkbd_bind *)iter->data;
 		guint keyval = gdk_keyval_from_name(bind->hostkey);
 		// Docs say this returns GDK_KEY_VoidSymbol, but it seems to
@@ -286,7 +286,7 @@ static void emulator_command(guint keyval, int shift) {
 		break;
 	case GDK_KEY_d:
 		if (shift) {
-			vdrive_flush(xroar_vdrive_interface);
+			vdrive_flush(xroar.vdrive_interface);
 		}
 		break;
 	case GDK_KEY_e:
@@ -320,7 +320,7 @@ static void emulator_command(guint keyval, int shift) {
 		break;
 	case GDK_KEY_p:
 		if (shift)
-			printer_flush(xroar_printer_interface);
+			printer_flush(xroar.printer_interface);
 		break;
 	case GDK_KEY_w:
 		xroar_insert_output_tape();
@@ -390,7 +390,7 @@ gboolean gtk2_keyboard_handle_key_press(GtkWidget *widget, GdkEventKey *event, g
 	int keyval_i = keyval_index(keyval);
 	if (keyval_preempt[keyval_i]) {
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-		keyboard_press(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
+		keyboard_press(xroar.keyboard_interface, keyval_to_dkey[keyval_i]);
 		return FALSE;
 	}
 
@@ -404,11 +404,11 @@ gboolean gtk2_keyboard_handle_key_press(GtkWidget *widget, GdkEventKey *event, g
 	}
 
 	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
-		KBD_MATRIX_PRESS(xroar_keyboard_interface, DSCAN_SHIFT);
+		KBD_MATRIX_PRESS(xroar.keyboard_interface, DSCAN_SHIFT);
 		return TRUE;
 	}
 	if (!shift) {
-		KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
+		KBD_MATRIX_RELEASE(xroar.keyboard_interface, DSCAN_SHIFT);
 	}
 	if (keyval == GDK_KEY_F12) {
 		if (shift) {
@@ -427,7 +427,7 @@ gboolean gtk2_keyboard_handle_key_press(GtkWidget *widget, GdkEventKey *event, g
 		return TRUE;
 	}
 
-	if (xroar_cfg.kbd.translate) {
+	if (xroar.cfg.kbd.translate) {
 		guint16 keycode = event->hardware_keycode;
 		guint32 unicode = gdk_keyval_to_unicode(event->keyval);
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   unicode %08x   %s\n", keycode, keyval, unicode, gdk_keyval_name(keyval));
@@ -447,12 +447,12 @@ gboolean gtk2_keyboard_handle_key_press(GtkWidget *widget, GdkEventKey *event, g
 		if (keyval_to_dkey[keyval_i] == DSCAN_SPACE)
 			unicode = shift ? DKBD_U_PAUSE_OUTPUT : 0x20;
 		last_unicode[keycode] = unicode;
-		keyboard_unicode_press(xroar_keyboard_interface, unicode);
+		keyboard_unicode_press(xroar.keyboard_interface, unicode);
 		return TRUE;
 	}
 
 	LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-	keyboard_press(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
+	keyboard_press(xroar.keyboard_interface, keyval_to_dkey[keyval_i]);
 	return TRUE;
 }
 
@@ -498,12 +498,12 @@ gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 	int keyval_i = keyval_index(keyval);
 	if (keyval_preempt[keyval_i]) {
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk release keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-		keyboard_release(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
+		keyboard_release(xroar.keyboard_interface, keyval_to_dkey[keyval_i]);
 		return FALSE;
 	}
 
 	if (!shift) {
-		KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
+		KBD_MATRIX_RELEASE(xroar.keyboard_interface, DSCAN_SHIFT);
 	}
 
 	if (keyval == GDK_KEY_Control_L || keyval == GDK_KEY_Control_R) {
@@ -512,7 +512,7 @@ gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 	}
 
 	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
-		KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
+		KBD_MATRIX_RELEASE(xroar.keyboard_interface, DSCAN_SHIFT);
 		return FALSE;
 	}
 	if (keyval == GDK_KEY_F12) {
@@ -520,21 +520,21 @@ gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 		return FALSE;
 	}
 
-	if (xroar_cfg.kbd.translate) {
+	if (xroar.cfg.kbd.translate) {
 		guint16 keycode = event->hardware_keycode;
 		guint32 unicode = last_unicode[keycode];
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk release keycode %6d   keyval %04x   unicode %08x   %s\n", keycode, keyval, unicode, gdk_keyval_name(keyval));
-		keyboard_unicode_release(xroar_keyboard_interface, unicode);
+		keyboard_unicode_release(xroar.keyboard_interface, unicode);
 		/* Put shift back the way it should be */
 		if (shift)
-			KBD_MATRIX_PRESS(xroar_keyboard_interface, DSCAN_SHIFT);
+			KBD_MATRIX_PRESS(xroar.keyboard_interface, DSCAN_SHIFT);
 		else
-			KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
+			KBD_MATRIX_RELEASE(xroar.keyboard_interface, DSCAN_SHIFT);
 		return FALSE;
 	}
 
 	LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk release keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-	keyboard_release(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
+	keyboard_release(xroar.keyboard_interface, keyval_to_dkey[keyval_i]);
 	return FALSE;
 }
 

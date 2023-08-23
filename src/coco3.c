@@ -359,9 +359,9 @@ static _Bool coco3_finish(struct part *p) {
 	struct machine_config *mc = m->config;
 
 	// Interfaces
-	mcc3->vo = xroar_vo_interface;
-	mcc3->snd = xroar_ao_interface->sound_interface;
-	mcc3->tape_interface = xroar_tape_interface;
+	mcc3->vo = xroar.vo_interface;
+	mcc3->snd = xroar.ao_interface->sound_interface;
+	mcc3->tape_interface = xroar.tape_interface;
 
 	mcc3->tape_interface->default_paused = 0;
 
@@ -522,7 +522,7 @@ static _Bool coco3_finish(struct part *p) {
 
 		valid_crc = crclist_match("@coco3", mcc3->crc_secb);
 
-		if (xroar_cfg.force_crc_match) {
+		if (xroar.cfg.force_crc_match) {
 			mcc3->crc_secb = 0xb4c88d6c;  // CoCo 3 Super Extended BASIC
 			forced = 1;
 		}
@@ -554,8 +554,8 @@ static _Bool coco3_finish(struct part *p) {
 
 #ifdef WANT_GDB_TARGET
 	// GDB
-	if (xroar_cfg.debug.gdb) {
-		mcc3->gdb_interface = gdb_interface_new(xroar_cfg.debug.gdb_ip, xroar_cfg.debug.gdb_port, m, mcc3->bp_session);
+	if (xroar.cfg.debug.gdb) {
+		mcc3->gdb_interface = gdb_interface_new(xroar.cfg.debug.gdb_ip, xroar.cfg.debug.gdb_port, m, mcc3->bp_session);
 	}
 #endif
 

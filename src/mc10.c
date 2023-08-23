@@ -276,9 +276,9 @@ static _Bool mc10_finish(struct part *p) {
 	struct machine_config *mc = m->config;
 
 	// Interfaces
-	mp->vo = xroar_vo_interface;
-	mp->snd = xroar_ao_interface->sound_interface;
-	mp->tape_interface = xroar_tape_interface;
+	mp->vo = xroar.vo_interface;
+	mp->snd = xroar.ao_interface->sound_interface;
+	mp->tape_interface = xroar.tape_interface;
 
 	mp->tape_interface->default_paused = 1;
 
@@ -401,7 +401,7 @@ static _Bool mc10_finish(struct part *p) {
 		mp->crc_bas = crc32_block(CRC32_RESET, mp->rom0, 0x2000);
 		valid_crc = crclist_match("@mc10_compat", mp->crc_bas);
 
-		if (xroar_cfg.force_crc_match) {
+		if (xroar.cfg.force_crc_match) {
 			mp->crc_bas = 0x11fda97e;  // MC-10 ROM
 			forced = 1;
 		}
@@ -424,8 +424,8 @@ static _Bool mc10_finish(struct part *p) {
 
 #ifdef WANT_GDB_TARGET
 	// GDB
-	/* if (xroar_cfg.gdb) {
-		mp->gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, m, mmp>bp_session);
+	/* if (xroar.cfg.gdb) {
+		mp->gdb_interface = gdb_interface_new(xroar.cfg.gdb_ip, xroar.cfg.gdb_port, m, mmp>bp_session);
 	} */
 #endif
 
@@ -494,7 +494,7 @@ static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 static void mc10_reset(struct machine *m, _Bool hard) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
-	xroar_set_keyboard_type(1, xroar_machine_config->keymap);
+	xroar_set_keyboard_type(1, xroar.machine_config->keymap);
 	if (hard) {
 		memset(mp->ram, 0, mp->ram_size);
 	}

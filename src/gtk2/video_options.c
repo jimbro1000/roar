@@ -218,8 +218,8 @@ static void vo_change_gain(GtkSpinButton *spin_button, gpointer user_data) {
 	float value = (float)gtk_spin_button_get_value(spin_button);
 	if (value < -49.9)
 		value = -999.;
-	if (xroar_ao_interface) {
-		sound_set_gain(xroar_ao_interface->sound_interface, value);
+	if (xroar.ao_interface) {
+		sound_set_gain(xroar.ao_interface->sound_interface, value);
 	}
 }
 
@@ -227,8 +227,8 @@ static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data)
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)uigtk2;
 	int value = (int)gtk_spin_button_get_value(spin_button);
-	if (xroar_vo_interface) {
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, value);
+	if (xroar.vo_interface) {
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_brightness, value);
 	}
 }
 
@@ -236,8 +236,8 @@ static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)uigtk2;
 	int value = (int)gtk_spin_button_get_value(spin_button);
-	if (xroar_vo_interface) {
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, value);
+	if (xroar.vo_interface) {
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_contrast, value);
 	}
 }
 
@@ -245,8 +245,8 @@ static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data)
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)uigtk2;
 	int value = (int)gtk_spin_button_get_value(spin_button);
-	if (xroar_vo_interface) {
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, value);
+	if (xroar.vo_interface) {
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_saturation, value);
 	}
 }
 
@@ -254,8 +254,8 @@ static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)uigtk2;
 	int value = (int)gtk_spin_button_get_value(spin_button);
-	if (xroar_vo_interface) {
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_hue, value);
+	if (xroar.vo_interface) {
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_hue, value);
 	}
 }
 
@@ -263,7 +263,7 @@ static void vo_change_picture(GtkComboBox *widget, gpointer user_data) {
         struct ui_gtk2_interface *uigtk2 = user_data;
         (void)uigtk2;
         int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar_vo_interface) {
+        if (xroar.vo_interface) {
                 xroar_set_picture(0, value);
         }
 }
@@ -272,15 +272,15 @@ static void vo_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data) 
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)uigtk2;
 	int value = gtk_toggle_button_get_active(widget);
-	vo_set_ntsc_scaling(xroar_vo_interface, 0, value);
+	vo_set_ntsc_scaling(xroar.vo_interface, 0, value);
 }
 
 static void vo_change_cmp_fs(GtkComboBox *widget, gpointer user_data) {
         struct ui_gtk2_interface *uigtk2 = user_data;
         (void)uigtk2;
         int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar_vo_interface) {
-                vo_set_cmp_fs(xroar_vo_interface, 0, value);
+        if (xroar.vo_interface) {
+                vo_set_cmp_fs(xroar.vo_interface, 0, value);
         }
 }
 
@@ -288,8 +288,8 @@ static void vo_change_cmp_fsc(GtkComboBox *widget, gpointer user_data) {
         struct ui_gtk2_interface *uigtk2 = user_data;
         (void)uigtk2;
         int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar_vo_interface) {
-                vo_set_cmp_fsc(xroar_vo_interface, 0, value);
+        if (xroar.vo_interface) {
+                vo_set_cmp_fsc(xroar.vo_interface, 0, value);
         }
 }
 
@@ -297,8 +297,8 @@ static void vo_change_cmp_system(GtkComboBox *widget, gpointer user_data) {
         struct ui_gtk2_interface *uigtk2 = user_data;
         (void)uigtk2;
         int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar_vo_interface) {
-                vo_set_cmp_system(xroar_vo_interface, 0, value);
+        if (xroar.vo_interface) {
+                vo_set_cmp_system(xroar.vo_interface, 0, value);
         }
 }
 
@@ -306,5 +306,5 @@ static void vo_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_d
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)uigtk2;
 	int value = gtk_toggle_button_get_active(widget);
-	vo_set_cmp_colour_killer(xroar_vo_interface, 0, value);
+	vo_set_cmp_colour_killer(xroar.vo_interface, 0, value);
 }

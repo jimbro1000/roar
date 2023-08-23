@@ -166,7 +166,7 @@ void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2) {
 		uisdl2->keyboard.unicode_last_scancode[i] = 0;
 
 	// Apply user-supplied binds:
-	for (struct slist *iter = xroar_cfg.kbd.bind_list; iter; iter = iter->next) {
+	for (struct slist *iter = xroar.cfg.kbd.bind_list; iter; iter = iter->next) {
 		struct dkbd_bind *bind = (struct dkbd_bind *)iter->data;
 		SDL_Scancode scancode = SDL_GetScancodeFromName(bind->hostkey);
 		if (scancode != SDL_SCANCODE_UNKNOWN && scancode < SDL_NUM_SCANCODES) {
@@ -210,7 +210,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		return;
 	case 'd':
 		if (shift) {
-			vdrive_flush(xroar_vdrive_interface);
+			vdrive_flush(xroar.vdrive_interface);
 		} else {
 			DELEGATE_CALL(uisdl2->public.update_state, ui_tag_drive_control, 0, NULL);
 		}
@@ -258,7 +258,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		return;
 	case 'p':
 		if (shift) {
-			printer_flush(xroar_printer_interface);
+			printer_flush(xroar.printer_interface);
 		}
 		return;
 	case 'q':
@@ -425,7 +425,7 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 
 	// If scancode preempts, never do a unicode lookup.
 	if (uisdl2->keyboard.scancode_preempt[scancode]) {
-		keyboard_press(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
+		keyboard_press(xroar.keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
 		return;
 	}
 
@@ -460,7 +460,7 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		return;
 	}
 
-	if (xroar_cfg.kbd.translate) {
+	if (xroar.cfg.kbd.translate) {
 		int unicode = sdl_os_keysym_to_unicode(keysym);
 		/* shift + backspace -> erase line */
 		if (shift && (unicode == 0x08 || unicode == 0x7f))
@@ -472,11 +472,11 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		if (uisdl2->keyboard.scancode_to_dkey[scancode] == DSCAN_SPACE)
 			unicode = shift ? DKBD_U_PAUSE_OUTPUT : 0x20;
 		uisdl2->keyboard.unicode_last_scancode[scancode] = unicode;
-		keyboard_unicode_press(xroar_keyboard_interface, unicode);
+		keyboard_unicode_press(xroar.keyboard_interface, unicode);
 		return;
 	}
 
-	keyboard_press(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
+	keyboard_press(xroar.keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
 }
 
 void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
@@ -534,7 +534,7 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 
 	// If scancode preempts, never do a unicode lookup.
 	if (uisdl2->keyboard.scancode_preempt[scancode]) {
-		keyboard_release(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
+		keyboard_release(xroar.keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
 		return;
 	}
 
@@ -542,11 +542,11 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 	switch (sym) {
 	case SDLK_LSHIFT: case SDLK_RSHIFT:
 		if (!shift) {
-			KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
+			KBD_MATRIX_RELEASE(xroar.keyboard_interface, DSCAN_SHIFT);
 		}
 		return;
 	case SDLK_CLEAR:
-		KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_CLEAR);
+		KBD_MATRIX_RELEASE(xroar.keyboard_interface, DSCAN_CLEAR);
 		return;
 	case SDLK_LCTRL: case SDLK_RCTRL:
 		uisdl2->keyboard.control = 0;
@@ -558,21 +558,21 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		break;
 	}
 
-	if (xroar_cfg.kbd.translate) {
+	if (xroar.cfg.kbd.translate) {
 		int unicode;
 		if (scancode >= SDL_NUM_SCANCODES)
 			return;
 		unicode = uisdl2->keyboard.unicode_last_scancode[scancode];
-		keyboard_unicode_release(xroar_keyboard_interface, unicode);
+		keyboard_unicode_release(xroar.keyboard_interface, unicode);
 		/* Put shift back the way it should be */
 		if (shift)
-			KBD_MATRIX_PRESS(xroar_keyboard_interface, DSCAN_SHIFT);
+			KBD_MATRIX_PRESS(xroar.keyboard_interface, DSCAN_SHIFT);
 		else
-			KBD_MATRIX_RELEASE(xroar_keyboard_interface, DSCAN_SHIFT);
+			KBD_MATRIX_RELEASE(xroar.keyboard_interface, DSCAN_SHIFT);
 		return;
 	}
 
-	keyboard_release(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
+	keyboard_release(xroar.keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

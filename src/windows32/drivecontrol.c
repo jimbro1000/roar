@@ -61,7 +61,7 @@ void windows32_dc_create_window(struct ui_sdl2_interface *uisdl2) {
 	}
 	dc_stm_drive_cyl_head = GetDlgItem(dc_window, IDC_STM_DRIVE_CYL_HEAD);
 
-	xroar_vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uisdl2);
+	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uisdl2);
 }
 
 void windows32_dc_show_window(struct ui_sdl2_interface *uisdl2) {

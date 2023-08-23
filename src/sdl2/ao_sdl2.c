@@ -177,15 +177,15 @@ static void *new(void *cfg) {
 	unsigned sample_nbytes;
 	enum sound_fmt sample_fmt;
 
-	if (xroar_cfg.ao.rate > 0)
-		rate = xroar_cfg.ao.rate;
+	if (xroar.cfg.ao.rate > 0)
+		rate = xroar.cfg.ao.rate;
 
-	if (xroar_cfg.ao.channels >= 1 && xroar_cfg.ao.channels <= 2)
-		nchannels = xroar_cfg.ao.channels;
+	if (xroar.cfg.ao.channels >= 1 && xroar.cfg.ao.channels <= 2)
+		nchannels = xroar.cfg.ao.channels;
 
 	aosdl->nfragments = 3;
-	if (xroar_cfg.ao.fragments >= 0 && xroar_cfg.ao.fragments <= 64)
-		aosdl->nfragments = xroar_cfg.ao.fragments;
+	if (xroar.cfg.ao.fragments >= 0 && xroar.cfg.ao.fragments <= 64)
+		aosdl->nfragments = xroar.cfg.ao.fragments;
 #ifdef HAVE_WASM
 	// The special case where nfragments == 0 requires threads which we're
 	// not using in Wasm, so never pick that.
@@ -194,15 +194,15 @@ static void *new(void *cfg) {
 #endif
 	unsigned buf_nfragments = aosdl->nfragments ? aosdl->nfragments : 1;
 
-	if (xroar_cfg.ao.fragment_ms > 0) {
-		fragment_nframes = (rate * xroar_cfg.ao.fragment_ms) / 1000;
-	} else if (xroar_cfg.ao.fragment_nframes > 0) {
-		fragment_nframes = xroar_cfg.ao.fragment_nframes;
+	if (xroar.cfg.ao.fragment_ms > 0) {
+		fragment_nframes = (rate * xroar.cfg.ao.fragment_ms) / 1000;
+	} else if (xroar.cfg.ao.fragment_nframes > 0) {
+		fragment_nframes = xroar.cfg.ao.fragment_nframes;
 	} else {
-		if (xroar_cfg.ao.buffer_ms > 0) {
-			buffer_nframes = (rate * xroar_cfg.ao.buffer_ms) / 1000;
-		} else if (xroar_cfg.ao.buffer_nframes > 0) {
-			buffer_nframes = xroar_cfg.ao.buffer_nframes;
+		if (xroar.cfg.ao.buffer_ms > 0) {
+			buffer_nframes = (rate * xroar.cfg.ao.buffer_ms) / 1000;
+		} else if (xroar.cfg.ao.buffer_nframes > 0) {
+			buffer_nframes = xroar.cfg.ao.buffer_nframes;
 		} else {
 			buffer_nframes = 1024 * buf_nfragments;
 		}
@@ -219,7 +219,7 @@ static void *new(void *cfg) {
 #endif
 	desired.userdata = aosdl;
 
-	switch (xroar_cfg.ao.format) {
+	switch (xroar.cfg.ao.format) {
 	case SOUND_FMT_U8:
 		desired.format = AUDIO_U8;
 		break;
@@ -249,10 +249,10 @@ static void *new(void *cfg) {
 
 	// First allow format changes, if format not explicitly specified
 	int allowed_changes = 0;
-	if (xroar_cfg.ao.format == SOUND_FMT_NULL) {
+	if (xroar.cfg.ao.format == SOUND_FMT_NULL) {
 		allowed_changes = SDL_AUDIO_ALLOW_FORMAT_CHANGE;
 	}
-	aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao.device, 0, &desired, &aosdl->audiospec, allowed_changes);
+	aosdl->device = SDL_OpenAudioDevice(xroar.cfg.ao.device, 0, &desired, &aosdl->audiospec, allowed_changes);
 
 	// Check the format is supported
 	if (aosdl->device == 0) {
@@ -273,7 +273,7 @@ static void *new(void *cfg) {
 
 	// One last try, allowing any changes.  Check the format is sensible later.
 	if (aosdl->device == 0) {
-		aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao.device, 0, &desired, &aosdl->audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
+		aosdl->device = SDL_OpenAudioDevice(xroar.cfg.ao.device, 0, &desired, &aosdl->audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
 		if (aosdl->device == 0) {
 			LOG_ERROR("Couldn't open audio: %s\n", SDL_GetError());
 			SDL_QuitSubSystem(SDL_INIT_AUDIO);

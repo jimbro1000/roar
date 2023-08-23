@@ -448,8 +448,8 @@ void sound_set_gain(struct sound_interface *sndp, double db) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	float v = powf(10., db / 20.);
 	snd->gain = v;
-	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_gain, (int)(v * 100.), &db);
+	if (xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_gain, (int)(v * 100.), &db);
 	}
 }
 
@@ -460,8 +460,8 @@ void sound_set_volume(struct sound_interface *sndp, int v) {
 	if (v > 200) v = 200;
 	snd->gain = (float)v / 100.;
 	float db = log10f(snd->gain) * 20.;
-	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_gain, v, &db);
+	if (xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_gain, v, &db);
 	}
 }
 

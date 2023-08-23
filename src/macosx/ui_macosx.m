@@ -255,8 +255,8 @@ int cocoa_super_all_keys = 0;
 			xroar_insert_output_tape();
 			break;
 		case TAG_TAPE_INPUT_REWIND:
-			if (xroar_tape_interface->tape_input) {
-				tape_seek(xroar_tape_interface->tape_input, 0, SEEK_SET);
+			if (xroar.tape_interface->tape_input) {
+				tape_seek(xroar.tape_interface->tape_input, 0, SEEK_SET);
 			}
 			break;
 		case TAG_ZOOM_IN:
@@ -291,11 +291,11 @@ int cocoa_super_all_keys = 0;
 
 	/* Cassettes: */
 	case TAG_TAPE_FLAGS:
-		tape_set_state(xroar_tape_interface, tape_get_state(xroar_tape_interface) ^ tag_value);
+		tape_set_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ tag_value);
 		break;
 	case TAG_TAPE_PLAY_PAUSE:
 		tape_is_playing = !tape_is_playing;
-		tape_set_playing(xroar_tape_interface, tape_is_playing, 0);
+		tape_set_playing(xroar.tape_interface, tape_is_playing, 0);
 		break;
 
 	/* Disks: */
@@ -331,23 +331,23 @@ int cocoa_super_all_keys = 0;
 		xroar_set_picture(0, tag_value);
 		break;
 	case TAG_NTSC_SCALING:
-		vo_set_ntsc_scaling(xroar_vo_interface, 0, !xroar_vo_interface->renderer->ntsc_scaling);
+		vo_set_ntsc_scaling(xroar.vo_interface, 0, !xroar.vo_interface->renderer->ntsc_scaling);
 		break;
 	case TAG_CCR:
 		current_ccr = tag;
 		xroar_set_ccr(0, tag_value);
 		break;
 	case TAG_CMP_FS:
-		vo_set_cmp_fs(xroar_vo_interface, 0, tag_value);
+		vo_set_cmp_fs(xroar.vo_interface, 0, tag_value);
 		break;
 	case TAG_CMP_FSC:
-		vo_set_cmp_fsc(xroar_vo_interface, 0, tag_value);
+		vo_set_cmp_fsc(xroar.vo_interface, 0, tag_value);
 		break;
 	case TAG_CMP_SYSTEM:
-		vo_set_cmp_system(xroar_vo_interface, 0, tag_value);
+		vo_set_cmp_system(xroar.vo_interface, 0, tag_value);
 		break;
 	case TAG_CMP_COLOUR_KILLER:
-		vo_set_cmp_colour_killer(xroar_vo_interface, 0, !xroar_vo_interface->renderer->cmp.colour_killer);
+		vo_set_cmp_colour_killer(xroar.vo_interface, 0, !xroar.vo_interface->renderer->cmp.colour_killer);
 		break;
 	case TAG_VDG_INVERSE:
 		vdg_inverted = !vdg_inverted;
@@ -390,7 +390,7 @@ int cocoa_super_all_keys = 0;
 	int tag_type = tag & TAG_TYPE_MASK;
 	int tag_value = tag & TAG_VALUE_MASK;
 
-	struct vo_render *vr = xroar_vo_interface ? xroar_vo_interface->renderer : NULL;
+	struct vo_render *vr = xroar.vo_interface ? xroar.vo_interface->renderer : NULL;
 
 	switch (tag_type) {
 
@@ -403,7 +403,7 @@ int cocoa_super_all_keys = 0;
 		break;
 
 	case TAG_TAPE_FLAGS:
-		[item setState:((tape_get_state(xroar_tape_interface) & tag_value) ? NSOnState : NSOffState)];
+		[item setState:((tape_get_state(xroar.tape_interface) & tag_value) ? NSOnState : NSOffState)];
 		break;
 	case TAG_TAPE_PLAY_PAUSE:
 		[item setState:(tape_is_playing ? NSOnState : NSOffState)];

@@ -148,7 +148,7 @@ void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2) {
 	gtk_builder_connect_signals(builder, uigtk2);
 	g_object_unref(builder);
 
-	xroar_vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, NULL);
+	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, NULL);
 }
 
 /* Drive Control - Signal Handlers */

@@ -33,6 +33,7 @@ struct event;
 struct machine_config;
 struct slist;
 struct vdg_palette;
+struct vdrive_interface;
 struct vo_interface;
 struct xroar_timeout;
 
@@ -76,8 +77,9 @@ enum xroar_filetype {
 	FILETYPE_IMG,  // Generic, heuristic decides if it's VHD or IDE
 };
 
-/**************************************************************************/
-/* Command line arguments */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Command line arguments
 
 struct xroar_cfg {
 
@@ -141,29 +143,34 @@ struct xroar_cfg {
 	} debug;
 };
 
-extern struct xroar_cfg xroar_cfg;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/**************************************************************************/
-/* Global flags */
+// Global emulator state
 
-#define UI_EVENT_LIST xroar_ui_events
-#define MACHINE_EVENT_LIST xroar_machine_events
-extern struct event *xroar_ui_events;
-extern struct event *xroar_machine_events;
+struct xroar {
+	struct xroar_cfg cfg;
 
-extern struct ui_interface *xroar_ui_interface;
-extern struct vo_interface *xroar_vo_interface;
-extern struct ao_interface *xroar_ao_interface;
+	struct event *ui_events;
+	struct event *machine_events;
 
-extern struct machine_config *xroar_machine_config;
-extern struct machine *xroar_machine;
-extern struct tape_interface *xroar_tape_interface;
-extern struct keyboard_interface *xroar_keyboard_interface;
-extern struct printer_interface *xroar_printer_interface;
+	struct ui_interface *ui_interface;
+	struct vo_interface *vo_interface;
+	struct ao_interface *ao_interface;
 
-extern struct vdrive_interface *xroar_vdrive_interface;
+	struct machine_config *machine_config;
+	struct machine *machine;
+	struct keyboard_interface *keyboard_interface;
+	struct tape_interface *tape_interface;
+	struct printer_interface *printer_interface;
+	struct vdrive_interface *vdrive_interface;
+};
 
-/**************************************************************************/
+extern struct xroar xroar;
+
+#define UI_EVENT_LIST xroar.ui_events
+#define MACHINE_EVENT_LIST xroar.machine_events
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /// Configure XRoar, initialise modules and start machine.
 struct ui_interface *xroar_init(int argc, char **argv);

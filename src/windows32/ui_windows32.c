@@ -214,8 +214,8 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)hardware_menu, "&Hardware");
 
-	windows32_ui_update_state(uisdl2, ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
-	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
+	windows32_ui_update_state(uisdl2, ui_tag_machine, xroar.machine_config ? xroar.machine_config->id : 0, NULL);
+	struct cart *cart = xroar.machine ? xroar.machine->get_interface(xroar.machine, "cart") : NULL;
 	windows32_ui_update_state(uisdl2, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
 }
 
@@ -268,8 +268,8 @@ void windows32_update_cartridge_menu(void *sptr) {
 	(void)sptr;
 	// Get list of cart configs
 	struct slist *ccl = NULL;
-	if (xroar_machine) {
-		const struct machine_partdb_extra *mpe = xroar_machine->part.partdb->extra[0];
+	if (xroar.machine) {
+		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
 		const char *cart_arch = mpe->cart_arch;
 		ccl = cart_config_list_is_a(cart_arch);
 	}
@@ -338,19 +338,19 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 			xroar_insert_input_tape();
 			break;
 		case ui_action_tape_input_rewind:
-			if (xroar_tape_interface && xroar_tape_interface->tape_input)
-				tape_rewind(xroar_tape_interface->tape_input);
+			if (xroar.tape_interface && xroar.tape_interface->tape_input)
+				tape_rewind(xroar.tape_interface->tape_input);
 			break;
 		case ui_action_tape_output:
 			xroar_insert_output_tape();
 			break;
 
 		case ui_action_tape_output_rewind:
-			if (xroar_tape_interface && xroar_tape_interface->tape_output)
-				tape_rewind(xroar_tape_interface->tape_output);
+			if (xroar.tape_interface && xroar.tape_interface->tape_output)
+				tape_rewind(xroar.tape_interface->tape_output);
 			break;
 		case ui_action_tape_play_pause:
-			tape_set_playing(xroar_tape_interface, !(GetMenuState(top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND) & MF_CHECKED), 1);
+			tape_set_playing(xroar.tape_interface, !(GetMenuState(top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND) & MF_CHECKED), 1);
 			break;
 		case ui_action_zoom_in:
 			sdl_zoom_in(global_uisdl2);
@@ -384,7 +384,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		windows32_tc_show_window(global_uisdl2);
 		break;
 	case ui_tag_tape_flags:
-		tape_select_state(xroar_tape_interface, tape_get_state(xroar_tape_interface) ^ tag_value);
+		tape_select_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ tag_value);
 		break;
 
 	// Disks:
@@ -671,7 +671,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		break;
 
 	case WM_UNINITMENUPOPUP:
-		DELEGATE_SAFE_CALL(xroar_vo_interface->draw);
+		DELEGATE_SAFE_CALL(xroar.vo_interface->draw);
 		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
 
 	default:

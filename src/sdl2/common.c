@@ -178,7 +178,7 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 						if (uc)
 							*p = toupper(*p);
 					}
-					keyboard_queue_basic(xroar_keyboard_interface, text);
+					keyboard_queue_basic(xroar.keyboard_interface, text);
 					SDL_free(text);
 				}
 				break;

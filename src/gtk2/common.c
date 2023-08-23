@@ -129,7 +129,7 @@ static void clipboard_text_received(GtkClipboard *clipboard, const gchar *text, 
 		if (uc)
 			*p = toupper(*p);
 	}
-	keyboard_queue_basic(xroar_keyboard_interface, ntext);
+	keyboard_queue_basic(xroar.keyboard_interface, ntext);
 	free(ntext);
 }
 
