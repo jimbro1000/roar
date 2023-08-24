@@ -30,11 +30,11 @@
 #include "sdsx.h"
 #include "xalloc.h"
 
+#include "auto_kbd.h"
 #include "breakpoint.h"
 #include "crc16.h"
 #include "events.h"
 #include "fs.h"
-#include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
 #include "mc6801/mc6801.h"
@@ -54,7 +54,6 @@ struct tape_interface_private {
 
 	struct machine *machine;
 	struct ui_interface *ui;
-	struct keyboard_interface *keyboard_interface;
 
 	struct debug_cpu *debug_cpu;
 	_Bool is_6809;
@@ -226,8 +225,7 @@ void tape_interface_free(struct tape_interface *ti) {
 }
 
 // Connecting a machine allows breakpoints to be set on that machine to
-// implement fast loading & tape rewriting.  It also allows driving the
-// keyboard to type automatic load commands.  This should all probably be
+// implement fast loading & tape rewriting.  This should all probably be
 // abstracted out.
 
 void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m) {
@@ -240,7 +238,6 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 	}
 
 	tip->machine = m;
-	tip->keyboard_interface = m->get_interface(m, "keyboard");
 
 	tip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
 	tip->is_6809 = part_is_a(&tip->debug_cpu->part, "MC6809");
@@ -273,7 +270,6 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 void tape_interface_disconnect_machine(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tip->machine = NULL;
-	tip->keyboard_interface = NULL;
 	tip->debug_cpu = NULL;
 	ti->update_audio = DELEGATE_DEFAULT1(void, float);
 }
@@ -654,7 +650,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	if (filename == NULL)
 		return -1;
-	keyboard_queue_basic(tip->keyboard_interface, NULL);
+	ak_parse_type_string(xroar.auto_kbd, NULL);
 	if (tape_open_reading(ti, filename) == -1)
 		return -1;
 	struct tape_file *f = tape_file_next(ti->tape_input, 0);
@@ -698,7 +694,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 		if (autorun_special[i].size == f->fnblock_size
 		    && autorun_special[i].crc == f->fnblock_crc) {
 			LOG_DEBUG(1, "Using special load instructions for '%s'\n", autorun_special[i].name);
-			keyboard_queue_basic(tip->keyboard_interface, autorun_special[i].run);
+			ak_parse_type_string(xroar.auto_kbd, autorun_special[i].run);
 			done = 1;
 		}
 	}
@@ -709,14 +705,14 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 
 		switch (type) {
 			case 0:
-				keyboard_queue_basic(tip->keyboard_interface, "\\025CLOAD\\r");
-				keyboard_queue_basic(tip->keyboard_interface, "RUN\\r");
+				ak_parse_type_string(xroar.auto_kbd, "\\025CLOAD\\r");
+				ak_parse_type_string(xroar.auto_kbd, "RUN\\r");
 				break;
 			case 2:
 				if (need_exec) {
-					keyboard_queue_basic(tip->keyboard_interface, "\\025CLOADM:EXEC\\r");
+					ak_parse_type_string(xroar.auto_kbd, "\\025CLOADM:EXEC\\r");
 				} else {
-					keyboard_queue_basic(tip->keyboard_interface, "\\025CLOADM\\r");
+					ak_parse_type_string(xroar.auto_kbd, "\\025CLOADM\\r");
 				}
 				break;
 			default:

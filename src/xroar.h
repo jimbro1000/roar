@@ -159,6 +159,8 @@ struct xroar {
 
 	struct machine_config *machine_config;
 	struct machine *machine;
+	struct auto_kbd *auto_kbd;
+
 	struct keyboard_interface *keyboard_interface;
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;

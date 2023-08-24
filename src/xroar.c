@@ -42,6 +42,7 @@
 #include "xalloc.h"
 
 #include "ao.h"
+#include "auto_kbd.h"
 #include "becker.h"
 #include "cart.h"
 #include "crclist.h"
@@ -1064,10 +1065,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 		// Text (type ASCII BASIC)
 		if (private_cfg.file.text) {
-			keyboard_queue_basic_file(xroar.keyboard_interface, private_cfg.file.text);
-			keyboard_queue_basic(xroar.keyboard_interface, "\\r");
+			ak_type_file(xroar.auto_kbd, private_cfg.file.text);
+			ak_parse_type_string(xroar.auto_kbd, "\\r");
 			if (autorun_media_slot == media_slot_text) {
-				keyboard_queue_basic(xroar.keyboard_interface, "RUN\\r");
+				ak_parse_type_string(xroar.auto_kbd, "RUN\\r");
 			}
 		}
 
@@ -1100,7 +1101,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Type strings into machine
 	while (private_cfg.kbd.type_list) {
 		sds data = private_cfg.kbd.type_list->data;
-		keyboard_queue_basic_sds(xroar.keyboard_interface, data);
+		ak_type_sds(xroar.auto_kbd, data);
 		private_cfg.kbd.type_list = slist_remove(private_cfg.kbd.type_list, data);
 		sdsfree(data);
 	}
@@ -1130,6 +1131,10 @@ void xroar_shutdown(void) {
 	if (shutting_down)
 		return;
 	shutting_down = 1;
+	if (xroar.auto_kbd) {
+		auto_kbd_free(xroar.auto_kbd);
+		xroar.auto_kbd = NULL;
+	}
 	if (xroar.machine) {
 		part_free((struct part *)xroar.machine);
 		xroar.machine = NULL;
@@ -1249,10 +1254,10 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 	case FILETYPE_WAV:
 	default:
 		if (filetype == FILETYPE_ASC && part_is_a(&xroar.machine->part, "mc10")) {
-			keyboard_queue_basic_file(xroar.keyboard_interface, filename);
-			keyboard_queue_basic(xroar.keyboard_interface, "\\r");
+			ak_type_file(xroar.auto_kbd, filename);
+			ak_parse_type_string(xroar.auto_kbd, "\\r");
 			if (autorun) {
-				keyboard_queue_basic(xroar.keyboard_interface, "RUN\\r");
+				ak_parse_type_string(xroar.auto_kbd, "RUN\\r");
 			}
 		} else {
 			int r;
@@ -1293,9 +1298,9 @@ void xroar_load_disk(const char *filename, int drive, _Bool autorun) {
 		 * we're talking to */
 		if (strcmp(xroar.machine->config->architecture, "coco") == 0
 		    || strcmp(xroar.machine->config->architecture, "coco3") == 0) {
-			keyboard_queue_basic(xroar.keyboard_interface, "\\025DOS\\r");
+			ak_parse_type_string(xroar.auto_kbd, "\\025DOS\\r");
 		} else {
-			keyboard_queue_basic(xroar.keyboard_interface, "\\025BOOT\\r");
+			ak_parse_type_string(xroar.auto_kbd, "\\025BOOT\\r");
 		}
 	}
 }
@@ -1730,6 +1735,7 @@ void xroar_connect_machine(void) {
 	assert(xroar.machine_config != NULL);
 	assert(xroar.machine != NULL);
 	tape_interface_connect_machine(xroar.tape_interface, xroar.machine);
+	xroar.auto_kbd = auto_kbd_new(xroar.machine);
 	xroar.keyboard_interface = xroar.machine->get_interface(xroar.machine, "keyboard");
 	xroar.printer_interface = xroar.machine->get_interface(xroar.machine, "printer");
 	struct cart *c = (struct cart *)part_component_by_id(&xroar.machine->part, "cart");
@@ -1769,6 +1775,10 @@ void xroar_connect_machine(void) {
 }
 
 void xroar_configure_machine(struct machine_config *mc) {
+	if (xroar.auto_kbd) {
+		auto_kbd_free(xroar.auto_kbd);
+		xroar.auto_kbd = NULL;
+	}
 	if (xroar.machine) {
 		part_free((struct part *)xroar.machine);
 	}

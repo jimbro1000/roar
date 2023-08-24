@@ -2,7 +2,7 @@
  *
  *  \brief WebAssembly (emscripten) support.
  *
- *  \copyright Copyright 2019-2022 Ciaran Anscomb
+ *  \copyright Copyright 2019-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -34,11 +34,11 @@
 #include "slist.h"
 #include "xalloc.h"
 
+#include "auto_kbd.h"
 #include "cart.h"
 #include "events.h"
 #include "fs.h"
 #include "logging.h"
-#include "keyboard.h"
 #include "machine.h"
 #include "romlist.h"
 #include "vdisk.h"
@@ -464,8 +464,8 @@ static void do_wasm_load_file(void *sptr) {
 		xroar_insert_disk_file(ev->drive, ev->filename);
 		break;
 	case wasm_load_file_type_text:
-		keyboard_queue_basic_file(xroar.keyboard_interface, ev->filename);
-		keyboard_queue_basic(xroar.keyboard_interface, "\\r");
+		ak_type_file(xroar.auto_kbd, ev->filename);
+		ak_parse_type_string(xroar.auto_kbd, "\\r");
 		break;
 	}
 	free(ev->filename);
@@ -510,7 +510,7 @@ void wasm_set_joystick(int port, const char *value) {
 static void do_wasm_queue_basic(void *sptr) {
 	char *text = sptr;
 	WASM_DEBUG("do_wasm_queue_basic(%s)\n", text);
-	keyboard_queue_basic(xroar.keyboard_interface, text);
+	ak_parse_type_string(xroar.auto_kbd, text);
 	free(text);
 }
 

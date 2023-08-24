@@ -24,8 +24,6 @@
 
 #include "dkbd.h"
 
-struct machine;
-
 struct keyboard_state {
 	unsigned row_source;
 	unsigned row_sink;
@@ -92,7 +90,7 @@ enum keyboard_chord_mode {
 	keyboard_chord_mode_coco_basic
 };
 
-struct keyboard_interface *keyboard_interface_new(struct machine *m);
+struct keyboard_interface *keyboard_interface_new(void);
 void keyboard_interface_free(struct keyboard_interface *ki);
 
 void keyboard_set_keymap(struct keyboard_interface *ki, int map);
@@ -102,12 +100,5 @@ void keyboard_set_chord_mode(struct keyboard_interface *ki, enum keyboard_chord_
 void keyboard_read_matrix(struct keyboard_interface *ki, struct keyboard_state *);
 void keyboard_unicode_press(struct keyboard_interface *ki, unsigned unicode);
 void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode);
-
-// If supplied as an SDS, the string is assumed to be pre-parsed for escape sequences, etc.
-void keyboard_queue_basic_sds(struct keyboard_interface *ki, sds s);
-// Else, if supplied as a normal C string, it's parsed.
-void keyboard_queue_basic(struct keyboard_interface *ki, const char *s);
-// Queue typing a BASIC file
-void keyboard_queue_basic_file(struct keyboard_interface *ki, const char *filename);
 
 #endif

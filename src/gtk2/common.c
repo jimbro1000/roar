@@ -29,7 +29,7 @@
 
 #include "xalloc.h"
 
-#include "keyboard.h"
+#include "auto_kbd.h"
 #include "xroar.h"
 
 #include "gtk2/common.h"
@@ -129,7 +129,7 @@ static void clipboard_text_received(GtkClipboard *clipboard, const gchar *text, 
 		if (uc)
 			*p = toupper(*p);
 	}
-	keyboard_queue_basic(xroar.keyboard_interface, ntext);
+	ak_parse_type_string(xroar.auto_kbd, ntext);
 	free(ntext);
 }
 

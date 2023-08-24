@@ -415,7 +415,7 @@ static _Bool mc10_finish(struct part *p) {
 	}
 
 	// Keyboard interface
-	mp->keyboard.interface = keyboard_interface_new(m);
+	mp->keyboard.interface = keyboard_interface_new();
 	mp->keyboard.interface->update = DELEGATE_AS0(void, mc10_keyboard_update, mp);
 	keyboard_set_keymap(mp->keyboard.interface, m->keyboard.type);
 

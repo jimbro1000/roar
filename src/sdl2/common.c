@@ -33,9 +33,9 @@
 #include "pl-string.h"
 #include "xalloc.h"
 
+#include "auto_kbd.h"
 #include "events.h"
 #include "joystick.h"
-#include "keyboard.h"
 #include "logging.h"
 #include "vo.h"
 #include "xroar.h"
@@ -178,7 +178,7 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 						if (uc)
 							*p = toupper(*p);
 					}
-					keyboard_queue_basic(xroar.keyboard_interface, text);
+					ak_parse_type_string(xroar.auto_kbd, text);
 					SDL_free(text);
 				}
 				break;

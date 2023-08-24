@@ -544,7 +544,7 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->PIA1->b.in_sink &= ~(1<<0);
 
 	// Keyboard interface
-	mcc3->keyboard.interface = keyboard_interface_new(m);
+	mcc3->keyboard.interface = keyboard_interface_new();
 	mcc3->keyboard.interface->update = DELEGATE_AS0(void, keyboard_update, mcc3);
 	keyboard_set_chord_mode(mcc3->keyboard.interface, keyboard_chord_mode_coco_basic);
 	keyboard_set_keymap(mcc3->keyboard.interface, m->keyboard.type);

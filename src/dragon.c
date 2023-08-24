@@ -861,7 +861,7 @@ static _Bool dragon_finish(struct part *p) {
 	}
 
 	// Keyboard interface
-	md->keyboard.interface = keyboard_interface_new(m);
+	md->keyboard.interface = keyboard_interface_new();
 	if (md->is_dragon) {
 		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_32k_basic);
 	} else {
