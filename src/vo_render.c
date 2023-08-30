@@ -184,6 +184,7 @@ struct vo_render *vo_render_new(int fmt) {
 
 	vr->cmp.cha_phase = M_PI/2.;  // default 90°
 	// sensible defaults - updates viewport offset
+	vr->viewport.x = MAX_FILTER_ORDER;
 	vr->viewport.w = 640;
 	vr->viewport.h = 240;
 	vo_render_set_active_area(vr, 254, 63, 512, 512);
@@ -609,6 +610,8 @@ static void update_cmp_system(struct vo_render *vr) {
 	                     vr->cmp.mod.ufilter.order : vr->cmp.mod.vfilter.order;
 	vr->cmp.demod.corder = (vr->cmp.demod.ufilter.order > vr->cmp.demod.vfilter.order) ?
 	                       vr->cmp.demod.ufilter.order : vr->cmp.demod.vfilter.order;
+	vr->cmp.demod.morder = (vr->cmp.demod.corder > vr->cmp.demod.yfilter.order) ?
+	                       vr->cmp.demod.corder : vr->cmp.demod.yfilter.order;
 
 	for (unsigned i = 0; i < vr->cmp.nbursts; i++) {
 		update_cmp_burst(vr, i);
@@ -984,7 +987,7 @@ void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint
 		vr->cmp.vswitch = !vswitch;
 
 	// Optionally apply lowpass filters to U and V.  Modulate results.
-	for (unsigned i = MAX_FILTER_ORDER; i < npixels - MAX_FILTER_ORDER; i++) {
+	for (unsigned i = vr->viewport.x - vr->cmp.demod.morder; i < (unsigned)(vr->viewport.x + vr->viewport.w + vr->cmp.demod.morder); i++) {
 		int c = data[i];
 		int py = vr->cmp.palette.y[c];
 
@@ -1023,7 +1026,7 @@ void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint
 
 	int_xyz rgb[1024];
 
-	for (unsigned i = MAX_FILTER_ORDER; i < npixels - MAX_FILTER_ORDER; i++) {
+	for (unsigned i = vr->viewport.x; i < (unsigned)(vr->viewport.x + vr->viewport.w); i++) {
 		int fy = 0;
 		int yorder = vr->cmp.demod.yfilter.order;
 		for (int ft = -yorder; ft <= yorder; ft++) {

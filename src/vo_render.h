@@ -260,6 +260,8 @@ struct vo_render {
 			struct vo_render_filter ufilter;
 			struct vo_render_filter vfilter;
 
+			int morder;  // max of corder, yfilter.order
+
 			// Filter chroma line delay.  Used in PAL averaging.
 			int fubuf[2][1024];
 			int fvbuf[2][1024];
