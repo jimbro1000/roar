@@ -473,6 +473,7 @@ xroar_SOURCES += \
 	windows32/drivecontrol.c windows32/drivecontrol.h \
 	windows32/filereq_windows32.c \
 	windows32/guicon.c windows32/guicon.h \
+	windows32/hkbd_windows.c windows32/hkbd_windows.h \
 	windows32/printercontrol.c windows32/printercontrol.h \
 	windows32/tapecontrol.c windows32/tapecontrol.h \
 	windows32/ui_windows32.c \
