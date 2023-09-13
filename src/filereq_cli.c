@@ -115,9 +115,9 @@ static char *get_filename(struct cli_filereq_interface *frcli, char const * cons
 		}
 	}
 
-	_Bool was_fullscreen = xroar_vo_interface->is_fullscreen;
+	_Bool was_fullscreen = xroar.vo_interface->is_fullscreen;
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 0);
+		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 0);
 
 	frcli->exists = 0;
 
@@ -185,7 +185,7 @@ static char *get_filename(struct cli_filereq_interface *frcli, char const * cons
 		// if the new path either doesn't exist, or is not a directory,
 		// return it.
 		if (was_fullscreen)
-			DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 1);
+			DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 1);
 		return frcli->path;
 	}
 }
