@@ -27,6 +27,7 @@
 #include "array.h"
 #include "xalloc.h"
 
+#include "hkbd.h"
 #include "logging.h"
 #include "mc6847/mc6847.h"
 #include "module.h"
@@ -35,6 +36,9 @@
 #include "xroar.h"
 
 #include "sdl2/common.h"
+#ifdef HAVE_X11
+#include "x11/hkbd_x11.h"
+#endif
 
 // MAX_VIEWPORT_* defines maximum viewport
 
@@ -237,9 +241,21 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	sdl_windows32_set_events_window(uisdl2->vo_window);
 #endif
 
-	// Initialise keyboard
-	sdl_os_keyboard_init(uisdl2->vo_window);
-	sdl_keyboard_init(uisdl2);
+	// Per-OS keyboard initialisation
+#ifdef HAVE_X11
+	{
+		SDL_SysWMinfo sdlinfo;
+		SDL_VERSION(&sdlinfo.version);
+		SDL_GetWindowWMInfo(uisdl2->vo_window, &sdlinfo);
+		if (sdlinfo.subsystem == SDL_SYSWM_X11) {
+			Display *display = sdlinfo.info.x11.display;
+			hk_x11_set_display(display);
+		}
+	}
+#endif
+
+	// Global keyboard initialisation
+	hk_init();
 
 	return 1;
 }
@@ -451,7 +467,6 @@ static void vo_sdl_free(void *sptr) {
 	}
 
 	if (uisdl2->vo_window) {
-		sdl_os_keyboard_free(uisdl2->vo_window);
 		SDL_DestroyWindow(uisdl2->vo_window);
 		uisdl2->vo_window = NULL;
 	}

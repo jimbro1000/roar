@@ -1,8 +1,8 @@
 /** \file
  *
- *  \brief System event handling for X11 using SDL2.
+ *  \brief Extended keyboard handling for X11 using SDL.
  *
- *  \copyright Copyright 2015 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -14,39 +14,32 @@
  *  See COPYING.GPL for redistribution conditions.
  *
  *  \endlicenseblock
- *
- *  MappingNotify events trigger an update of keyboard mapping tables.
- *
- *  KeymapNotify events used to update internal modifier state.
  */
 
 #include "top-config.h"
 
+#include <X11/Xlib.h>
 #include <SDL.h>
 #include <SDL_syswm.h>
-#include <X11/X.h>
 
-#include "logging.h"
+#include "hkbd.h"
 #include "sdl2/common.h"
+#include "x11/hkbd_x11.h"
 
 void sdl_x11_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
-
 	switch (wmmsg->msg.x11.event.type) {
-
 	case MappingNotify:
 		// Keyboard mapping changed, rebuild our mapping tables.
-		sdl_x11_mapping_notify(&wmmsg->msg.x11.event.xmapping);
+		hk_x11_handle_mapping_event(&wmmsg->msg.x11.event.xmapping);
 		break;
 
 	case KeymapNotify:
 		// These are received after a window gets focus, so scan
 		// keyboard for modifier state.
-		sdl_x11_keymap_notify(&wmmsg->msg.x11.event.xkeymap);
+		hk_x11_handle_keymap_event(&wmmsg->msg.x11.event.xkeymap);
 		break;
 
 	default:
 		break;
-
 	}
-
 }

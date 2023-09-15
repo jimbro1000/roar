@@ -47,11 +47,7 @@
 // globally.
 struct ui_sdl2_interface *global_uisdl2 = NULL;
 
-extern inline void sdl_os_keyboard_init(SDL_Window *sw);
-extern inline void sdl_os_keyboard_free(SDL_Window *sw);
 extern inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg);
-extern inline void sdl_os_fix_keyboard_event(SDL_Event *ev);
-extern inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -78,9 +74,11 @@ static _Bool mouse_button[3] = { 0, 0, 0 };
 
 // If the SDL UI is active, more joystick interfaces are available
 
+extern struct joystick_submodule hkbd_js_keyboard;
+
 static struct joystick_submodule *js_submodlist[] = {
 	&sdl_js_submod_physical,
-	&sdl_js_submod_keyboard,
+	&hkbd_js_keyboard,
 	&sdl_js_submod_mouse,
 	NULL
 };
@@ -143,11 +141,9 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 			xroar_quit();
 			break;
 		case SDL_KEYDOWN:
-			sdl_os_fix_keyboard_event(&event);
 			sdl_keypress(uisdl2, &event.key.keysym);
 			break;
 		case SDL_KEYUP:
-			sdl_os_fix_keyboard_event(&event);
 			sdl_keyrelease(uisdl2, &event.key.keysym);
 			break;
 		case SDL_MOUSEMOTION:

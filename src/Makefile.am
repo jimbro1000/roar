@@ -359,17 +359,9 @@ xroar_SOURCES += \
 
 if X11
 xroar_SOURCES += \
-	sdl2/sdl_x11.c \
-	sdl2/sdl_x11_keyboard.c \
-	sdl2/sdl_x11_keycode_tables.h
+	sdl2/sdl_x11.c
 xroar_CFLAGS += $(X11_CFLAGS)
 xroar_LDADD += $(X11_LIBS)
-endif
-
-if MINGW
-xroar_SOURCES += \
-	sdl2/sdl_windows32_keyboard.c \
-	sdl2/sdl_windows32_vsc_table.h
 endif
 
 endif
@@ -385,8 +377,6 @@ xroar_SOURCES += \
 	macosx/filereq_cocoa.m \
 	macosx/hkbd_darwin.c macosx/hkbd_darwin.h \
 	macosx/ui_macosx.m
-xroar_SOURCES += \
-	sdl2/sdl_cocoa_keyboard.c
 endif
 endif
 
