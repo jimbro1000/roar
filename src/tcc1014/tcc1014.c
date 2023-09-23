@@ -549,6 +549,7 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 
 	for (int i = 0; i < 16; i++) {
 		tcc1014_set_register(gime, i, 0);
+		gime->palette_reg[i] = 0;
 	}
 	tcc1014_set_sam_register(gimep, 0);
 
