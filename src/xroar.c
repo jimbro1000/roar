@@ -1106,13 +1106,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		sdsfree(data);
 	}
 
-	// Printing
-	if (private_cfg.printer.file) {
-		printer_open_file(xroar.printer_interface, private_cfg.printer.file);
-	} else if (private_cfg.printer.pipe) {
-		printer_open_pipe(xroar.printer_interface, private_cfg.printer.pipe);
-	}
-
 #ifdef HAVE_WASM
 	if (xroar.machine_config) {
 		xroar_set_machine(1, xroar.machine_config->id);
@@ -1737,7 +1730,15 @@ void xroar_connect_machine(void) {
 	tape_interface_connect_machine(xroar.tape_interface, xroar.machine);
 	xroar.auto_kbd = auto_kbd_new(xroar.machine);
 	xroar.keyboard_interface = xroar.machine->get_interface(xroar.machine, "keyboard");
+
+	// Printing
 	xroar.printer_interface = xroar.machine->get_interface(xroar.machine, "printer");
+	if (private_cfg.printer.file) {
+		printer_open_file(xroar.printer_interface, private_cfg.printer.file);
+	} else if (private_cfg.printer.pipe) {
+		printer_open_pipe(xroar.printer_interface, private_cfg.printer.pipe);
+	}
+
 	struct cart *c = (struct cart *)part_component_by_id(&xroar.machine->part, "cart");
 	if (c && !part_is_a((struct part *)c, "cart")) {
 		part_free((struct part *)c);
