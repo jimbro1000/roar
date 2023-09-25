@@ -7,6 +7,7 @@
  * GIME: respect X offset and HVEN in COCO mode
  * MPI slot config moved from global to per-cart, included in -config-print
  * Add screenshot to PNG from menu or Control+Shift+S
+ * Fix printing after switching machines [Jak Fearon]
 
 Version 1.4.2, Tue 16 Jun 2023
 
