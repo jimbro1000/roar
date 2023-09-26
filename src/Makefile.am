@@ -194,6 +194,8 @@ endif
 endif
 endif
 
+# WebAssembly support
+
 if WASM
 xroar_CFLAGS += $(WASM_CFLAGS)
 xroar_LDADD += $(WASM_LIBS)
