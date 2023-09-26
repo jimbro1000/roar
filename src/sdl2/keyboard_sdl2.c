@@ -378,8 +378,6 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		return;
 	if (scancode >= SDL_NUM_SCANCODES)
 		return;
-	if (sym == SDL_SCANCODE_UNKNOWN)
-		return;
 
 	if (!uisdl2->mouse_hidden) {
 		SDL_ShowCursor(SDL_DISABLE);
@@ -392,6 +390,9 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 			unicode = 0;
 		LOG_PRINT("sdl.key press   scan=%3d   sym=%08x   mod=%04x   unicode=%04x   name=%s\n", scancode, sym, mod, unicode, SDL_GetKeyName(sym));
 	}
+
+	if (sym == SDLK_UNKNOWN)
+		return;
 
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
