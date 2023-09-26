@@ -35,6 +35,7 @@
 #include "xalloc.h"
 
 #include "logging.h"
+#include "machine.h"
 #include "module.h"
 #include "vo.h"
 #include "vo_opengl.h"
@@ -120,8 +121,14 @@ static void *new(void *sptr) {
 	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, vogtkgl);
 
 	// Configure drawing_area widget
-	vogtkgl->window_area.w = 640;
-	vogtkgl->window_area.h = 480;
+	_Bool is_coco3 = (strcmp(xroar.machine_config->architecture, "coco3") == 0);
+	if (is_coco3) {
+		vogtkgl->window_area.w = 720;
+		vogtkgl->window_area.h = 540;
+	} else {
+		vogtkgl->window_area.w = 640;
+		vogtkgl->window_area.h = 480;
+	}
 	gtk_widget_set_size_request(global_uigtk2->drawing_area, vogtkgl->window_area.w, vogtkgl->window_area.h);
 	GdkGLConfig *glconfig = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGB | GDK_GL_MODE_DOUBLE);
 	if (!glconfig) {
