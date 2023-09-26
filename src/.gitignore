@@ -21,6 +21,7 @@
 /windows32/*.o
 /windows32/*.res
 /tags
+/x11/*.o
 /xroar
 /xroar.exe
 /xroar.js

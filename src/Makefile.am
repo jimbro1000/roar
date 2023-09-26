@@ -150,7 +150,16 @@ EXTRA_DIST += \
 	mc6809/mc6809_common.c \
 	mc680x/mc680x_ops.c \
 	tcc1014/font-gime.c tcc1014/font-gime.h \
-	vo_render_tmpl.c
+	vo_render_tmpl.c \
+	x11/hkbd_x11_keycode_tables.h
+
+# X11 keycode mapping tables should be distributed, but can be generated from
+# files in /usr/share/X11/xkb/keycodes (xkb-data package in Debian).
+
+XKB_TO_HK_SCANCODE = $(top_builddir)/tools/xkb_to_hk_scancode.pl
+
+x11/hkbd_x11_keycode_tables.h:
+	$(XKB_TO_HK_SCANCODE) > $@
 
 # VDG bitmaps should be distributed, but can be generated from font image files
 # if needed.
@@ -202,6 +211,14 @@ xroar_CFLAGS += -DROMPATH=\"~/.xroar/roms:$(datadir)/xroar/roms:\"
 xroar_CFLAGS += -DCONFPATH=\"~/.xroar:$(sysconfdir):$(datadir)/xroar\"
 endif
 endif
+endif
+
+# Common X11 support
+
+if X11
+xroar_SOURCES += \
+	x11/hkbd_x11.c x11/hkbd_x11.h \
+	x11/hkbd_x11_keycode_tables.h
 endif
 
 # WebAssembly support
