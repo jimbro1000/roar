@@ -250,6 +250,8 @@ struct dk_name_to_key {
 	{ "control", DSCAN_CTRL },
 	{ "f1", DSCAN_F1 },
 	{ "f2", DSCAN_F2 },
+	{ "unbind", DSCAN_INVALID },
+	{ "unmap", DSCAN_INVALID },
 };
 
 int8_t dk_key_by_name(const char *name) {
