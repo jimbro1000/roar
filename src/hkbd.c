@@ -42,6 +42,18 @@
 #include "xconfig.h"
 #include "xroar.h"
 
+#ifdef HAVE_X11
+#include "x11/hkbd_x11.h"
+#endif
+
+#ifdef WINDOWS32
+#include "windows32/hkbd_windows.h"
+#endif
+
+#ifdef HAVE_COCOA
+#include "macosx/hkbd_darwin.h"
+#endif
+
 // If an OS-specific intialisation was able to generate a mapping table to
 // HK scancodes, they will be here:
 
@@ -1129,6 +1141,13 @@ void hk_update_keymap(void) {
 
 	// Any OS-specific defaults
 	_Bool have_keymap = 0;
+#if defined(HAVE_X11)
+	have_keymap = have_keymap || hk_x11_update_keymap();
+#elif defined(WINDOWS32)
+	have_keymap = have_keymap || hk_windows_update_keymap();
+#elif defined(HAVE_COCOA)
+	have_keymap = have_keymap || hk_darwin_update_keymap();
+#endif
 	if (xroar.cfg.kbd.lang != hk_lang_auto) {
 		have_keymap = 0;
 	}
