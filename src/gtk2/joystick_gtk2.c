@@ -47,8 +47,6 @@
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
 
-extern struct joystick_submodule gtk2_js_submod_keyboard;
-
 static struct joystick_submodule gtk2_js_submod_mouse = {
 	.name = "mouse",
 	.configure_axis = configure_axis,
@@ -57,8 +55,10 @@ static struct joystick_submodule gtk2_js_submod_mouse = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+extern struct joystick_submodule hkbd_js_keyboard;
+
 static struct joystick_submodule *js_submodlist[] = {
-	&gtk2_js_submod_keyboard,
+	&hkbd_js_keyboard,
 	&gtk2_js_submod_mouse,
 	NULL
 };

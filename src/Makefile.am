@@ -327,8 +327,7 @@ GTK2_RESOURCES = \
 EXTRA_DIST += \
 	$(GTK2_RESOURCES) \
 	gtk2/gtk2.gresource.c \
-	gtk2/gtk2.gresource.xml \
-	gtk2/keyboard_gtk2_mappings.c
+	gtk2/gtk2.gresource.xml
 
 if GLIB_COMPILE_RESOURCES
 .INTERMEDIATE: gtk2/gtk2.gresource.tmp
