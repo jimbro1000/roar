@@ -24,6 +24,8 @@
 #include <ws2tcpip.h>
 #include <commctrl.h>
 
+#include "xalloc.h"
+
 #include "logging.h"
 
 #include "windows32/common_windows32.h"
@@ -56,4 +58,13 @@ int windows32_init(_Bool alloc_console) {
 
 void windows32_shutdown(void) {
 	WSACleanup();
+}
+
+void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS) {
+	int length = SendMessage(hWnd, WM_GETTEXTLENGTH, 0, 0) + 1;
+	char *text = xmalloc(length);
+	length = SendMessage(hWnd, WM_GETTEXT, length, (LPARAM)text);
+	FillRect(pDIS->hDC, &pDIS->rcItem, (HBRUSH)(COLOR_WINDOW+1));
+	DrawText(pDIS->hDC, text, length, &pDIS->rcItem, DT_PATH_ELLIPSIS);
+	free(text);
 }

@@ -29,4 +29,7 @@ int windows32_init(_Bool alloc_console);
 /// Cleanup before exit.
 void windows32_shutdown(void);
 
+// Draw a control using DrawText() with DT_PATH_ELLIPSIS
+void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS);
+
 #endif
