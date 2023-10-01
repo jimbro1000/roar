@@ -501,6 +501,10 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		windows32_tc_update_input_filename(uisdl2, (const char *)data);
 		break;
 
+	case ui_tag_tape_output_filename:
+		windows32_tc_update_output_filename(uisdl2, (const char *)data);
+		break;
+
 	case ui_tag_tape_playing:
 		windows32_tc_update_tape_playing(uisdl2, value);
 		break;
