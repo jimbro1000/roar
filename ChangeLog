@@ -8,6 +8,7 @@
  * MPI slot config moved from global to per-cart, included in -config-print
  * Add screenshot to PNG from menu or Control+Shift+S
  * Fix printing after switching machines [Jak Fearon]
+ * Better rendering of paths in Windows dialogs
 
 Version 1.4.2, Tue 16 Jun 2023
 
