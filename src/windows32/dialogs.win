@@ -88,7 +88,7 @@ pad=5 id=TAPE_CONTROLS dialog XRoar Tape Control
 
 h1 Input
 
-id=INPUT_FILENAME style=path hexpand=1 text
+id=INPUT_FILENAME style=ownerdraw hexpand=1 text
 pad_top=2 pad_bottom=4 width=100 height=56 id=INPUT_PROGRAMLIST listview
 
 table
@@ -116,7 +116,7 @@ pad=2 nop
 
 h1 Output
 
-id=OUTPUT_FILENAME style=path hexpand=1 text
+id=OUTPUT_FILENAME style=ownerdraw hexpand=1 text
 
 table
 tr td width=112 id=OUTPUT_POSITION scrollbar
@@ -168,7 +168,7 @@ pad=5 id=DRIVE_CONTROLS dialog XRoar Drive Control
 
 hexpand=1 table
 hexpand=1 tr td hexpand=0 text Drive 1
-   hexpand=1 td id=DRIVE1_FILENAME style=path hexpand=1 text
+   hexpand=1 td id=DRIVE1_FILENAME style=ownerdraw hexpand=1 text
 end table
 
 table
@@ -182,7 +182,7 @@ pad=2 nop
 
 hexpand=1 table
 hexpand=1 tr td hexpand=0 text Drive 2
-   hexpand=1 td id=DRIVE2_FILENAME style=path hexpand=1 text
+   hexpand=1 td id=DRIVE2_FILENAME style=ownerdraw hexpand=1 text
 end table
 
 table
@@ -196,7 +196,7 @@ pad=2 nop
 
 hexpand=1 table
 hexpand=1 tr td hexpand=0 text Drive 3
-   hexpand=1 td id=DRIVE3_FILENAME style=path hexpand=1 text
+   hexpand=1 td id=DRIVE3_FILENAME style=ownerdraw hexpand=1 text
 end table
 
 table
@@ -210,7 +210,7 @@ pad=2 nop
 
 hexpand=1 table
 hexpand=1 tr td hexpand=0 text Drive 4
-   hexpand=1 td id=DRIVE4_FILENAME style=path hexpand=1 text
+   hexpand=1 td id=DRIVE4_FILENAME style=ownerdraw hexpand=1 text
 end table
 
 table

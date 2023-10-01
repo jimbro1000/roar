@@ -124,6 +124,18 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 	case WM_NOTIFY:
 		return TRUE;
 
+	case WM_DRAWITEM:
+		{
+			LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
+			int id = LOWORD(wParam);
+			if (id >= IDC_STM_DRIVE1_FILENAME && id <= IDC_STM_DRIVE4_FILENAME) {
+				int drive = id - IDC_STM_DRIVE1_FILENAME;
+				windows32_drawtext_path(dc_stm_drive_filename[drive], pDIS);
+				return TRUE;
+			}
+		}
+		return FALSE;
+
 	case WM_COMMAND:
 		if (HIWORD(wParam) == BN_CLICKED) {
 			// Per-drive checkbox toggles & buttons
