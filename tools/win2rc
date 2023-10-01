@@ -759,6 +759,7 @@ sub dump_rc {
 		}
 		if (exists $eattrs->{style}) {
 			$style = ", DT_PATH_ELLIPSIS | DT_SINGLELINE" if ($eattrs->{style} eq 'path');
+			$style = ", SS_OWNERDRAW" if ($eattrs->{style} eq 'ownerdraw');
 		}
 		print "   $ctl \"$text\", $id, $px, $py, $w, $h$style\n";
 	}
