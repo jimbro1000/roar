@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "c-strcase.h"
 #include "sds.h"
 #include "sdsx.h"
 
@@ -59,6 +60,38 @@ sds path_interp(const char *filename) {
 		s = sdscat(s, PSEP);
 		filename++;
 		filename += strspn(filename, PSEPARATORS);
+#ifdef WINDOWS32
+	} else if (*filename == '%') {
+		char *next = strchr(filename+1, '%');
+		if (next) {
+			char *varname = filename + 1;
+			int length = next - varname;
+			REFKNOWNFOLDERID rfid = NULL;
+			if (length == 12 && c_strncasecmp(varname, "LOCALAPPDATA", length) == 0) {
+				rfid = &FOLDERID_LocalAppData;
+			} else if (length == 7 && c_strncasecmp(varname, "PROFILE", length) == 0) {
+				rfid = &FOLDERID_Profile;
+			} else if (length == 11 && c_strncasecmp(varname, "USERPROFILE", length) == 0) {
+				rfid = &FOLDERID_Profile;
+			}
+			if (rfid) {
+				// XXX mixing WCHAR and char won't work
+				// properly - see if WideCharToMultiByte() will
+				// help here
+				WCHAR *dir;
+				if (SHGetKnownFolderPath(rfid, 0, NULL, &dir) == S_OK) {
+					s = sdscat(s, dir);
+					CoTaskMemFree(dir);
+				}
+			} else {
+				const char *dir = getenv(varname);
+				if (dir && *dir) {
+					s = sdscat(s, dir);
+				}
+			}
+			filename = next + 1;
+		}
+#endif
 	}
 	s = sdscat(s, filename);
 	return s;
