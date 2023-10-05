@@ -21,6 +21,7 @@
 #ifdef WINDOWS32
 #include <windows.h>
 #include <shlobj.h>
+#include <direct.h>
 #endif
 
 #include <dirent.h>
@@ -100,7 +101,10 @@ sds path_interp_full(const char *path, uint32_t flags) {
 				rfid = &FOLDERID_Profile;
 			}
 			if (rfid) {
-				char *dir = get_known_folder_path_utf8(rfid, 0);
+				DWORD dwFlags = 0;
+				if (flags & PATH_FLAG_CREATE)
+					dwFlags |= KF_FLAG_CREATE;
+				char *dir = get_known_folder_path_utf8(rfid, dwFlags);
 				if (dir) {
 					s = sdscat(s, dir);
 					free(dir);
@@ -116,6 +120,24 @@ sds path_interp_full(const char *path, uint32_t flags) {
 #endif
 	}
 	s = sdscat(s, path);
+
+	// Create path as directory if it didn't exist already.  On Windows,
+	// this is in addition to requesting the creation of any "known
+	// directory" above.
+	if (flags & PATH_FLAG_CREATE) {
+		struct stat statbuf;
+		if (stat(s, &statbuf) != 0) {
+#ifdef WINDOWS32
+			_Bool err = (_mkdir(s) != 0);
+#else
+			_Bool err = (mkdir(s, 0755) != 0);
+#endif
+			if (err) {
+				sdsfree(s);
+				return NULL;
+			}
+		}
+	}
 
 	return s;
 }

@@ -21,6 +21,10 @@
 
 #include "sds.h"
 
+// Flags to pass to path_interp_full()
+
+#define PATH_FLAG_CREATE (1 << 0)  // create path if it doesn't exist
+
 // Interpolate variables at the beginning of a path element or filename.
 //
 // A leading "~/" is replaced with ${HOME}/ (${USERPROFILE}\ under Windows).
