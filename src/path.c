@@ -18,6 +18,11 @@
 
 #include "top-config.h"
 
+#ifdef WINDOWS32
+#include <windows.h>
+#include <shlobj.h>
+#endif
+
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,31 +47,51 @@
 #define HOMEDIR "HOME"
 #endif
 
+// Wrap SHGetKnownFolderPath(), allocating required space for path converted to
+// UTF-8.  Caller should free() result.
+
+#ifdef WINDOWS32
+static char *get_known_folder_path_utf8(KNOWNFOLDERID const *rfid, DWORD dwFlags) {
+	WCHAR *dir_w;
+	if (SHGetKnownFolderPath(rfid, dwFlags, NULL, &dir_w) != S_OK)
+		return NULL;
+	char *dir = NULL;
+	int len = WideCharToMultiByte(CP_UTF8, 0, dir_w, -1, NULL, 0, NULL, NULL);
+	if (len > 0) {
+		dir = malloc(len + 1);
+		WideCharToMultiByte(CP_UTF8, 0, dir_w, -1, dir, len + 1, NULL, NULL);
+		dir[len] = 0;
+	}
+	CoTaskMemFree(dir_w);
+	return dir;
+}
+#endif
+
 // Interpolate variables into a path element or filename (only considers
 // leading "~/" for now).
 
-sds path_interp(const char *filename) {
-	if (!filename)
+sds path_interp_full(const char *path, uint32_t flags) {
+	(void)flags;
+	if (!path)
 		return NULL;
-
-	const char *home = getenv(HOMEDIR);
-	if (home && *home == 0)
-		home = NULL;
 
 	sds s = sdsempty();
 
-	if (home && *filename == '~' && strspn(filename+1, PSEPARATORS) > 0) {
-		s = sdscat(s, home);
-		s = sdscat(s, PSEP);
-		filename++;
-		filename += strspn(filename, PSEPARATORS);
+	if (*path == '~' && strspn(path+1, PSEPARATORS) > 0) {
+		const char *home = getenv(HOMEDIR);
+		if (home && *home) {
+			s = sdscat(s, home);
+			s = sdscat(s, PSEP);
+		}
+		path++;
+		path += strspn(path, PSEPARATORS);
 #ifdef WINDOWS32
-	} else if (*filename == '%') {
-		char *next = strchr(filename+1, '%');
+	} else if (*path == '%') {
+		const char *next = strchr(path+1, '%');
 		if (next) {
-			char *varname = filename + 1;
+			const char *varname = path + 1;
 			int length = next - varname;
-			REFKNOWNFOLDERID rfid = NULL;
+			KNOWNFOLDERID const *rfid = NULL;
 			if (length == 12 && c_strncasecmp(varname, "LOCALAPPDATA", length) == 0) {
 				rfid = &FOLDERID_LocalAppData;
 			} else if (length == 7 && c_strncasecmp(varname, "PROFILE", length) == 0) {
@@ -75,13 +100,10 @@ sds path_interp(const char *filename) {
 				rfid = &FOLDERID_Profile;
 			}
 			if (rfid) {
-				// XXX mixing WCHAR and char won't work
-				// properly - see if WideCharToMultiByte() will
-				// help here
-				WCHAR *dir;
-				if (SHGetKnownFolderPath(rfid, 0, NULL, &dir) == S_OK) {
+				char *dir = get_known_folder_path_utf8(rfid, 0);
+				if (dir) {
 					s = sdscat(s, dir);
-					CoTaskMemFree(dir);
+					free(dir);
 				}
 			} else {
 				const char *dir = getenv(varname);
@@ -89,12 +111,17 @@ sds path_interp(const char *filename) {
 					s = sdscat(s, dir);
 				}
 			}
-			filename = next + 1;
+			path = next + 1;
 		}
 #endif
 	}
-	s = sdscat(s, filename);
+	s = sdscat(s, path);
+
 	return s;
+}
+
+sds path_interp(const char *path) {
+	return path_interp_full(path, 0);
 }
 
 // Find file within supplied colon-separated path.  In path elements, "~/" at
@@ -132,26 +159,15 @@ sds find_in_path(const char *path, const char *filename) {
 	}
 	sdsfree(f);
 
-	home = getenv(HOMEDIR);
-	if (home && *home == 0)
-		home = NULL;
-
 	const char *p = path;
 	size_t plen = strlen(p);
 	sds s = sdsempty();
 
 	while (p) {
 		sdssetlen(s, 0);
-		sds pathelem = sdsx_tok_str_len(&p, &plen, ":", 0);
-
-		// Prefix $HOME if path elem starts "~/"
-		if (home && *pathelem == '~' && strspn(pathelem+1, PSEPARATORS) > 0) {
-			s = sdscat(s, home);
-			pathelem = sdsx_replace_substr(pathelem, 2, -1);
-			if (strspn(s + sdslen(s) - 1, PSEPARATORS) == 0) {
-				s = sdscat(s, PSEP);
-			}
-		}
+		sds tok = sdsx_tok_str_len(&p, &plen, ":", 0);
+		sds pathelem = path_interp(tok);
+		sdsfree(tok);
 
 		// Append a '/' if required, then the filename
 		s = sdscatsds(s, pathelem);
