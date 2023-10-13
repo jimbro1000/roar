@@ -144,6 +144,11 @@ struct tape_file_autorun {
 
 static struct tape_file_autorun autorun_special[] = {
 	{
+	  .name = "Dungeon Raid",
+	  .size = 36, .crc = 0x1822,
+	  .run = "\\025CLEAR0\\rCLOADM\\r",
+	},
+	{
 	  .name = "Electronic Author",
 	  .size = 15, .crc = 0x8866,
 	  .run = "\\025CLEAR20\\rCLOADM\\r",
