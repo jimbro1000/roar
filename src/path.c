@@ -156,7 +156,6 @@ sds path_interp(const char *path) {
 
 sds find_in_path(const char *path, const char *filename) {
 	struct stat statbuf;
-	const char *home;
 
 	if (!filename)
 		return NULL;
