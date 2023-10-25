@@ -97,6 +97,11 @@ struct MC6847_private {
 	unsigned render_mode;
 	unsigned pal_padding;
 
+	// Set when pixel_data[] contains only the current border colour - PAL
+	// padding lines (which occur during vertical border) will invalidate
+	// this.
+	_Bool have_border_only;
+
 	/* Unsafe warning: pixel_data[] needs to be 8 elements longer than a
 	 * full scanline, for the mid-scanline 32 -> 16 byte mode switch case
 	 * where many extra pixels are emitted.  8 is the maximum number of
@@ -300,13 +305,12 @@ static void do_hs_fall(void *data) {
 	// Finish rendering previous scanline
 	if (vdg->frame == 0) {
 		if (vdg->scanline < VDG_ACTIVE_AREA_START) {
-			if (vdg->scanline == 0) {
-				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START;
-				for (unsigned j = VDG_tAVB; j > 0; j--) {
-					*(v++) = vdg->border_colour;
-				}
+			if (!vdg->have_border_only) {
+				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, vdg->border_colour, VDG_tAVB);
+				vdg->have_border_only = 1;
 			}
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
+			vdg->have_border_only = 0;
 			render_scanline(vdg);
 			vdg->public.row++;
 			if (vdg->public.row > 11)
@@ -315,11 +319,9 @@ static void do_hs_fall(void *data) {
 				vdg->A += vdg->is_32byte ? 32 : 16;
 			vdg->beam_pos = VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
-			if (vdg->scanline == VDG_ACTIVE_AREA_END) {
-				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START;
-				for (unsigned j = VDG_tAVB; j > 0; j--) {
-					*(v++) = vdg->border_colour;
-				}
+			if (!vdg->have_border_only) {
+				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, vdg->border_colour, VDG_tAVB);
+				vdg->have_border_only = 1;
 			}
 		}
 	}
@@ -344,14 +346,20 @@ static void do_hs_fall(void *data) {
 		if (!vdg->public.is_coco) {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
 			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
+				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, VDG_BLACK, VDG_tAVB);
+				vdg->have_border_only = 0;
 				vdg->pal_padding = 25;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
 			}
 		} else {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 26)) {
+				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, VDG_BLACK, VDG_tAVB);
+				vdg->have_border_only = 0;
 				vdg->pal_padding = 26;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
 			} else if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 48)) {
+				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, VDG_BLACK, VDG_tAVB);
+				vdg->have_border_only = 0;
 				vdg->pal_padding = 24;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
 			}
@@ -617,7 +625,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 void mc6847_reset(struct MC6847 *vdgp) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
-	memset(vdg->pixel_data, VDG_BLACK, sizeof(vdg->pixel_data));
+	memset(vdg->pixel_data, 0, sizeof(vdg->pixel_data));
 	vdg->beam_pos = VDG_LEFT_BORDER_START;
 	vdg->scanline = 0;
 	vdg->public.row = 0;
