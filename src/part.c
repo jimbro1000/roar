@@ -2,7 +2,7 @@
  *
  *  \brief Parts & interfaces.
  *
- *  \copyright Copyright 2018-2021 Ciaran Anscomb
+ *  \copyright Copyright 2018-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -218,16 +218,8 @@ struct part *part_create(const char *name, void *options) {
 	// Initialise, populating useful stuff from partdb
 	*p = (struct part){0};
 	p->partdb = pe;
-	_Bool free_options = 0;
-	if (!options) {
-		options = xstrdup(pe->name);
-		free_options = 1;
-	}
 	if (pe->funcs->initialise) {
 		pe->funcs->initialise(p, options);
-	}
-	if (free_options) {
-		free(options);
 	}
 
 	// Finish

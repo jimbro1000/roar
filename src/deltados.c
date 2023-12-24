@@ -128,7 +128,7 @@ static void deltados_initialise(struct part *p, void *options) {
 
 	c->config = cc;
 
-	part_add_component(p, part_create("WD2791", NULL), "FDC");
+	part_add_component(p, part_create("WD2791", "WD2791"), "FDC");
 }
 
 static _Bool deltados_finish(struct part *p) {

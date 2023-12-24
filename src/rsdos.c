@@ -137,7 +137,7 @@ static void rsdos_initialise(struct part *p, void *options) {
 
 	c->config = cc;
 
-	part_add_component(p, part_create("WD2793", NULL), "FDC");
+	part_add_component(p, part_create("WD2793", "WD2793"), "FDC");
 }
 
 static _Bool rsdos_finish(struct part *p) {

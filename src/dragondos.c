@@ -134,7 +134,7 @@ static void dragondos_initialise(struct part *p, void *options) {
 
 	c->config = cc;
 
-	part_add_component(p, part_create("WD2797", NULL), "FDC");
+	part_add_component(p, part_create("WD2797", "WD2797"), "FDC");
 }
 
 static _Bool dragondos_finish(struct part *p) {
