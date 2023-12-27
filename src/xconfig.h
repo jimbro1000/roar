@@ -230,6 +230,11 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 enum xconfig_result xconfig_parse_cli_struct(struct xconfig_option const *options,
 		int argc, char **argv, int *argn, void *sptr);
 
+// Sanity check value assigned to an enumeration type.  Pass in assigned and
+// default values.  Returns assigned value if valid, else the default.
+
+int xconfig_check_enum(struct xconfig_enum *list, int val, int dfl);
+
 void xconfig_shutdown(struct xconfig_option const *options);
 
 #endif

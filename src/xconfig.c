@@ -554,6 +554,14 @@ enum xconfig_result xconfig_parse_cli_struct(struct xconfig_option const *option
 	return XCONFIG_OK;
 }
 
+int xconfig_check_enum(struct xconfig_enum *list, int val, int dfl) {
+	for (int i = 0; list[i].name; i++) {
+		if (list[i].value == val)
+			return val;
+	}
+	return dfl;
+}
+
 void xconfig_shutdown(struct xconfig_option const *options) {
 	for (int i = 0; options[i].type != XCONFIG_END; i++) {
 		if (options[i].type == XCONFIG_STRING) {
