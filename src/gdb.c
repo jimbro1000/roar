@@ -2,7 +2,7 @@
  *
  *  \brief GDB protocol support.
  *
- *  \copyright Copyright 2013-2022 Ciaran Anscomb
+ *  \copyright Copyright 2013-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -294,21 +294,22 @@ void gdb_run_unlock(struct gdb_interface *gi) {
 	pthread_mutex_unlock(&gip->run_state_mt);
 }
 
-static void gdb_handle_signal(struct gdb_interface_private *gip, int sig) {
+static void gdb_handle_signal(struct gdb_interface_private *gip, int sig, _Bool ack) {
 	gip->last_signal = sig;
-	send_last_signal(gip);
+	if (ack)
+		send_last_signal(gip);
 }
 
 void gdb_stop(struct gdb_interface *gi, int sig) {
 	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
 	gip->run_state = gdb_run_state_stopped;
-	gdb_handle_signal(gip, sig);
+	gdb_handle_signal(gip, sig, 1);
 }
 
 void gdb_single_step(struct gdb_interface *gi) {
 	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
 	gip->run_state = gdb_run_state_stopped;
-	gdb_handle_signal(gip, MACHINE_SIGTRAP);
+	gdb_handle_signal(gip, MACHINE_SIGTRAP, 1);
 	pthread_cond_signal(&gip->run_state_cv);
 }
 
@@ -321,18 +322,17 @@ static void gdb_machine_single_step(struct gdb_interface_private *gip) {
 	pthread_mutex_unlock(&gip->run_state_mt);
 }
 
-static void gdb_machine_signal(struct gdb_interface_private *gip, int sig) {
+static void gdb_machine_signal(struct gdb_interface_private *gip, int sig, _Bool ack) {
 	pthread_mutex_lock(&gip->run_state_mt);
 	if (gip->run_state == gdb_run_state_running) {
 		gip->machine->signal(gip->machine, sig);
 		gip->run_state = gdb_run_state_stopped;
-		gdb_handle_signal(gip, sig);
+		gdb_handle_signal(gip, sig, ack);
 	}
 	pthread_mutex_unlock(&gip->run_state_mt);
 }
 
 static void gdb_continue(struct gdb_interface_private *gip) {
-	//struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
 	pthread_mutex_lock(&gip->run_state_mt);
 	if (gip->run_state == gdb_run_state_stopped) {
 		gip->run_state = gdb_run_state_running;
@@ -381,13 +381,13 @@ static void *handle_tcp_sock(void *sptr) {
 		}
 		LOG_DEBUG_GDB(LOG_GDB_CONNECT, "gdb: connection accepted\n");
 
-		gdb_machine_signal(gip, MACHINE_SIGINT);
+		gdb_machine_signal(gip, MACHINE_SIGINT, 0);
 		_Bool attached = 1;
 		while (attached) {
 			int l = read_packet(gip, in_packet, sizeof(in_packet));
 			if (l == -GDBE_BREAK) {
 				LOG_DEBUG_GDB(LOG_GDB_PACKET, "gdb: BREAK\n");
-				gdb_machine_signal(gip, MACHINE_SIGINT);
+				gdb_machine_signal(gip, MACHINE_SIGINT, 1);
 				continue;
 			} else if (l == -GDBE_BAD_CHECKSUM) {
 				if (send_char(gip, '-') < 0)
