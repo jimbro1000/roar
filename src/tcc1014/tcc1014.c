@@ -2,7 +2,7 @@
  *
  *  \brief TCC1014 (GIME) support.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -590,7 +590,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			gimep->Z = 0x70000 | A;
 		}
 
-	} else if (A < 0xfe00) {
+	} else if (A < 0xfe00 || (!gime->TY && !gime->MC3 && A < 0xff00)) {
 		if (!gime->MC1) {
 			gimep->S = (A >= 0xc000) ? 1 : 0;
 		} else {
@@ -602,7 +602,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		if (gime->MC3 || !gime->MMUEN) {
 			gimep->Z = 0x70000 | A;
 		} else {
-			gimep->Z = gime->mmu_bank[7] | (A & 0x1fff);
+			gimep->Z = gime->mmu_bank[gime->TR | 7] | (A & 0x1fff);
 		}
 
 	} else if (A < 0xff40) {
