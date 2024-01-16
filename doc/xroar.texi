@@ -33,13 +33,13 @@
 This manual is for XRoar (version @value{VERSION}), a Dragon and Tandy 8-bit
 computer emulator.
 
-Copyright @copyright{} 2023
+Copyright @copyright{} 2024
 Ciaran Anscomb.
 @end copying
 
 @titlepage
 @title XRoar @value{VERSION}
-@subtitle Dragon and Tandy Colour Computer emulator
+@subtitle Dragon and Tandy 8-bit computer emulator
 @page
 @vskip 0pt plus 1filll
 @insertcopying
@@ -105,7 +105,7 @@ Other features include:
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
-for Mac OS X+ and Windows.
+for Windows and Mac OS X+.
 
 XRoar can also be compiled to WebAssembly, and redistributing it in this form
 may provide a convenient way for users to run your Dragon software.  See
@@ -115,6 +115,15 @@ may provide a convenient way for users to run your Dragon software.  See
 
 @node Recent changes
 @section Recent changes
+
+Version 1.5 allows larger or smaller picture areas to be selected, showing more
+or less border.  It also introduces optional 60Hz scaling, stretching pictures
+vertically to reproduce the image shape more familiar to users in 60Hz regions
+(where fewer vertical lines span the same vertical space).  Both of these can
+be adjusted in the TV Controls dialog (or through menu options in the case of
+Mac OS X+).  MPI slot configuration is now per-cart rather than global, and you
+can save screenshots in PNG format if built against libpng.  In addition, a few
+CoCo 3 cartridge games that did not work before now do.
 
 Version 1.4 replaces the @option{-ccr simulated} cross-colour renderer with
 more CPU-intensive code that also handles PAL.  The old NTSC-only renderer is
@@ -500,9 +509,9 @@ supported architectures, and which machine profiles are built-in.
 @item @ @ @ @option{-machine-desc @var{text}}
 @tab Description shown in @option{-machine help} and menu options.
 @item @ @ @ @option{-machine-arch @var{arch}}
-@tab Base machine architecture.  See @ref{Machines} for a list.  @samp{dragon32, dragon64, coco, coco3} or @samp{mc10}.
+@tab Base machine architecture.  See @ref{Machines} for a list.  @samp{dragon32}, @samp{dragon64}, @samp{coco}, @samp{coco3} or @samp{mc10}.
 @item @ @ @ @option{-machine-keyboard @var{type}}
-@tab Override the type of keyboard attached to machine.  @samp{dragon, dragon200e, coco} or @samp{coco3}.
+@tab Override the type of keyboard attached to machine.  @samp{dragon}, @samp{dragon200e}, @samp{coco} or @samp{coco3}.
 @item @ @ @ @option{-machine-cpu @var{cpu}}
 @tab Fitted CPU.  One of @samp{6809} or @samp{6309}.  Not applicable to the MC-10.
 @item @ @ @ @option{-bas @var{rom}}
@@ -572,8 +581,8 @@ Architecture @samp{dragon32}.  Built-in machine profile @samp{dragon32}.
 @subsection Dragon 64
 
 The Dragon 64 was released the next year, in 1983.  In upped the on-board RAM
-to 64K and provided a reassembled version of Microsoft BASIC to make use of it.
-It also added a serial port, though that is not yet emulated by XRoar.
+to 64K and provided a second version of Microsoft BASIC assembled to make use
+of it.  It also added a serial port, though that is not yet emulated by XRoar.
 
 There are a few more changes to the motherboard than just extra RAM, so XRoar
 treats this as a separate architecture.
@@ -794,7 +803,7 @@ Two memory expansion cartridges created by Tormod Volden for the Dragon.  Both
 accept an SD card image.
 
 The earlier NX32 provides simple bank switching, while the MOOH provides
-extensive MMU functionality very like that in the Tandy CoCo 3.
+MMU-like functionality very like that in the Tandy CoCo 3.
 
 Types @samp{nx32}, @samp{mooh}.  Built-in cartridge profiles: @samp{nx32},
 @samp{mooh}.  Both require fleshing out with ROM information, and an SD card
@@ -904,49 +913,11 @@ DriveWire@w{ }4.
 @section Cassettes
 
 Cassette tape was the primary method of loading software until floppy disk
-drives became available, and remains popular for games distribution even since,
-as it serves the largest market.  Data is encoded onto cassette tape as audio,
-all currently-emulated machines using the same format, where a single cycle
-represents one bit of data, and its wavelength determines the bit's value.
-
-The Dragon and Tandy Colour Computers have a built-in cassette relay that can
-control the cassette motor remotely, but the MC-10 does not.  After you type
-the appropriate load command on an MC-10, you will have to manually start the
-player.
-
-XRoar supports tapes as raw sampled audio in WAV format (@file{.wav}), or in
-the more compact CAS format (@file{.cas}) which represents bits of data
-directly (files for the MC-10 are typically still CAS format, but with a
-@file{.c10} extension; these will also work).
-
-An extension to the CAS format called CUE is also supported.  This comprises
-extra data at the end of the file that @emph{marks up} the CAS file to indicate
-portions of silence, or the wavelength used for each bit.  This enables it to
-better represent the structure of the original tape, support certain fast
-loaders, yet for data within the file to remain readable with a hex editor if
-it is correctly aligned.
-
-Some MC-10/Alice software has been seen in K7 format (@file{.k7}).  XRoar has
-read-only support for these files.
-
-XRoar can also attach BASIC ASCII text files (with @file{.bas} or @file{.asc}
-file extensions) and interpret them as cassettes, providing a useful way to
-edit these in your favourite text editor before loading into the emulator.
-Note: this feature is not supported by the MC-10.
-
-The tape used for writing is considered separate to the read tape (this is an
-emulator-friendly approach to prevent overwriting your programs, though it
-is possible with two cassette decks).
-
-Under Mac OS X+, the @clicksequence{File @click{} Cassette} menu contains
-controls to insert or rewind the input and output tapes, play/pause and toggle
-options.
-
-In the Unix/Linux GTK+ and Windows interfaces, these options are available from
-the tape control dialog, which you can open with @clicksequence{Tool @click{}
-Tape control} or by pressing @kbd{@key{CTRL}+T}.  This dialog will also show
-you the programs found on a cassette and allow you to double click them to seek
-to the appropriate position.
+drives became available, but has remained popular for games distribution even
+since, as it serves the largest market.  Data is encoded onto cassette tape as
+audio, all currently-emulated machines using the same format, where a single
+cycle represents one bit of data, and its wavelength determines the bit's
+value.
 
 @multitable @columnfractions .32 .64
 @item @option{-load-tape @var{file}}
@@ -973,17 +944,71 @@ to the appropriate position.
 @tab Write a snapshot to @var{file} each time the cassette motor is switched off.
 @end multitable
 
-@emph{Tape padding} defaults to on, may be useful to disable with
-@option{-no-tape-pad-auto} if you are having trouble loading.  A lot of old CAS
-tape images were created with their leaders truncated.  This worked fine in
-emulators that fully intercepted the ROM to load them, but causes issues when
-converted to audio to play out to a real machine.
+In the Unix/Linux GTK+ and Windows interfaces, most cassette functions are
+available in the tape control dialog, which you can open with
+@clicksequence{Tool @click{} Tape control} or by pressing @kbd{@key{CTRL}+T}.
+This dialog will also show you the programs found on a cassette and allow you
+to double click them to seek to the appropriate position.
 
-Tape rewriting, enabled with @option{-tape-rewrite} is a special mode where
-the ROM is intercepted, and anything read from the input tape is
-@emph{rewritten} to the output tape.  Custom loaders may defeat it, but
-otherwise this is a good way of creating a well-formed CAS file, with bytes
-aligned and consistent leader lengths.
+Under Mac OS X+, most functionality is found in the @clicksequence{File
+@click{} Cassette} menu.
+
+@node Tape image file formats
+@subsection Tape image file formats
+
+XRoar supports tapes as raw sampled audio in WAV format (@file{.wav}), or in
+the more compact CAS format (@file{.cas}) which represents bits of data
+directly (files for the MC-10 are typically still CAS format, but with a
+@file{.c10} extension; these will also work).
+
+An extension to the CAS format called CUE is also supported.  This comprises
+extra data at the end of the file that @emph{marks up} the CAS file to indicate
+portions of silence, or the wavelength used for each bit.  This enables it to
+better represent the structure of the original tape, support certain fast
+loaders, yet for data within the file to remain readable with a hex editor if
+it is correctly aligned.
+
+Some MC-10/Alice software has been seen in K7 format (@file{.k7}).  XRoar has
+read-only support for these files.
+
+XRoar can also attach BASIC ASCII text files (with @file{.bas} or @file{.asc}
+file extensions) and interpret them as cassettes, providing a useful way to
+edit these in your favourite text editor before loading into the emulator.
+Note: this feature is not supported by the MC-10.
+
+@node Input and Output tapes
+@subsection Input and Output tapes
+
+The tape used for writing is considered separate to the read tape.  This is an
+emulator-friendly approach to prevent overwriting your programs, though it
+would of course be possible in real life with two cassette decks.
+
+Tape rewriting, enabled with @option{-tape-rewrite} is a special mode where the
+ROM is intercepted, and anything read from the input tape is @emph{rewritten}
+to the output tape.  Custom loaders may defeat it, but otherwise this is a good
+way of creating a well-formed CAS file, with bytes aligned and consistent
+leader lengths.
+
+@node Remote motor control
+@subsection Remote motor control
+
+The Dragon and Tandy Colour Computers have a built-in cassette relay that can
+control the cassette motor remotely.  For these platforms, cassette emulation
+will default to ``play'' being pressed, letting the remote control start and
+stop the tape.
+
+The MC-10 and Alice have no remote connection, and so for these platforms
+cassette emulation defaults to stopped, and you will have to manually start
+and stop the tape after entering load commands.
+
+@node Other tape options
+@subsection Other tape options
+
+Tape padding defaults to on: A lot of old CAS tape images were created with
+their leaders truncated, and this option tries to account for that
+automatically.  It may be useful to try turning this option off (from the UI,
+or with @option{-no-tape-pad-auto}) if you are having trouble loading
+something.
 
 The @option{-snap-motoroff @var{file}} option is useful for getting a dump
 of the machine state at the moment a program has finished loading, but before
@@ -996,33 +1021,12 @@ extension, you can get a simple RAM dump, viewable in a hex editor.
 @section Floppy disks
 
 Floppy disk drives provide much faster access to data than cassette tape.
-Initially costly, prices did fall somewhat, so these became a fairly common
+Initially costly, prices did fall somewhat, so these are a fairly common
 expansion.
 
-If a disk interface cartridge is selected, XRoar supports virtual disks.  Three
-virtual disk formats are supported:
-
-@multitable @columnfractions .15 .80
-@headitem Extension @tab Description
-@item .dmk
-@tab Disk image file in a format defined by David Keil.  These images store a lot of information about the structure of a disk and support both single and double density data.
-@item .jvc, .os9, .dsk
-@tab Disk image file in a basic sector-by-sector format with optional header information.
-@item .vdk
-@tab Another disk image file format, used by PC-Dragon.
-@end multitable
-
-Under Mac OS X+, the @clicksequence{File @click{} Drive @var{X}} menus allow
-you to insert or eject disks, create new disks, or toggle the write-enable and
-write-back options.
-
-In the Unix/Linux GTK+ and Windows interfaces, these options are available from
-the drive control dialog, which you can open with @clicksequence{Tool @click{}
-Drive control} or by pressing @kbd{@key{CTRL}+D}.
-
-Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
-instead of one, so when you perform operations on Drive 1, from the CoCo's
-point of view, that will be Drive 0.
+To use floppy disk images, an emulated disk controller will need to be
+configured.  XRoar will usually try to do this automatically if it finds the
+appropriate ROMs for a disk controller suited to the machine you've chosen.
 
 @multitable @columnfractions .26 .70
 @item @option{-load-fd@var{X} @var{file}}
@@ -1034,6 +1038,35 @@ point of view, that will be Drive 0.
 @item @option{-no-disk-auto-sd}
 @tab Don't assume single density for 10 sector-per-track disks.
 @end multitable
+
+In the Unix/Linux GTK+ and Windows interfaces, most floppy drive functions are
+available in the drive control dialog, which you can open with
+@clicksequence{Tool @click{} Drive control} or by pressing @kbd{@key{CTRL}+D}.
+
+Under Mac OS X+, most functionality is found in the @clicksequence{File
+@click{} Drive @var{X}} menus.
+
+Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
+instead of one, so when you perform operations on Drive 1, from the CoCo's
+point of view, that will be Drive 0.
+
+@node Floppy image file formats
+@subsection Floppy image file formats
+
+These floppy disk image formats are supported:
+
+@multitable @columnfractions .15 .80
+@headitem Extension @tab Description
+@item .dmk
+@tab Disk image file in a format defined by David Keil.  These images store a lot of information about the structure of a disk and support both single and double density data.
+@item .jvc, .os9, .dsk
+@tab Disk image file in a basic sector-by-sector format with optional header information.
+@item .vdk
+@tab Another disk image file format, used by PC-Dragon.
+@end multitable
+
+@node Emulated floppy behaviour
+@subsection Emulated floppy behaviour
 
 When you attach a disk, it is read into memory, and subsequent disk operations
 are performed on this in-memory copy.  Write-enable defaults to on (write
@@ -1066,8 +1099,14 @@ extensions with @option{-no-disk-auto-os9}.
 @section Hard disks
 
 The Glenside IDE controller interfaces hard disks to the Tandy CoCo, and the
-MOOH and NX32 memory expansions can each provide access to an SD card.  XRoar
-supports these types of hard disk image:
+MOOH and NX32 memory expansions can each provide access to an SD card.
+
+@multitable @columnfractions .21 .75
+@item @option{-load-hd@var{X} @var{file}}
+@tab Use @var{file} as the hard disk image for drive @var{X} (0 or 1).
+@end multitable
+
+XRoar supports these types of hard disk image:
 
 IDE images with header information should have a @file{.ide} extension.  This
 is necessary to distinguish them from images with no header.  These images
@@ -1088,11 +1127,6 @@ bytes per sector with no header information.
 When no IDE metadata is present, XRoar will fake some up so that raw images can
 still be used with the IDE controller emulation.  This means VHD images
 containing RSDOS filesystems are usable with YA-DOS or HDBDOS.
-
-@multitable @columnfractions .21 .75
-@item @option{-load-hd@var{X} @var{file}}
-@tab Use @var{file} as the hard disk image for drive @var{X} (0 or 1).
-@end multitable
 
 @c = === === === === === === === === === === === === === === === === === ===
 
@@ -1419,7 +1453,7 @@ To make life easier, the default image for each type of machine or cartridge
 usually refers to a ROM list which contains all the corresponding filenames
 seen in the wild, the primary examples being:
 
-@multitable {Tandy Super ECB (PAL CoCo 3)} {Xdragondos_compatxx} {dplus49b, sdose6, ddos10XXXXX}
+@multitable {Tandy Super ECB PAL XXXXX} {Xdragondos_compatxx} {dplus49b, sdose6, ddos10XXXXX}
 @headitem Firmware ROM @tab ROM list @tab Canonical image names
 @item Dragon 32 BASIC @tab @samp{@@dragon32} @tab @file{d32.rom}
 @item Dragon 64 32K BASIC @tab @samp{@@dragon64} @tab @file{d64_1.rom}
@@ -1564,7 +1598,9 @@ reasonable border.  You can change this to one of a set of defined areas:
 @option{-vo-picture action} and @option{-vo-picture underscan} show more of the
 picture, and may be more suitable when emulating a CoCo 3 which has some larger
 video modes.  @option{-vo-picture zoomed} crops to 512x384; enough to show
-standard VDG output with no borders at all.
+standard VDG output with no borders at all.  @kbd{@key{CTRL}+@key{comma}} and
+@kbd{@key{CTRL}+@key{fullstop}} zoom the picture area out and in where
+supported.
 
 Various levels of composite video rendering precision can be selected with
 @option{-ccr}, trading off CPU with accuracy.  @option{-ccr simulated} is the
@@ -1933,9 +1969,12 @@ use by other user interfaces.  Version 2 only.
 
 @myuref{http://www.libsdl.org/, SDL}, Simple Directmedia Layer, provides a
 slightly more basic user experience.  Menus are added using native code under
-Mac OS X+ and Windows; any other target using SDL will support only keyboard
+Windows and Mac OS X+; any other target using SDL will support only keyboard
 shortcuts.  Unless you are building for Linux, SDL is required to use
 joysticks.  Version 2 required.
+
+If @myuref{http://www.libpng.org/pub/png/libpng.html, libpng} is available,
+screenshots can be saved in PNG format.
 
 POSIX Regular Expressions are used in option parsing, so
 @myuref{https://laurikari.net/tre/about/, TRE} is required on non-POSIX
@@ -2152,13 +2191,13 @@ configuration file.
 @item @ @ @ @option{-machine-desc @var{text}}
 @tab Description shown in @option{-machine help} and menu options.
 @item @ @ @ @option{-machine-arch @var{arch}}
-@tab Base machine architecture.  See @ref{Machines} for a list.  @samp{dragon32, dragon64, coco, coco3} or @samp{mc10}.
+@tab Base machine architecture.  See @ref{Machines} for a list.  @samp{dragon32}, @samp{dragon64}, @samp{coco}, @samp{coco3} or @samp{mc10}.
 @item @ @ @ @option{-machine-keyboard @var{type}}
-@tab Override the type of keyboard attached to machine.  @samp{dragon, dragon200e, coco} or @samp{coco3}.
+@tab Override the type of keyboard attached to machine.  @samp{dragon}, @samp{dragon200e}, @samp{coco} or @samp{coco3}.
 @item @ @ @ @option{-machine-cpu @var{cpu}}
 @tab Fitted CPU.  One of @samp{6809} or @samp{6309}.  Not applicable to the MC-10.
 @item @ @ @ @option{-bas @var{rom}}
-@tab ROM image for Colour BASIC (CoCo) or Microcolour BASIC (MC-10).
+@tab ROM image for Colour BASIC (CoCo) or Microcolour BASIC (MC-10, Alice).
 @item @ @ @ @option{-extbas @var{rom}}
 @tab ROM image for Extended BASIC (Super Extended BASIC on the CoCo@w{ }3).
 @item @ @ @ @option{-altbas @var{rom}}
@@ -2174,7 +2213,7 @@ configuration file.
 @item @ @ @ @option{-vdg-type @var{type}}
 @tab Indicate the VDG variant fitted.  One of @samp{6847} or @samp{6847t1}.
 @item @ @ @ @option{-ram @var{kbytes}}
-@tab Amount of RAM fitted in kilobytes.  Valid sizes are 4K, 8K, 16K, 32K or 64K for Dragon and Tandy CoCo 1/2; 128K, 512K, 1024K or 2048K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
+@tab Amount of RAM fitted in kilobytes.  Valid sizes are 4K, 8K, 16K, 32K or 64K for Dragon and Tandy CoCo 1/2; 128K, 512K, 1024K or 2048K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10 and Alice.
 @item @ @ @ @option{-machine-cart @var{name}}
 @tab Default cartridge to attach.
 @item @ @ @ @option{-no-machine-cart}

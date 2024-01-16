@@ -1,5 +1,5 @@
 XRoar - a Dragon and Tandy 8-bit computer emulator
-Copyright 2003-2023 Ciaran Anscomb <xroar@6809.org.uk>
+Copyright 2003-2024 Ciaran Anscomb <xroar@6809.org.uk>
 
 
 Introduction
@@ -28,7 +28,7 @@ wide variety of platforms.  Emulated hardware includes:
    * GDB target for remote debugging.
 
    XRoar is easily built from source under Linux, and binary packages
-are provided for Mac OS X+ and Windows.
+are provided for Windows and Mac OS X+.
 
    XRoar can also be compiled to WebAssembly, and redistributing it in
 this form may provide a convenient way for users to run your Dragon
@@ -55,7 +55,17 @@ home page (https://www.6809.org.uk/xroar/).
 Recent changes
 ==============
 
-Version 1.4 replaces the '-ccr simulated' cross-colour renderer with
+Version 1.5 allows larger or smaller picture areas to be selected,
+showing more or less border.  It also introduces optional 60Hz scaling,
+stretching pictures vertically to reproduce the image shape more
+familiar to users in 60Hz regions (where fewer vertical lines span the
+same vertical space).  Both of these can be adjusted in the TV Controls
+dialog (or through menu options in the case of Mac OS X+).  MPI slot
+configuration is now per-cart rather than global, and you can save
+screenshots in PNG format if built against libpng.  In addition, a few
+CoCo 3 cartridge games that did not work before now do.
+
+   Version 1.4 replaces the '-ccr simulated' cross-colour renderer with
 more CPU-intensive code that also handles PAL. The old NTSC-only
 renderer is still available using '-ccr partial'.  Some video options
 can be changed on the fly in a new TV Controls dialog.
@@ -138,7 +148,8 @@ followed by any command line options.
 
    The Mac OS X+ build provides a menu for access to certain features,
 and often accepts the more familiar '<Command>+KEY' in place of the
-'<CTRL>+KEY' shortcuts listed in this manual.
+'<CTRL>+KEY' shortcuts listed in this manual.  It does not provide
+control dialog boxes.
 
 Windows binary package
 ----------------------
@@ -147,19 +158,20 @@ Download and unzip the appropriate '.zip' distribution for your system.
 
    The easiest way forward is to simply put ROM images into the
 directory created when you unzip the distribution, and then run the
-'.exe' straight from there.  You can also put any configuration file
-('xroar.conf') here.
+'.exe' straight from there, or see *note Prerequisites:: for information
+on keeping them in a location that should work after installing new
+versions.
 
-   However, if you want to avoid having to move files around each time
-you upgrade, you can create 'Documents/XRoar' to contain your
-configuration file, and a subdirectory of that, 'Documents/XRoar/roms'
-for ROM images.
+   You can also put any configuration file ('xroar.conf') in the same
+directory.  Again, this can also be placed in a common location.  *Note
+The configuration file::.
 
    Note when troubleshooting that the logging from the Windows binary is
 probably only going to be visible if you run it with the '-C' option
 (must be the first option) to allocate a console.
 
-   The Windows build provides menu-based access to certain features.
+   The Windows build provides a reasonably full user-interface,
+including menus and control dialogs.
 
 Building from source
 ====================
@@ -174,7 +186,7 @@ Debian, this can (at the time of writing) be achieved with the following
 simple command:
 
      $ sudo apt install build-essential libsndfile1-dev libgtk2.0-dev \
-             libgtkglext1-dev libasound2-dev
+             libgtkglext1-dev libasound2-dev libpng-dev
 
    Under Mac OS X+, first be sure to install Apple's Xcode
 (https://developer.apple.com/xcode/) package.  The easiest way to then
@@ -195,9 +207,12 @@ requester for use by other user interfaces.  Version 2 only.
 
    SDL (http://www.libsdl.org/), Simple Directmedia Layer, provides a
 slightly more basic user experience.  Menus are added using native code
-under Mac OS X+ and Windows; any other target using SDL will support only
-keyboard shortcuts.  Unless you are building for Linux, SDL is required
-to use joysticks.  Version 2 required.
+under Windows and Mac OS X+; any other target using SDL will support
+only keyboard shortcuts.  Unless you are building for Linux, SDL is
+required to use joysticks.  Version 2 required.
+
+   If libpng (http://www.libpng.org/pub/png/libpng.html) is available,
+screenshots can be saved in PNG format.
 
    POSIX Regular Expressions are used in option parsing, so TRE
 (https://laurikari.net/tre/about/) is required on non-POSIX platforms

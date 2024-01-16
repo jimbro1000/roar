@@ -112,15 +112,12 @@ Autorun cartridge.
 .TP
 \fB\-cart\-becker\fR
 Enable becker port where supported.
-
-.SS Multi\-Pak Interface:
-
 .TP
 \fB\-mpi\-slot\fR \fIslot\fR
-Initially select slot (0\-3).
+(MPI) initially select slot (0\-3).
 .TP
 \fB\-mpi\-load\-cart\fR \fI[slot=]name\fR
-Insert cartridge into next or numbered slot.
+(MPI) insert cartridge into next or numbered slot.
 
 .PP
 These options also apply to the similar RACE Computer Expansion Cage.
@@ -319,6 +316,12 @@ OpenGL texture filter (\fBauto\fR, \fBnearest\fR or \fBlinear\fR)
 \fB\-geometry\fR \fIw\fRx\fIh\fR+\fIx\fR+\fIy\fR
 initial emulator geometry
 .TP
+\fB\-vo\-picture\fR \fIp\fR
+initial picture area (\fB\-vo\-picture help\fR for list)
+.TP
+\fB\-no\-vo\-scale\-60hz\fR
+disable vertical scaling for 60Hz video
+.TP
 \fB\-invert\-text\fR
 start with text mode inverted
 .TP
@@ -334,8 +337,8 @@ set TV colour saturation (0-100) [50]
 \fB\-vo\-hue\fR \fIn\fR
 set TV hue control (-179 to +180) [0]
 .TP
-\fB\-no\-vo\-colour\-killer\fR
-disable colour killer (enabled by default)
+\fB\-vo\-colour\-killer\fR
+enable colour killer (disabled by default)
 
 .SS Audio:
 
