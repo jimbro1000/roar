@@ -9,6 +9,9 @@
  * Add screenshot to PNG from menu or Control+Shift+S
  * Fix printing after switching machines [Jak Fearon]
  * Better rendering of paths in Windows dialogs
+ * Fix some CoCo 3 cartridge behaviour [Christian Haitian]
+ * GIME: reset video address later (fixes Androne) ["EnsignRutherford"]
+ * GIME: fix various $FExx access problems
 
 Version 1.4.2, Tue 16 Jun 2023
 
