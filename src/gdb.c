@@ -126,6 +126,9 @@ struct gdb_interface_private {
 	pthread_t sock_thread;
 	int sockfd;
 
+	// Session state
+	_Bool no_ack_mode;
+
 	// Run state
 	enum gdb_run_state run_state;
 	pthread_cond_t run_state_cv;
@@ -390,9 +393,11 @@ static void *handle_tcp_sock(void *sptr) {
 				gdb_machine_signal(gip, MACHINE_SIGINT, 1);
 				continue;
 			} else if (l == -GDBE_BAD_CHECKSUM) {
-				if (send_char(gip, '-') < 0)
-					break;
-				continue;
+				if (!gip->no_ack_mode) {
+					if (send_char(gip, '-') < 0)
+						break;
+					continue;
+				}
 			} else if (l < 0) {
 				break;
 			}
@@ -412,11 +417,11 @@ static void *handle_tcp_sock(void *sptr) {
 				LOG_PRINT("\n");
 			}
 			if (gip->run_state != gdb_run_state_stopped) {
-				if (send_char(gip, '-') < 0)
+				if (!gip->no_ack_mode && send_char(gip, '-') < 0)
 					break;
 				continue;
 			}
-			if (send_char(gip, '+') < 0)
+			if (!gip->no_ack_mode && send_char(gip, '+') < 0)
 				break;
 
 			char *args = &in_packet[1];
@@ -935,6 +940,10 @@ static void general_set(struct gdb_interface_private *gip, char *args) {
 			return;
 		}
 #endif
+	} else if (0 == strcmp(set, "StartNoAckMode")) {
+		gip->no_ack_mode = 1;
+		send_packet_string(gip, "OK");
+		return;
 	}
 	send_packet(gip, NULL, 0);
 	return;
