@@ -2,7 +2,7 @@
  *
  *  \brief Motorola SN74LS783/MC6883 Synchronous Address Multiplexer.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -145,8 +145,6 @@ struct MC6883_private {
 
 };
 
-#define MC6883_SER_VDG_F (18)
-
 static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct MC6883, S),
 	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct MC6883, Z),
@@ -170,7 +168,7 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_ELEM(16, ser_type_bool, struct MC6883_private, extend_slow_cycle),
 
 	SER_ID_STRUCT_ELEM(17, ser_type_unsigned, struct MC6883_private, vdg.v),
-	SER_ID_STRUCT_UNHANDLED(MC6883_SER_VDG_F),
+	SER_ID_STRUCT_ELEM(18, ser_type_uint16, struct MC6883_private, vdg.f),
 	SER_ID_STRUCT_ELEM(19, ser_type_int, struct MC6883_private, vdg.clr_mode),
 
 	SER_ID_STRUCT_SUBSTRUCT(20, struct MC6883_private, vdg.vcounter[VC_B15_5], &vcounter_ser_struct_data),
@@ -241,17 +239,14 @@ static _Bool mc6883_finish(struct part *p) {
 	return 1;
 }
 
+// XXX There are currently no unhandled elements, so these do nothing useful.
+// Not deleting, as some backwards compatibility will probably be needed soon.
+
 static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
+	(void)sam;
+	(void)sh;
 	switch (tag) {
-	case MC6883_SER_VDG_F:
-		// maintain compatibility
-		{
-			uint16_t f = ser_read_vuint32(sh);
-			sam->vdg.f = f >> 5;
-		}
-		break;
-
 	default:
 		return 0;
 	}
@@ -260,15 +255,11 @@ static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
+	(void)sam;
+	(void)sh;
 	switch (tag) {
-	case MC6883_SER_VDG_F:
-		// maintain compatibility
-		ser_write_vuint32(sh, tag, sam->vdg.f << 5);
-		break;
-
 	default:
 		return 0;
-
 	}
 	return 1;
 }
@@ -453,7 +444,7 @@ void mc6883_vdg_fsync(struct MC6883 *samp, _Bool level) {
 	vcounter_reset(sam, VC_YDIV3);
 	vcounter_reset(sam, VC_YDIV4);
 	vcounter_reset(sam, VC_B15_5);
-	sam->vdg.vcounter[VC_B15_5].value = sam->vdg.f;
+	sam->vdg.vcounter[VC_B15_5].value = sam->vdg.f >> 5;
 }
 
 // Called with the number of bytes of video data required.  Any one call will
@@ -550,7 +541,7 @@ static void update_from_register(struct MC6883_private *sam) {
 	int new_hclr = vdg_hclrs[new_v];
 
 	sam->vdg.v = sam->reg & 7;
-	sam->vdg.f = (sam->reg & 0x03f8) << 1;
+	sam->vdg.f = (sam->reg << 6) & 0xfe00;
 	sam->vdg.clr_mode = new_hclr;
 
 	if (new_ydiv != old_ydiv) {
