@@ -2,7 +2,7 @@
  *
  *  \brief Serialisation and deserialisation helpers.
  *
- *  \copyright Copyright 2015-2022 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -15,6 +15,20 @@
  *
  *  \endlicenseblock
  */
+
+// If using ser_write_struct_data()/ser_read_struct_data() and there's need to
+// change the type in a data structure, there are certain changes that are safe
+// with no other modification other than the type in the ser_struct entry,
+// because they are actually serialised in the same way:
+//
+// Signed types: ser_type_int, ser_type_int8, ser_type_int16, ser_type_int32
+//
+// Unsigned types: ser_type_bool, ser_type_unsigned, ser_type_uint8,
+// ser_type_uint16, ser_type_uint32
+//
+// Most other changes will require a per-element handler for compatibility
+// (being flagged in the ser_struct entry as "unhandled" by
+// ser_*_struct_data()).
 
 #include "top-config.h"
 
