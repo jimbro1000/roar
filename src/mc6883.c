@@ -116,8 +116,48 @@ struct MC6883_private {
 	// SAM control register
 	unsigned reg;
 
-	// Address decode
-	_Bool map_type_1;
+	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+	// -- Registers
+
+        // V: VDG addressing mode
+        // Mode         Division        Bits cleared on HS#
+        // V2 V1 V0     X   Y
+        //  0  0  0     1  12           B1-B4
+        //  0  0  1     3   1           B1-B3
+        //  0  1  0     1   3           B1-B4
+        //  0  1  1     2   1           B1-B3
+        //  1  0  0     1   2           B1-B4
+        //  1  0  1     1   1           B1-B3
+        //  1  1  0     1   1           B1-B4
+        //  1  1  1     1   1           None (DMA MODE)
+	unsigned V;
+
+	// F: VDG address offset.  Specifies bits 15 downto 9 of the video RAM
+	// base address.
+	uint16_t F;
+
+	// P: Page bit.
+	_Bool P;
+
+        // R: MPU rate.
+        unsigned R;
+
+        // M: Memory type.
+        unsigned M;
+
+	// TY: Map type.  0 selects 32K RAM, 32K ROM.  1 selects 64K RAM.
+	_Bool TY;
+
+	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+	// -- Timing
+
+	_Bool mpu_rate_fast;
+	_Bool mpu_rate_ad;
+	_Bool running_fast;
+	_Bool extend_slow_cycle;
+
+	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+	// -- Address multiplexer
 
 	// Address multiplexer
 	uint16_t ram_row_mask;
@@ -127,23 +167,23 @@ struct MC6883_private {
 	uint16_t ram_ras1;
 	uint16_t ram_page_bit;
 
-	// MPU rate
-	_Bool mpu_rate_fast;
-	_Bool mpu_rate_ad;
-	_Bool running_fast;
-	_Bool extend_slow_cycle;
+	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+	// -- VDG
 
-	struct {
-		unsigned v;  // video mode
-		uint16_t f;  // VDG address bits 15..9 latched on FSync
+	// Glitching
+	//
+	// Comparison of V to Vprev provides the "glitching".
 
-		// end of line clear mode
-		int clr_mode;  // CLR4, CLR3 or CLRN
+	unsigned Vprev;
 
-		struct vcounter vcounter[NUM_VCOUNTERS];
-	} vdg;
+	// Counters, dividers
+
+	int clr_mode;  // end of line clear mode: CLR4, CLR3 or CLRN
+	struct vcounter vcounter[NUM_VCOUNTERS];
 
 };
+
+#define MC6883_SER_REG (5)
 
 static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct MC6883, S),
@@ -151,34 +191,37 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct MC6883, V),
 	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6883, RAS),
 
-	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct MC6883_private, reg),
-
-	SER_ID_STRUCT_ELEM(6, ser_type_bool, struct MC6883_private, map_type_1),
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_REG),
 
 	SER_ID_STRUCT_ELEM(7, ser_type_uint16, struct MC6883_private, ram_row_mask),
 	SER_ID_STRUCT_ELEM(8, ser_type_int, struct MC6883_private, ram_col_shift),
 	SER_ID_STRUCT_ELEM(9, ser_type_uint16, struct MC6883_private, ram_col_mask),
 	SER_ID_STRUCT_ELEM(10, ser_type_uint16, struct MC6883_private, ram_ras1_bit),
 	SER_ID_STRUCT_ELEM(11, ser_type_uint16, struct MC6883_private, ram_ras1),
-	SER_ID_STRUCT_ELEM(12, ser_type_uint16, struct MC6883_private, ram_page_bit),
+	SER_ID_STRUCT_ELEM(12, ser_type_uint16, struct MC6883_private, P),
 
 	SER_ID_STRUCT_ELEM(13, ser_type_bool, struct MC6883_private, mpu_rate_fast),
 	SER_ID_STRUCT_ELEM(14, ser_type_bool, struct MC6883_private, mpu_rate_ad),
 	SER_ID_STRUCT_ELEM(15, ser_type_bool, struct MC6883_private, running_fast),
 	SER_ID_STRUCT_ELEM(16, ser_type_bool, struct MC6883_private, extend_slow_cycle),
 
-	SER_ID_STRUCT_ELEM(17, ser_type_unsigned, struct MC6883_private, vdg.v),
-	SER_ID_STRUCT_ELEM(18, ser_type_uint16, struct MC6883_private, vdg.f),
-	SER_ID_STRUCT_ELEM(19, ser_type_int, struct MC6883_private, vdg.clr_mode),
+	SER_ID_STRUCT_ELEM(17, ser_type_unsigned, struct MC6883_private, V),
+	SER_ID_STRUCT_ELEM(18, ser_type_uint16, struct MC6883_private, F),
+	SER_ID_STRUCT_ELEM(28, ser_type_bool, struct MC6883_private, P),
+	SER_ID_STRUCT_ELEM(29, ser_type_unsigned, struct MC6883_private, R),
+	SER_ID_STRUCT_ELEM(30, ser_type_unsigned, struct MC6883_private, M),
+	SER_ID_STRUCT_ELEM(6, ser_type_bool, struct MC6883_private, TY),
 
-	SER_ID_STRUCT_SUBSTRUCT(20, struct MC6883_private, vdg.vcounter[VC_B15_5], &vcounter_ser_struct_data),
-	SER_ID_STRUCT_SUBSTRUCT(21, struct MC6883_private, vdg.vcounter[VC_B4], &vcounter_ser_struct_data),
-	SER_ID_STRUCT_SUBSTRUCT(22, struct MC6883_private, vdg.vcounter[VC_B3_0], &vcounter_ser_struct_data),
-	SER_ID_STRUCT_SUBSTRUCT(23, struct MC6883_private, vdg.vcounter[VC_YDIV4], &vcounter_ser_struct_data),
-	SER_ID_STRUCT_SUBSTRUCT(24, struct MC6883_private, vdg.vcounter[VC_YDIV3], &vcounter_ser_struct_data),
-	SER_ID_STRUCT_SUBSTRUCT(25, struct MC6883_private, vdg.vcounter[VC_YDIV2], &vcounter_ser_struct_data),
-	SER_ID_STRUCT_SUBSTRUCT(26, struct MC6883_private, vdg.vcounter[VC_XDIV3], &vcounter_ser_struct_data),
-	SER_ID_STRUCT_SUBSTRUCT(27, struct MC6883_private, vdg.vcounter[VC_XDIV2], &vcounter_ser_struct_data),
+	SER_ID_STRUCT_ELEM(19, ser_type_int, struct MC6883_private, clr_mode),
+
+	SER_ID_STRUCT_SUBSTRUCT(20, struct MC6883_private, vcounter[VC_B15_5], &vcounter_ser_struct_data),
+	SER_ID_STRUCT_SUBSTRUCT(21, struct MC6883_private, vcounter[VC_B4], &vcounter_ser_struct_data),
+	SER_ID_STRUCT_SUBSTRUCT(22, struct MC6883_private, vcounter[VC_B3_0], &vcounter_ser_struct_data),
+	SER_ID_STRUCT_SUBSTRUCT(23, struct MC6883_private, vcounter[VC_YDIV4], &vcounter_ser_struct_data),
+	SER_ID_STRUCT_SUBSTRUCT(24, struct MC6883_private, vcounter[VC_YDIV3], &vcounter_ser_struct_data),
+	SER_ID_STRUCT_SUBSTRUCT(25, struct MC6883_private, vcounter[VC_YDIV2], &vcounter_ser_struct_data),
+	SER_ID_STRUCT_SUBSTRUCT(26, struct MC6883_private, vcounter[VC_XDIV3], &vcounter_ser_struct_data),
+	SER_ID_STRUCT_SUBSTRUCT(27, struct MC6883_private, vcounter[VC_XDIV2], &vcounter_ser_struct_data),
 };
 
 static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -220,14 +263,14 @@ static struct part *mc6883_allocate(void) {
 	sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	sam->public.vdg_update = DELEGATE_DEFAULT0(void);
 
-	// Set up VDG address divider sources.  Set initial V=7 so that first
+	// Set up VDG address divider sources.  Set initial Vprev=7 so that first
 	// call to reset() changes them.
-	sam->vdg.v = 7;
+	sam->Vprev = 7;
 
 	for (int i = 0; i < NUM_VCOUNTERS; i++) {
-		sam->vdg.vcounter[i].input_from = vcounter_init[i].input_from;
-		sam->vdg.vcounter[i].val_mod = vcounter_init[i].val_mod;
-		sam->vdg.vcounter[i].out_mask = vcounter_init[i].out_mask;
+		sam->vcounter[i].input_from = vcounter_init[i].input_from;
+		sam->vcounter[i].val_mod = vcounter_init[i].val_mod;
+		sam->vcounter[i].out_mask = vcounter_init[i].out_mask;
 	}
 
 	return p;
@@ -239,14 +282,16 @@ static _Bool mc6883_finish(struct part *p) {
 	return 1;
 }
 
-// XXX There are currently no unhandled elements, so these do nothing useful.
-// Not deleting, as some backwards compatibility will probably be needed soon.
-
 static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
-	(void)sam;
-	(void)sh;
 	switch (tag) {
+	case MC6883_SER_REG:
+		{
+			uint16_t reg = ser_read_vuint32(sh);
+			mc6883_set_register(&sam->public, reg);
+		}
+		break;
+
 	default:
 		return 0;
 	}
@@ -255,9 +300,14 @@ static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
-	(void)sam;
-	(void)sh;
 	switch (tag) {
+	case MC6883_SER_REG:
+		{
+			uint16_t value = mc6883_get_register(&sam->public);
+			ser_write_vuint32(sh, tag, value);
+		}
+		break;
+
 	default:
 		return 0;
 	}
@@ -304,19 +354,32 @@ void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		samp->RAS = 0;
 		fast_cycle = sam->mpu_rate_fast || (samp->S != 4 && sam->mpu_rate_ad);
 		if (samp->S == 7 && !RnW && A >= 0xffc0) {
-			if (A < 0xffc6) {
-				// this is a change of video mode, so update VDG
+			if (A <= 0xffc5 || (A >= 0xffda && A <= 0xffdd)) {
+				// might affect display, so update VDG
 				DELEGATE_CALL(samp->vdg_update);
 			}
-			unsigned b = 1 << ((A >> 1) & 0x0f);
-			if (A & 1) {
-				sam->reg |= b;
-			} else {
-				sam->reg &= ~b;
+			switch ((A >> 1) & 0xf) {
+			default:
+			case 0x0: sam->V = (sam->V & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
+			case 0x1: sam->V = (sam->V & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
+			case 0x2: sam->V = (sam->V & ~(1 <<  2)) | ((A & 0x1) <<  2); break;
+			case 0x3: sam->F = (sam->F & ~(1 <<  9)) | ((A & 0x1) <<  9); break;
+			case 0x4: sam->F = (sam->F & ~(1 << 10)) | ((A & 0x1) << 10); break;
+			case 0x5: sam->F = (sam->F & ~(1 << 11)) | ((A & 0x1) << 11); break;
+			case 0x6: sam->F = (sam->F & ~(1 << 12)) | ((A & 0x1) << 12); break;
+			case 0x7: sam->F = (sam->F & ~(1 << 13)) | ((A & 0x1) << 13); break;
+			case 0x8: sam->F = (sam->F & ~(1 << 14)) | ((A & 0x1) << 14); break;
+			case 0x9: sam->F = (sam->F & ~(1 << 15)) | ((A & 0x1) << 15); break;
+			case 0xa: sam->P = A & 0x1; break;
+			case 0xb: sam->R = (sam->R & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
+			case 0xc: sam->R = (sam->R & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
+			case 0xd: sam->M = (sam->M & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
+			case 0xe: sam->M = (sam->M & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
+			case 0xf: sam->TY = A & 0x1; break;
 			}
 			want_register_update = 1;
 		}
-	} else if ((A & 0x8000) && !sam->map_type_1) {
+	} else if ((A & 0x8000) && !sam->TY) {
 		samp->S = data_S[A >> 13];
 		samp->RAS = 0;
 		fast_cycle = sam->mpu_rate_fast || sam->mpu_rate_ad;
@@ -368,22 +431,22 @@ void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 static void vcounter_set(struct MC6883_private *sam, int i, int val);
 
 static void vcounter_update(struct MC6883_private *sam, int i) {
-	_Bool old_input = sam->vdg.vcounter[i].input;
-	_Bool new_input = sam->vdg.vcounter[sam->vdg.vcounter[i].input_from].output;
+	_Bool old_input = sam->vcounter[i].input;
+	_Bool new_input = sam->vcounter[sam->vcounter[i].input_from].output;
 	if (new_input != old_input) {
-		sam->vdg.vcounter[i].input = new_input;
+		sam->vcounter[i].input = new_input;
 		if (!new_input) {
-			vcounter_set(sam, i, (sam->vdg.vcounter[i].value + 1) % sam->vdg.vcounter[i].val_mod);
+			vcounter_set(sam, i, (sam->vcounter[i].value + 1) % sam->vcounter[i].val_mod);
 		}
 	}
 }
 
 static void vcounter_set(struct MC6883_private *sam, int i, int val) {
-	sam->vdg.vcounter[i].value = val;
-	sam->vdg.vcounter[i].output = val & sam->vdg.vcounter[i].out_mask;
+	sam->vcounter[i].value = val;
+	sam->vcounter[i].output = val & sam->vcounter[i].out_mask;
 	// Never need to check VC_GROUND or VC_B3_0
 	for (int j = 0; j < NUM_VCOUNTERS - 2; j++) {
-		if (sam->vdg.vcounter[j].input_from == i)
+		if (sam->vcounter[j].input_from == i)
 			vcounter_update(sam, j);
 	}
 }
@@ -393,17 +456,17 @@ void mc6883_vdg_hsync(struct MC6883 *samp, _Bool level) {
 	if (level)
 		return;
 
-	switch (sam->vdg.clr_mode) {
+	switch (sam->clr_mode) {
 
 	case CLR4:
 		// clear bits 4..1
-		sam->vdg.vcounter[VC_B3_0].value = 0;
-		sam->vdg.vcounter[VC_B3_0].output = 0;
-		sam->vdg.vcounter[VC_XDIV3].input = 0;
-		sam->vdg.vcounter[VC_XDIV2].input = 0;
-		sam->vdg.vcounter[VC_B4].input = 0;
-		sam->vdg.vcounter[VC_B4].value = 0;
-		sam->vdg.vcounter[VC_B4].output = 0;
+		sam->vcounter[VC_B3_0].value = 0;
+		sam->vcounter[VC_B3_0].output = 0;
+		sam->vcounter[VC_XDIV3].input = 0;
+		sam->vcounter[VC_XDIV2].input = 0;
+		sam->vcounter[VC_B4].input = 0;
+		sam->vcounter[VC_B4].value = 0;
+		sam->vcounter[VC_B4].output = 0;
 		vcounter_update(sam, VC_YDIV2);
 		vcounter_update(sam, VC_YDIV3);
 		vcounter_update(sam, VC_YDIV4);
@@ -412,8 +475,8 @@ void mc6883_vdg_hsync(struct MC6883 *samp, _Bool level) {
 
 	case CLR3:
 		// clear bits 3..1
-		sam->vdg.vcounter[VC_B3_0].value = 0;
-		sam->vdg.vcounter[VC_B3_0].output = 0;
+		sam->vcounter[VC_B3_0].value = 0;
+		sam->vcounter[VC_B3_0].output = 0;
 		vcounter_update(sam, VC_XDIV2);
 		vcounter_update(sam, VC_XDIV3);
 		vcounter_update(sam, VC_B4);
@@ -426,9 +489,9 @@ void mc6883_vdg_hsync(struct MC6883 *samp, _Bool level) {
 }
 
 static inline void vcounter_reset(struct MC6883_private *sam, int i) {
-	sam->vdg.vcounter[i].input = 0;
-	sam->vdg.vcounter[i].value = 0;
-	sam->vdg.vcounter[i].output = 0;
+	sam->vcounter[i].input = 0;
+	sam->vcounter[i].value = 0;
+	sam->vcounter[i].output = 0;
 }
 
 void mc6883_vdg_fsync(struct MC6883 *samp, _Bool level) {
@@ -444,7 +507,7 @@ void mc6883_vdg_fsync(struct MC6883 *samp, _Bool level) {
 	vcounter_reset(sam, VC_YDIV3);
 	vcounter_reset(sam, VC_YDIV4);
 	vcounter_reset(sam, VC_B15_5);
-	sam->vdg.vcounter[VC_B15_5].value = sam->vdg.f >> 5;
+	sam->vcounter[VC_B15_5].value = sam->F >> 5;
 }
 
 // Called with the number of bytes of video data required.  Any one call will
@@ -464,8 +527,8 @@ int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	// whatever was being access by the CPU.  This won't be terribly
 	// accurate, as this function is called a lot less frequently than the
 	// CPU address changes.
-	uint16_t b3_0 = sam->vdg.vcounter[VC_B3_0].value;
-	uint16_t V = (sam->vdg.vcounter[VC_B15_5].value << 5) | (sam->vdg.vcounter[VC_B4].value << 4) | b3_0;
+	uint16_t b3_0 = sam->vcounter[VC_B3_0].value;
+	uint16_t V = (sam->vcounter[VC_B15_5].value << 5) | (sam->vcounter[VC_B4].value << 4) | b3_0;
 	samp->V = sam->mpu_rate_fast ? samp->Z : VRAM_TRANSLATE(V);
 
 	// Either way, need to advance the VDG address pointer.
@@ -490,92 +553,96 @@ int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
 
 void mc6883_set_register(struct MC6883 *samp, unsigned int value) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
-	sam->reg = value;
+	sam->V = value & 7;
+	sam->F = (value << 6) & 0xfe00;
+	sam->P = (value >> 10) & 1;
+	sam->R = (value >> 11) & 3;
+	sam->M = (value >> 13) & 3;
+	sam->TY = (value >> 15) & 1;
 	update_from_register(sam);
 }
 
 unsigned int mc6883_get_register(struct MC6883 *samp) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
-	return sam->reg;
+	unsigned value = sam->V & 7;
+	value |= (sam->F & 0xfe00) >> 6;
+	value |= (sam->P ? 0x0400 : 0);
+	value |= (sam->R << 11);
+	value |= (sam->M << 13);
+	value |= (sam->TY ? 0x8000 : 0);
+	return value;
 }
 
 static void update_vcounter_inputs(struct MC6883_private *sam) {
-	int v = sam->reg & 7;
-	switch (vdg_ydivs[v]) {
+	switch (vdg_ydivs[sam->V]) {
 	case DIV12:
-		sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV4;
+		sam->vcounter[VC_B15_5].input_from = VC_YDIV4;
 		break;
 	case DIV3:
-		sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV3;
+		sam->vcounter[VC_B15_5].input_from = VC_YDIV3;
 		break;
 	case DIV2:
-		sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV2;
+		sam->vcounter[VC_B15_5].input_from = VC_YDIV2;
 		break;
 	case DIV1: default:
-		sam->vdg.vcounter[VC_B15_5].input_from = VC_B4;
+		sam->vcounter[VC_B15_5].input_from = VC_B4;
 		break;
 	}
-	switch (vdg_xdivs[v]) {
+	switch (vdg_xdivs[sam->V]) {
 	case DIV3:
-		sam->vdg.vcounter[VC_B4].input_from = VC_XDIV3;
+		sam->vcounter[VC_B4].input_from = VC_XDIV3;
 		break;
 	case DIV2:
-		sam->vdg.vcounter[VC_B4].input_from = VC_XDIV2;
+		sam->vcounter[VC_B4].input_from = VC_XDIV2;
 		break;
 	case DIV1: default:
-		sam->vdg.vcounter[VC_B4].input_from = VC_B3_0;
+		sam->vcounter[VC_B4].input_from = VC_B3_0;
 		break;
 	}
 }
 
 static void update_from_register(struct MC6883_private *sam) {
-	int old_v = sam->vdg.v;
+	int old_ydiv = vdg_ydivs[sam->Vprev];
+	int old_xdiv = vdg_xdivs[sam->Vprev];
 
-	int old_ydiv = vdg_ydivs[old_v];
-	int old_xdiv = vdg_xdivs[old_v];
+	int new_ydiv = vdg_ydivs[sam->V];
+	int new_xdiv = vdg_xdivs[sam->V];
+	sam->clr_mode = vdg_hclrs[sam->V];
 
-	int new_v = sam->reg & 7;
-
-	int new_ydiv = vdg_ydivs[new_v];
-	int new_xdiv = vdg_xdivs[new_v];
-	int new_hclr = vdg_hclrs[new_v];
-
-	sam->vdg.v = sam->reg & 7;
-	sam->vdg.f = (sam->reg << 6) & 0xfe00;
-	sam->vdg.clr_mode = new_hclr;
+	sam->Vprev = sam->V;
 
 	if (new_ydiv != old_ydiv) {
 		switch (new_ydiv) {
 		case DIV12:
 			if (old_ydiv == DIV3) {
 				// 'glitch'
-				sam->vdg.vcounter[VC_B15_5].input_from = VC_GROUND;
+				sam->vcounter[VC_B15_5].input_from = VC_GROUND;
 				vcounter_update(sam, VC_B15_5);
 			} else if (old_ydiv == DIV2) {
 				// 'glitch'
-				sam->vdg.vcounter[VC_B15_5].input_from = VC_B4;
+				sam->vcounter[VC_B15_5].input_from = VC_B4;
 				vcounter_update(sam, VC_B15_5);
 			}
-			sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV4;
+			sam->vcounter[VC_B15_5].input_from = VC_YDIV4;
 			break;
 		case DIV3:
 			if (old_ydiv == DIV12) {
 				// 'glitch'
-				sam->vdg.vcounter[VC_B15_5].input_from = VC_GROUND;
+				sam->vcounter[VC_B15_5].input_from = VC_GROUND;
 				vcounter_update(sam, VC_B15_5);
 			}
-			sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV3;
+			sam->vcounter[VC_B15_5].input_from = VC_YDIV3;
 			break;
 		case DIV2:
 			if (old_ydiv == DIV12) {
 				// 'glitch'
-				sam->vdg.vcounter[VC_B15_5].input_from = VC_B4;
+				sam->vcounter[VC_B15_5].input_from = VC_B4;
 				vcounter_update(sam, VC_B15_5);
 			}
-			sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV2;
+			sam->vcounter[VC_B15_5].input_from = VC_YDIV2;
 			break;
 		case DIV1: default:
-			sam->vdg.vcounter[VC_B15_5].input_from = VC_B4;
+			sam->vcounter[VC_B15_5].input_from = VC_B4;
 			break;
 		}
 		vcounter_update(sam, VC_YDIV2);
@@ -589,21 +656,21 @@ static void update_from_register(struct MC6883_private *sam) {
 		case DIV3:
 			if (old_xdiv == DIV2) {
 				// 'glitch'
-				sam->vdg.vcounter[VC_B4].input_from = VC_GROUND;
+				sam->vcounter[VC_B4].input_from = VC_GROUND;
 				vcounter_update(sam, VC_B4);
 			}
-			sam->vdg.vcounter[VC_B4].input_from = VC_XDIV3;
+			sam->vcounter[VC_B4].input_from = VC_XDIV3;
 			break;
 		case DIV2:
 			if (old_xdiv == DIV3) {
 				// 'glitch'
-				sam->vdg.vcounter[VC_B4].input_from = VC_GROUND;
+				sam->vcounter[VC_B4].input_from = VC_GROUND;
 				vcounter_update(sam, VC_B4);
 			}
-			sam->vdg.vcounter[VC_B4].input_from = VC_XDIV2;
+			sam->vcounter[VC_B4].input_from = VC_XDIV2;
 			break;
 		case DIV1: default:
-			sam->vdg.vcounter[VC_B4].input_from = VC_B3_0;
+			sam->vcounter[VC_B4].input_from = VC_B3_0;
 			break;
 		}
 		vcounter_update(sam, VC_XDIV2);
@@ -611,12 +678,11 @@ static void update_from_register(struct MC6883_private *sam) {
 		vcounter_update(sam, VC_B4);
 	}
 
-	int memory_size = (sam->reg >> 13) & 3;
-	sam->ram_row_mask = ram_row_masks[memory_size];
-	sam->ram_col_shift = ram_col_shifts[memory_size];
-	sam->ram_col_mask = ram_col_masks[memory_size];
-	sam->ram_ras1_bit = ram_ras1_bits[memory_size];
-	switch (memory_size) {
+	sam->ram_row_mask = ram_row_masks[sam->M];
+	sam->ram_col_shift = ram_col_shifts[sam->M];
+	sam->ram_col_mask = ram_col_masks[sam->M];
+	sam->ram_ras1_bit = ram_ras1_bits[sam->M];
+	switch (sam->M) {
 	case 0: // 4K
 	case 1: // 16K
 		sam->ram_page_bit = 0;
@@ -625,12 +691,12 @@ static void update_from_register(struct MC6883_private *sam) {
 	default:
 	case 2:
 	case 3: // 64K
-		sam->ram_page_bit = (sam->reg & 0x0400) << 5;
+		sam->ram_page_bit = sam->P ? 0x8000 : 0;
 		sam->ram_ras1 = 0;
 		break;
 	}
 
-	sam->map_type_1 = ((sam->reg & 0x8000) != 0);
-	sam->mpu_rate_fast = sam->reg & 0x1000;
-	sam->mpu_rate_ad = !sam->map_type_1 && (sam->reg & 0x800);
+	sam->mpu_rate_fast = sam->R & 0x2;
+	// XXX it isn't as simple as this
+	sam->mpu_rate_ad = !sam->TY && (sam->R & 0x1);
 }
