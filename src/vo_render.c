@@ -2,7 +2,7 @@
  *
  *  \brief Video renderers.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -183,8 +183,11 @@ struct vo_render *vo_render_new(int fmt) {
 	vo_render_set_cmp_system(vr, 1, VO_RENDER_SYSTEM_PAL_I);
 
 	vr->cmp.cha_phase = M_PI/2.;  // default 90°
-	// sensible defaults - updates viewport offset
-	vr->viewport.x = MAX_FILTER_ORDER;
+
+	// Sensible viewport defaults.  Will be updated to centre the display
+	// in short order.  Default X offset is enough to apply two filters
+	// without having to worry about underflow.
+	vr->viewport.x = 2 * MAX_FILTER_ORDER;
 	vr->viewport.w = 640;
 	vr->viewport.h = 240;
 	vo_render_set_active_area(vr, 254, 63, 512, 512);
