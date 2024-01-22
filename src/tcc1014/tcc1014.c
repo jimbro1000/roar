@@ -892,6 +892,10 @@ static void do_hs_fall(void *sptr) {
 	} else switch (gime->vstate) {
 	case tcc1014_vstate_vblank:
 		if (gime->lcount >= TCC1014_TOP_BORDER_START) {
+			gime->B = gime->Y;
+			if (gime->COCO) {
+				gime->B = (gime->B & 0x701ff) | (gime->SAM_F << 9);
+			}
 			gime->lcount = 0;
 			gime->vstate = gime->post_vblank_vstate;
 			memset(gime->pixel_data, gime->border_colour, sizeof(gime->pixel_data));
@@ -926,10 +930,6 @@ static void do_hs_fall(void *sptr) {
 		if (gime->lcount >= 4) {
 			gime->fs_rise_event.at_tick = gime->scanline_start + gime->pVSYNC;
 			event_queue(&MACHINE_EVENT_LIST, &gime->fs_rise_event);
-			gime->B = gime->Y;
-			if (gime->COCO) {
-				gime->B = (gime->B & 0x701ff) | (gime->SAM_F << 9);
-			}
 			gime->vstate = tcc1014_vstate_vblank;
 			gime->lcount = 0;
 			gime->scanline = 0;
