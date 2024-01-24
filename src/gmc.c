@@ -143,6 +143,7 @@ static void gmc_free(struct part *p) {
 
 static void gmc_reset(struct cart *c, _Bool hard) {
 	cart_rom_reset(c, hard);
+	c->rom_mask &= 0x3fff;  // limit GMC carts to 16K (but banked)
 }
 
 static void gmc_attach(struct cart *c) {
@@ -174,7 +175,7 @@ static uint8_t gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	(void)R2;
 
 	if (R2) {
-		return c->rom_data[A & 0x3fff];
+		return c->rom_data[c->rom_bank | (A & c->rom_mask)];
 	}
 
 	if (!P2) {
@@ -183,7 +184,7 @@ static uint8_t gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 
 	if ((A & 1) == 0) {
 		// bank switch
-		cart_rom_select_bank(c, (D & 3) << 14);
+		cart_rom_select_bank(c, D << 14);
 		return D;
 	}
 

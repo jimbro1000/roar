@@ -85,7 +85,8 @@ struct cart {
 	// ROM data.  Not a necessary feature of a cartridge, but included here
 	// to avoid having to create a "cart_rom" struct that adds little else.
 	uint8_t *rom_data;
-	uint16_t rom_bank;
+	uint32_t rom_bank;
+	uint32_t rom_bank_mask;
 	uint16_t rom_mask;
 
 	// Used to schedule regular FIRQs when an "autorun" cartridge is
@@ -136,6 +137,6 @@ void cart_rom_reset(struct cart *c, _Bool hard);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
 void cart_rom_free(struct part *p);
-void cart_rom_select_bank(struct cart *c, uint16_t bank);
+void cart_rom_select_bank(struct cart *c, uint32_t bank);
 
 #endif

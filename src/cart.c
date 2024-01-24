@@ -74,7 +74,7 @@ static const struct ser_struct_data cart_config_ser_struct_data = {
 static const struct ser_struct ser_struct_cart[] = {
 	SER_ID_STRUCT_UNHANDLED(CART_SER_CART_CONFIG),
 	SER_ID_STRUCT_ELEM(2, ser_type_bool,   struct cart, EXTMEM),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint16, struct cart, rom_bank),
+	SER_ID_STRUCT_ELEM(3, ser_type_uint32, struct cart, rom_bank),
 	SER_ID_STRUCT_ELEM(4, ser_type_event,  struct cart, firq_event),
 };
 
@@ -555,9 +555,9 @@ void cart_rom_init(struct cart *c) {
 	c->reset = cart_rom_reset;
 	c->attach = cart_rom_attach;
 	c->detach = cart_rom_detach;
-	c->rom_data = xzalloc(0x10000);
-	c->rom_mask = 0x3fff;
+	c->rom_mask = 0;
 	c->rom_bank = 0;
+	c->rom_bank_mask = 0;
 
 	event_init(&c->firq_event, DELEGATE_AS0(void, do_firq, c));
 	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
@@ -587,37 +587,80 @@ static void cart_rom_load(struct cart *c) {
 	if (cc->rom) {
 		sds tmp = romlist_find(cc->rom);
 		if (tmp) {
-			int size = machine_load_rom(tmp, c->rom_data, 0x10000);
-			(void)size;  // avoid warnings if...
+			// Specifying rom2 explicitly limits us to 16K total,
+			// otherwise scale up the size we allocate:
+			off_t max_size = 0x4000;
+			if (!cc->rom2) {
+				FILE *fd = fopen(tmp, "rb");
+				if (fd) {
+					off_t fsize = fs_file_size(fd);
+					if (fsize > 0x20000) {
+						// Never actually seen a 256K
+						// cart, but support it anyway:
+						max_size = 0x40000;
+					} else if (fsize > 0x10000) {
+						// 128K cart, e.g. RoboCop
+						max_size = 0x20000;
+					} else if (fsize > 0x4000) {
+						// 64K cart, e.g. any GMC
+						max_size = 0x10000;
+					} else if (fsize > 0x2000) {
+						// 16K cart
+						max_size = 0x4000;
+					} else {
+						// 8K cart
+						max_size = 0x2000;
+					}
+					fclose(fd);
+				}
+			}
+			c->rom_data = xrealloc(c->rom_data, max_size);
+
+			int actual_size = machine_load_rom(tmp, c->rom_data, max_size);
 #ifdef LOGGING
-			if (size > 0) {
-				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data, size);
+			if (actual_size > 0) {
+				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data, actual_size);
 				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
 			}
 #endif
 			sdsfree(tmp);
-			if (size > 0x4000) {
+			c->rom_bank_mask = 0;
+			if (actual_size > 0x10000) {
+				c->rom_bank_mask = 0x3c000;
 				c->rom_mask = 0x7fff;
-			} else if (size > 0x2000) {
+			} else if (actual_size > 0x10000) {
+				c->rom_bank_mask = 0x1c000;
+				c->rom_mask = 0x7fff;
+			} else if (actual_size > 0x4000) {
+				c->rom_bank_mask = 0x0c000;
+				c->rom_mask = 0x7fff;
+			} else if (actual_size > 0x2000) {
 				c->rom_mask = 0x3fff;
 			} else {
 				c->rom_mask = 0x1fff;
 			}
+			if (actual_size < max_size) {
+				memset(c->rom_data + actual_size, 0xff, max_size - actual_size);
+			}
 		}
 	}
+
 	if (cc->rom2) {
 		sds tmp = romlist_find(cc->rom2);
 		if (tmp) {
-			int size = machine_load_rom(tmp, c->rom_data + 0x2000, 0x2000);
-			(void)size;  // avoid warnings if...
+			off_t max_size = 0x2000;
+			int actual_size = machine_load_rom(tmp, c->rom_data + 0x2000, max_size);
 #ifdef LOGGING
-			if (size > 0) {
-				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data + 0x2000, size);
+			if (actual_size > 0) {
+				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data + 0x2000, actual_size);
 				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
 			}
 #endif
 			c->rom_mask = 0x3fff;
 			sdsfree(tmp);
+			if (actual_size < max_size) {
+				memset(c->rom_data + 0x2000 + actual_size, 0xff, max_size - actual_size);
+			}
 		}
 	}
 }
@@ -650,8 +693,8 @@ void cart_rom_detach(struct cart *c) {
 	event_dequeue(&c->firq_event);
 }
 
-void cart_rom_select_bank(struct cart *c, uint16_t bank) {
-	c->rom_bank = bank;
+void cart_rom_select_bank(struct cart *c, uint32_t bank) {
+	c->rom_bank = bank & c->rom_bank_mask;
 }
 
 // Toggles the cartridge interrupt line.
