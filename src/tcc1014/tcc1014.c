@@ -700,7 +700,7 @@ static void schedule_timer(struct TCC1014_private *gime) {
 
 static void update_timer(void *sptr) {
 	struct TCC1014_private *gime = sptr;
-	if (gime->TINS) {
+	if (gime->TINS && gime->timer_counter > 0) {
 		// TINS=1: 3.58MHz
 		int elapsed = (event_current_tick - gime->timer_tick_base) >> 2;
 		gime->timer_counter -= elapsed;
@@ -708,7 +708,7 @@ static void update_timer(void *sptr) {
 	if (gime->timer_counter <= 0) {
 		gime->blink = !gime->blink;
 		unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
-		gime->timer_counter = timer_reset + gime->timer_offset;
+		gime->timer_counter = timer_reset ? (timer_reset + gime->timer_offset) : 0;
 		schedule_timer(gime);
 		SET_INTERRUPT(gime, 0x20);
 	}
@@ -752,7 +752,7 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		{
 			// Timer MSB
 			unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
-			gime->timer_counter = timer_reset + gime->timer_offset;
+			gime->timer_counter = timer_reset ? (timer_reset + gime->timer_offset) : 0;
 			schedule_timer(gime);
 		}
 		GIME_DEBUG("GIME TMRH:  TIMER=%d\n", (val<<8)|gime->registers[5]);
