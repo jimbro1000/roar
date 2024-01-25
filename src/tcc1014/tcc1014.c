@@ -174,7 +174,7 @@ struct TCC1014_private {
 
 	// $FFA0-$FFA7: MMU bank registers (task one)
 	// $FFA8-$FFAF: MMU bank registers (task two)
-	uint32_t mmu_bank[16];
+	uint8_t mmu_bank[16];
 
 	// $FFB0-$FFBF: Colour palette registers
 	uint8_t palette_reg[16];
@@ -489,7 +489,7 @@ static _Bool tcc1014_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 		break;
 	case TCC1014_SER_MMU_BANKS:
 		for (int i = 0; i < 16; i++) {
-			gime->mmu_bank[i] = ser_read_uint8(sh) << 13;
+			gime->mmu_bank[i] = ser_read_uint8(sh);
 		}
 		break;
 	case TCC1014_SER_PALETTE_REG:
@@ -510,7 +510,7 @@ static _Bool tcc1014_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	case TCC1014_SER_MMU_BANKS:
 		ser_write_tag(sh, tag, 16);
 		for (int i = 0; i < 16; i++) {
-			ser_write_uint8_untagged(sh, gime->mmu_bank[i] >> 13);
+			ser_write_uint8_untagged(sh, gime->mmu_bank[i]);
 		}
 		ser_write_close_tag(sh);
 		break;
@@ -581,29 +581,30 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 	// Address decoding
 
-	if (A < 0x8000 || (gime->TY && A < 0xfe00)) {
-		gimep->RAS = 1;
-		if (gime->MMUEN) {
-			unsigned bank = (A >> 13) | gime->TR;
-			gimep->Z = gime->mmu_bank[bank] | (A & 0x1fff);
-		} else {
-			gimep->Z = 0x70000 | A;
+	if (A < 0xff00) {
+		_Bool use_mmu = gime->MMUEN;
+
+		if (A >= 0xfe00) {
+			if (gime->MC3) {
+				gimep->RAS = 1;
+				use_mmu = 0;
+			}
 		}
 
-	} else if (A < 0xfe00 || (!gime->TY && !gime->MC3 && A < 0xff00)) {
-		if (!gime->MC1) {
-			gimep->S = (A >= 0xc000) ? 1 : 0;
+		unsigned bank = use_mmu ? gime->mmu_bank[gime->TR | (A >> 13)]
+		                        : (0x38 | (A >> 13));
+
+		if (!gime->TY && bank >= 0x3c) {
+			if (!gime->MC1) {
+				gimep->S = (bank >= 0x3e) ? 1 : 0;
+			} else {
+				gimep->S = gime->MC0 ? 1 : 0;
+			}
 		} else {
-			gimep->S = gime->MC0 ? 1 : 0;
+			gimep->RAS = 1;
 		}
 
-	} else if (A < 0xff00) {
-		gimep->RAS = 1;
-		if (gime->MC3 || !gime->MMUEN) {
-			gimep->Z = 0x70000 | A;
-		} else {
-			gimep->Z = gime->mmu_bank[gime->TR | 7] | (A & 0x1fff);
-		}
+		gimep->Z = (bank << 13) | (A & 0x1fff);
 
 	} else if (A < 0xff40) {
 		if ((A & 0x10) == 0) {
@@ -647,9 +648,9 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 	} else if (A < 0xffb0) {
 		if (!RnW) {
-			gime->mmu_bank[A & 15] = (*gimep->CPUD & 0x3f) << 13;
+			gime->mmu_bank[A & 15] = *gimep->CPUD & 0x3f;
 		} else {
-			*gimep->CPUD = (*gimep->CPUD & ~0x3f) | (gime->mmu_bank[A & 15] >> 13);
+			*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->mmu_bank[A & 15];
 		}
 
 	} else if (A < 0xffc0) {
