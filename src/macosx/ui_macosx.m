@@ -1210,7 +1210,7 @@ void cocoa_update_machine_menu(void *sptr) {
 	struct slist *iter;
 	for (iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
-		if (mc == xroar_machine_config)
+		if (mc == xroar.machine_config)
 			current_machine = TAG(ui_tag_machine, mc->id);
 		NSString *description = [[NSString alloc] initWithUTF8String:mc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
@@ -1228,11 +1228,11 @@ void cocoa_update_cartridge_menu(void *sptr) {
 	// Get list of cart configs
 	struct slist *ccl = NULL;
 	struct cart *cart = NULL;
-	if (xroar_machine) {
-		const struct machine_partdb_extra *mpe = xroar_machine->part.partdb->extra[0];
+	if (xroar.machine) {
+		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
 		const char *cart_arch = mpe->cart_arch;
 		ccl = slist_reverse(cart_config_list_is_a(cart_arch));
-		cart = (struct cart *)part_component_by_id(&xroar_machine->part, "cart");
+		cart = (struct cart *)part_component_by_id(&xroar.machine->part, "cart");
 	}
 
 	// Remove old entries
