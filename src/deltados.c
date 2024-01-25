@@ -171,7 +171,7 @@ static void deltados_detach(struct cart *c) {
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct deltados *d = (struct deltados *)c;
 	if (R2) {
-		return c->rom_data[A & 0x3fff];
+		return c->rom_data[A & c->rom_mask];
 	}
 	if (!P2) {
 		return D;
@@ -185,7 +185,7 @@ static uint8_t deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 	struct deltados *d = (struct deltados *)c;
 	(void)R2;
 	if (R2) {
-		return c->rom_data[A & 0x3fff];
+		return c->rom_data[A & c->rom_mask];
 	}
 	if (!P2) {
 		return D;

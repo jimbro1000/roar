@@ -192,7 +192,7 @@ static void rsdos_detach(struct cart *c) {
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct rsdos *d = (struct rsdos *)c;
 	if (R2) {
-		return c->rom_data[A & 0x3fff];
+		return c->rom_data[A & c->rom_mask];
 	}
 	if (!P2) {
 		return D;
@@ -216,7 +216,7 @@ static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct rsdos *d = (struct rsdos *)c;
 	if (R2) {
-		return c->rom_data[A & 0x3fff];
+		return c->rom_data[A & c->rom_mask];
 	}
 	if (!P2) {
 		return D;

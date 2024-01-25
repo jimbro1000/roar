@@ -188,7 +188,7 @@ static void dragondos_detach(struct cart *c) {
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct dragondos *d = (struct dragondos *)c;
 	if (R2) {
-		return c->rom_data[A & 0x3fff];
+		return c->rom_data[A & c->rom_mask];
 	}
 	if (!P2) {
 		return D;
@@ -215,7 +215,7 @@ static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, u
 	struct dragondos *d = (struct dragondos *)c;
 	(void)R2;
 	if (R2) {
-		return c->rom_data[A & 0x3fff];
+		return c->rom_data[A & c->rom_mask];
 	}
 	if (!P2) {
 		return D;
