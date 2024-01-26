@@ -2,7 +2,7 @@
  *
  *  \brief File path searching.
  *
- *  \copyright Copyright 2009-2020 Ciaran Anscomb
+ *  \copyright Copyright 2009-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "c-ctype.h"
 #include "c-strcase.h"
 #include "sds.h"
 #include "sdsx.h"
@@ -165,7 +166,11 @@ sds find_in_path(const char *path, const char *filename) {
 		return NULL;
 
 	// If no path or filename contains a directory, just test file
-	if (path == NULL || *path == 0 || strpbrk(f, PSEPARATORS)) {
+	if (path == NULL || *path == 0 || strpbrk(f, PSEPARATORS)
+#ifdef WINDOWS32
+	    || (c_isalpha(*f) && *(f+1) == ':')
+#endif
+	    ) {
 		// Only consider a file if user has read access.  This is NOT a
 		// security check, it's purely for usability.
 		if (stat(f, &statbuf) == 0) {
