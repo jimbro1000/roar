@@ -2,7 +2,7 @@
  *
  *  \brief C locale character handling.
  *
- *  \copyright Copyright 2014 Ciaran Anscomb
+ *  \copyright Copyright 2014-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -34,6 +34,10 @@ static inline bool c_islower(int c) {
 
 static inline bool c_isupper(int c) {
 	return (c >= 'A' && c <= 'Z');
+}
+
+static inline bool c_isalpha(int c) {
+	return c_islower(c) || c_isupper(c);
 }
 
 #endif
