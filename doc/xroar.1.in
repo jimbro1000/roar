@@ -337,8 +337,8 @@ set TV colour saturation (0-100) [50]
 \fB\-vo\-hue\fR \fIn\fR
 set TV hue control (-179 to +180) [0]
 .TP
-\fB\-vo\-colour\-killer\fR
-enable colour killer (disabled by default)
+\fB\-no\-vo\-colour\-killer\fR
+disable colour killer (enabled by default)
 
 .SS Audio:
 
