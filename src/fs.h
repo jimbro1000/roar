@@ -2,7 +2,7 @@
  *
  *  \brief File operations.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -27,6 +27,8 @@ off_t fs_file_size(FILE *fd);
 
 // unlike ftruncate(), this leaves file position at new EOF
 int fs_truncate(FILE *fd, off_t length);
+
+uint32_t fs_file_crc32(FILE *fd);
 
 // Writing basic integer types
 

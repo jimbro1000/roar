@@ -2,7 +2,7 @@
  *
  *  \brief File operations.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -31,6 +31,7 @@
 
 #include "xalloc.h"
 
+#include "crc32.h"
 #include "fs.h"
 
 // POSIX way to find file size.  errno set as appropriate.
@@ -58,6 +59,36 @@ int fs_truncate(FILE *fd, off_t length) {
 	if (ftruncate(fno, length) < 0)
 		return -1;
 	return fseeko(fd, length, SEEK_SET);
+}
+
+// Compute CRC32 of entire file from current position.  File position is
+// recorded and reset before return on success.  CRC32_RESET is returned on
+// error, which is of course a valid CRC, so if it's important, be sure to
+// check that.
+
+uint32_t fs_file_crc32(FILE *fd) {
+	off_t offset = ftello(fd);
+	if (offset < 0)
+		return CRC32_RESET;
+
+	uint8_t buf[8192];
+	uint32_t crc32 = CRC32_RESET;
+
+	for (;;) {
+		size_t nread = fread(buf, 1, sizeof(buf), fd);
+		if (nread > 0) {
+			crc32 = crc32_block(crc32, buf, nread);
+		}
+		if (nread < sizeof(buf))
+			break;
+	}
+
+	if (feof(fd)) {
+		fseeko(fd, offset, SEEK_SET);
+		return crc32;
+	}
+
+	return CRC32_RESET;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
