@@ -2,7 +2,7 @@
  *
  *  \brief Dragon/CoCo cartridge support.
  *
- *  \copyright Copyright 2005-2021 Ciaran Anscomb
+ *  \copyright Copyright 2005-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -41,6 +41,7 @@ struct cart_config {
 	int id;
 	char *rom;
 	char *rom2;
+	_Bool no_header;  // don't try and skip header if filesize % 256 != 0
 	_Bool becker_port;
 	int autorun;
 

@@ -2,7 +2,7 @@
  *
  *  \brief Dragon/CoCo cartridge support.
  *
- *  \copyright Copyright 2005-2022 Ciaran Anscomb
+ *  \copyright Copyright 2005-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -115,6 +115,270 @@ static void do_firq(void *);
 static _Bool cart_rom_has_interface(struct cart *c, const char *ifname);
 
 /**************************************************************************/
+
+// The cartridge type heuristic basically just says "any image > 16K is
+// banked", so it assigns the "gmc" cart-type to handle that, else assumes
+// "rom".
+//
+// The CoCo 3 actually has the means to handle a whole unbanked 32K, so this
+// small list of titles includes those known exceptions.  Once they exceeded
+// that 32K, cartridges tended to be banked 16K again anyway.
+//
+// And we might as well list known disk ROMs here too - "running" them isn't
+// the best way to configure those cartridges, but it can't hurt?
+//
+// These are here as a convenience only.
+
+struct cart_fingerprint {
+	const char *name;
+	off_t size;
+	uint32_t crc32;
+	const char *type;
+	_Bool no_autorun;  // e.g., DOS ROMs
+};
+
+static struct cart_fingerprint cart_special[] = {
+
+	// DragonDOS cartridges
+
+	{
+		.name = "DragonDOS 1.0 (Dragon Data Ltd)",
+		.size = 0x2000,
+		.crc32 = 0xb44536f6,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "DragonDOS 1.3A (Dragon Data Ltd)",
+		.size = 0x2000,
+		.crc32 = 0x67bd6e27,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "DragonDOS 1.5 (Dragon Data Ltd)",
+		.size = 0x2000,
+		.crc32 = 0x0d1b492c,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "DragonDOS 4.0 (Eurohard S.A.)",
+		.size = 0x2000,
+		.crc32 = 0x14f4c54a,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "DragonDOS 4.1 (Eurohard S.A.)",
+		.size = 0x2000,
+		.crc32 = 0x16d25658,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "DragonDOS 4.2 (Eurohard S.A.)",
+		.size = 0x2000,
+		.crc32 = 0x6bb0b4bb,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "DOSplus 4.8 (S3)",
+		.size = 0x2000,
+		.crc32 = 0xd4d954a0,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "DOSplus 4.9B (S3)",
+		.size = 0x2000,
+		.crc32 = 0x7c6dfca8,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "SuperDOS E4 (PNP)",
+		.size = 0x2000,
+		.crc32 = 0x8023c1c8,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "SuperDOS E5 (PNP)",
+		.size = 0x2000,
+		.crc32 = 0x460b703a,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "SuperDOS E6 (PNP)",
+		.size = 0x2000,
+		.crc32 = 0x8c1d6c45,
+		.type = "dragondos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "SuperDOS E7T (PNP)",
+		.size = 0x2000,
+		.crc32 = 0x5d7779b7,
+		.type = "rsdos",
+		.no_autorun = 1,
+	},
+
+	// Delta cartridges
+
+	{
+		.name = "Delta System 1A (Premier Microsystems)",
+		.size = 0x2000,
+		.crc32 = 0x149eb4dd,
+		.type = "delta",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "Delta System 2.0 (Premier Microsystems)",
+		.size = 0x2000,
+		.crc32 = 0x307fb37c,
+		.type = "delta",
+		.no_autorun = 1,
+	},
+
+	// RS-DOS cartridges
+
+	{
+		.name = "Disk Extended Colour BASIC 1.0 (Tandy)",
+		.size = 0x2000,
+		.crc32 = 0xb4f9968e,
+		.type = "rsdos",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "Disk Extended Colour BASIC 1.1 (Tandy)",
+		.size = 0x2000,
+		.crc32 = 0x0b9c5415,
+		.type = "rsdos",
+		.no_autorun = 1,
+	},
+
+	// IDE cartridges
+
+	{
+		.name = "HDB-DOS 1.5 Becker CoCo 3",
+		.size = 0x2000,
+		.crc32 = 0xe6f24735,
+		.type = "ide",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "HDB-DOS 1.4 DW3 CoCo 2",
+		.size = 0x2000,
+		.crc32 = 0xd7e7df0c,
+		.type = "ide",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "HDB-DOS 1.4 LBA",
+		.size = 0x2000,
+		.crc32 = 0xabf3a8dd,
+		.type = "ide",
+		.no_autorun = 1,
+	},
+
+	{
+		.name = "YA-DOS 0.5B Picard",
+		.size = 0x4000,
+		.crc32 = 0xdffc86c4,
+		.type = "ide",
+		.no_autorun = 1,
+	},
+
+	// CoCo 3 32K cartridges
+
+	{
+		.name = "Arkanoid (1987)(Taito)",
+		.size = 0x8000,
+		.crc32 = 0x2fab4955,
+		.type = "rom",
+	},
+
+	{
+		.name = "GFL Championship Football II (1988)(ZCT Systems)",
+		.size = 0x8000,
+		.crc32 = 0x899978e7,
+		.type = "rom",
+	},
+
+	{
+		.name = "RAD Warrior (1987)(Tandy)",
+		.size = 0x8000,
+		.crc32 = 0xc8b64049,
+		.type = "rom",
+	},
+
+	{
+		.name = "Rampage! (1989)(Activision)",
+		.size = 0x8000,
+		.crc32 = 0x09c2e97d,
+		.type = "rom",
+	},
+
+	{
+		.name = "Silpheed (1988)(Sierra)[coco 3]",
+		.size = 0x8000,
+		.crc32 = 0xccfd0a0c,
+		.type = "rom",
+	},
+
+	{
+		.name = "Super Pitfall (1988)(Activision)",
+		.size = 0x8000,
+		.crc32 = 0xe8e54cbe,
+		.type = "rom",
+	},
+
+	// Others
+
+	{
+		.name = "Blockdown (2021)(Teipen Mwnci)",
+		.size = 0x4000,
+		.crc32 = 0xabe7bb9e,
+		.type = "gmc",
+	},
+
+	{
+		// Ok actually the heuristic would be just fine with this one;
+		// I just wanted to list it ;)
+		.name = "Dunjunz (2020)(Teipen Mwnci)",
+		.size = 0x10000,
+		.crc32 = 0x58716b7f,
+		.type = "gmc",
+	},
+
+	{
+		.name = "Orchestra-90/CC (Tandy)",
+		.size = 0x2000,
+		.crc32 = 0x15fb39af,
+		.type = "orch90",
+	},
+
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct cart_config *cart_config_new(void) {
 	struct cart_config *new = xmalloc(sizeof(*new));
@@ -259,17 +523,52 @@ struct cart_config *cart_config_by_name(const char *name) {
 		if (rom_cart_config->rom)
 			free(rom_cart_config->rom);
 		rom_cart_config->rom = xstrdup(name);
-		rom_cart_config->autorun = 1;
 		FILE *fd = fopen(name, "rb");
 		if (fd) {
 			off_t fsize = fs_file_size(fd);
-			if (fsize > 0x4000) {
+			uint32_t crc32 = CRC32_RESET;
+			if (fsize > 0) {
+				crc32 = fs_file_crc32(fd);
+				// Round up file size to a multiple of 4K for
+				// matching, padding the CRC32 with 0xff bytes
+				// for matching.
+				while ((fsize & 0xfff) != 0) {
+					uint8_t dummy = 0xff;
+					crc32 = crc32_block(crc32, &dummy, 1);
+					fsize++;
+				}
+				// Hide this away in debug logging for now
+				if (logging.level >= 3) {
+					LOG_PRINT("Cartridge: %s\n", name);
+					LOG_PRINT("\tsize 0x%zx\n", fsize);
+					LOG_PRINT("\tcrc32 0x%x\n", crc32);
+				}
+			}
+			for (unsigned i = 0; i < ARRAY_N_ELEMENTS(cart_special); i++) {
+				if (cart_special[i].size == fsize &&
+				    cart_special[i].crc32 == crc32) {
+					LOG_DEBUG(1, "Cartridge: using cart-type '%s' for '%s'\n", cart_special[i].type, cart_special[i].name);
+					rom_cart_config->type = xstrdup(cart_special[i].type);
+					// We ONLY recognise headerless files here,
+					// so flag that there's no need to try being
+					// over-smart about that.
+					rom_cart_config->no_header = 1;
+					rom_cart_config->autorun = !cart_special[i].no_autorun;
+					break;
+				}
+			}
+			// If not found, and cart size exceeds 16K, assume a
+			// banked ROM (so use GMC cart to handle it).
+			if (!rom_cart_config->type && fsize > 0x4000) {
+				LOG_DEBUG(1, "Cartridge: assuming cart-type 'gmc' for '%s'\n", name);
 				rom_cart_config->type = xstrdup("gmc");
+				rom_cart_config->autorun = 1;
 			}
 			fclose(fd);
 		}
 		if (!rom_cart_config->type) {
 			rom_cart_config->type = xstrdup("rom");
+			rom_cart_config->autorun = 1;
 		}
 		xroar_update_cartridge_menu();
 		return rom_cart_config;
@@ -616,7 +915,7 @@ static void cart_rom_load(struct cart *c) {
 			}
 			c->rom_data = xrealloc(c->rom_data, max_size);
 
-			int actual_size = machine_load_rom(tmp, c->rom_data, max_size);
+			int actual_size = machine_load_rom_nh(tmp, c->rom_data, max_size, cc->no_header);
 #ifdef LOGGING
 			if (actual_size > 0) {
 				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data, actual_size);
