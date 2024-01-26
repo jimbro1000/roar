@@ -1,3 +1,7 @@
+ * Include a cartridge database (mostly CoCo 3 32K) for convenience
+ * Fix potential crash when cartridge loading fails [Russ Le Blang]
+ * Recognise Windows "<drive-letter>:" [Russ Le Blang]
+
 Version 1.5, Thu 25 Jan 2024
 
  * Add ability to change Picture Area, seeing more or less border
@@ -12,7 +16,7 @@ Version 1.5, Thu 25 Jan 2024
  * Fix printing after switching machines [Jak Fearon]
  * Better rendering of paths in Windows dialogs
  * Fix some CoCo 3 cartridge behaviour [Christian Haitian]
- * GIME: reset video address later (fixes Androne) ["EnsignRutherford"]
+ * GIME: reset video address later (fixes Androne) [Russ Le Blang]
  * GIME: fix various $FExx access problems
 
 Version 1.4.2, Tue 16 Jun 2023
