@@ -914,6 +914,7 @@ static void cart_rom_load(struct cart *c) {
 				}
 			}
 			c->rom_data = xrealloc(c->rom_data, max_size);
+			memset(c->rom_data, 0xff, max_size);
 
 			int actual_size = machine_load_rom_nh(tmp, c->rom_data, max_size, cc->no_header);
 #ifdef LOGGING
@@ -938,13 +939,14 @@ static void cart_rom_load(struct cart *c) {
 			} else {
 				c->rom_mask = 0x1fff;
 			}
-			if (actual_size < max_size) {
-				memset(c->rom_data + actual_size, 0xff, max_size - actual_size);
-			}
 		}
 	}
 
 	if (cc->rom2) {
+		if (!c->rom_data) {
+			c->rom_data = xmalloc(0x4000);
+			memset(c->rom_data, 0xff, 0x4000);
+		}
 		sds tmp = romlist_find(cc->rom2);
 		if (tmp) {
 			off_t max_size = 0x2000;
@@ -957,10 +959,13 @@ static void cart_rom_load(struct cart *c) {
 #endif
 			c->rom_mask = 0x3fff;
 			sdsfree(tmp);
-			if (actual_size < max_size) {
-				memset(c->rom_data + 0x2000 + actual_size, 0xff, max_size - actual_size);
-			}
 		}
+	}
+
+	if (!c->rom_data) {
+		c->rom_data = xmalloc(1);
+		c->rom_bank_mask = 0;
+		c->rom_mask = 0;
 	}
 }
 
