@@ -2,7 +2,7 @@
  *
  *  \brief Machine configuration.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -370,7 +370,7 @@ void machine_config_print_all(FILE *f, _Bool all) {
 	}
 }
 
-int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
+int machine_load_rom_nh(const char *path, uint8_t *dest, off_t max_size, _Bool no_header) {
 	if (path == NULL)
 		return -1;
 
@@ -387,7 +387,7 @@ int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
 	off_t file_size = fs_file_size(fd);
 	if (file_size < 0)
 		return -1;
-	int header_size = file_size % 256;
+	int header_size = no_header ? 0 : (file_size % 256);
 	file_size -= header_size;
 	if (file_size > max_size)
 		file_size = max_size;
