@@ -1,3 +1,5 @@
+ * GIME: timer interrupt fixes [Tim Lindner]
+
 Version 1.5.1, Sat 27 Jan 2024
 
  * Include a cartridge database (mostly CoCo 3 32K) for convenience
