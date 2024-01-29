@@ -636,9 +636,15 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			if (A == 0xff92) {
 				*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->irq_state;
 				gime->irq_state = 0;
+				if (gime->timer_counter == 0) {
+					SET_INTERRUPT(gime, 0x20);
+				}
 			} else if (A == 0xff93) {
 				*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->firq_state;
 				gime->firq_state = 0;
+				if (gime->timer_counter == 0) {
+					SET_INTERRUPT(gime, 0x20);
+				}
 			} else if (A == 0xff94 || A == 0xff95) {
 				*gimep->CPUD = 0;
 			} else {
@@ -754,6 +760,9 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 			// Timer MSB
 			unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
 			gime->timer_counter = timer_reset ? (timer_reset + gime->timer_offset) : 0;
+			if (gime->timer_counter == 0) {
+				SET_INTERRUPT(gime, 0x20);
+			}
 			schedule_timer(gime);
 		}
 		GIME_DEBUG("GIME TMRH:  TIMER=%d\n", (val<<8)|gime->registers[5]);
