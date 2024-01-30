@@ -74,7 +74,9 @@ static int read_v2_snapshot(const char *filename);
 const char *snapv1_header = "XRoar snapshot.\012\000";
 static int read_v1_snapshot(const char *filename);
 #else
+#ifndef HAVE_WASM
 static int read_v1_snapshot(const char *f) { (void)f; return -1; }
+#endif
 #endif
 
 // For WebAssembly, read the snapshot in, but if that resulted in any pending
