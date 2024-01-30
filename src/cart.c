@@ -540,7 +540,7 @@ struct cart_config *cart_config_by_name(const char *name) {
 				// Hide this away in debug logging for now
 				if (logging.level >= 3) {
 					LOG_PRINT("Cartridge: %s\n", name);
-					LOG_PRINT("\tsize 0x%zx\n", fsize);
+					LOG_PRINT("\tsize 0x%lx\n", (long)fsize);
 					LOG_PRINT("\tcrc32 0x%x\n", crc32);
 				}
 			}
