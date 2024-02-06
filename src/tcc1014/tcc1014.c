@@ -749,10 +749,14 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 
 	case 2:
 		GIME_DEBUG("GIME IRQ:   TMR=%d HBORD=%d VBORD=%d SER=%d KBD=%d CART=%d\n", (val>>5)&1, (val>>4)&1, (val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
+		gime->irq_state &= ~val;
+		gime->public.IRQ &= ~val;
 		break;
 
 	case 3:
 		GIME_DEBUG("GIME FIRQ:  TMR=%d HBORD=%d VBORD=%d SER=%d KBD=%d CART=%d\n", (val>>5)&1, (val>>4)&1, (val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
+		gime->firq_state &= ~val;
+		gime->public.FIRQ &= ~val;
 		break;
 
 	case 4:
