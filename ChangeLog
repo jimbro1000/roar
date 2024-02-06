@@ -1,3 +1,7 @@
+Version 1.5.3, Tue  6 Feb 2024
+
+ * GIME: fix interrupt fixes fix (fixes RoboCop)
+
 Version 1.5.2, Mon 29 Jan 2024
 
  * GIME: timer interrupt fixes [Tim Lindner]
