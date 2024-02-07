@@ -2,7 +2,7 @@
  *
  *  \brief Parts & interfaces.
  *
- *  \copyright Copyright 2018-2023 Ciaran Anscomb
+ *  \copyright Copyright 2018-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -59,6 +59,8 @@ extern const struct partdb_entry orch90_part;
 extern const struct partdb_entry race_part;
 extern const struct partdb_entry rsdos_part;
 
+extern const struct partdb_entry ram_part;
+
 extern const struct partdb_entry hd6309_part;
 extern const struct partdb_entry mc6801_part;
 extern const struct partdb_entry mc6803_part;
@@ -108,6 +110,8 @@ const struct partdb_entry *partdb[] = {
 	&race_part,
 #endif
 #endif
+
+	&ram_part,
 
 #ifdef WANT_PART_MC6809
 	&hd6309_part,
