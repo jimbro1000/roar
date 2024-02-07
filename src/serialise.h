@@ -2,7 +2,7 @@
  *
  *  \brief Serialisation and deserialisation helpers.
  *
- *  \copyright Copyright 2015-2022 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -218,6 +218,9 @@ void ser_write_string(struct ser_handle *sh, int tag, const char *s);
 void ser_write_sds(struct ser_handle *sh, int tag, const sds s);
 void ser_write(struct ser_handle *sh, int tag, const void *ptr, size_t size);
 
+void ser_write_array_uint8(struct ser_handle *sh, int tag, uint8_t *src, size_t nelems);
+void ser_write_array_uint16(struct ser_handle *sh, int tag, uint16_t *src, size_t nelems);
+
 // Open tag write helpers.
 
 void ser_write_open_vuint32(struct ser_handle *sh, int tag, uint32_t v);
@@ -241,6 +244,14 @@ uint16_t ser_read_uint16(struct ser_handle *sh);
 int32_t ser_read_vint32(struct ser_handle *sh);
 uint32_t ser_read_vuint32(struct ser_handle *sh);
 void ser_read(struct ser_handle *sh, void *ptr, size_t size);
+
+// For array read helpers, dst is a _pointer_ to the destination pointer, which
+// will be allocated if NULL.  nelems is the maximum number of elements
+// allowed.  Returns actual number of elements read, called can raise a format
+// error if mismatch is a bad thing.
+
+size_t ser_read_array_uint8(struct ser_handle *sh, uint8_t **dst, size_t nelems);
+size_t ser_read_array_uint16(struct ser_handle *sh, uint16_t **dst, size_t nelems);
 
 // The following all allocate their own storage:
 

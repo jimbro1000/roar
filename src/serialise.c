@@ -372,6 +372,20 @@ void ser_write_sds(struct ser_handle *sh, int tag, const sds s) {
 	ser_write(sh, tag, s, length);
 }
 
+void ser_write_array_uint8(struct ser_handle *sh, int tag, uint8_t *src, size_t nelems) {
+	return ser_write(sh, tag, src, nelems);
+}
+
+void ser_write_array_uint16(struct ser_handle *sh, int tag, uint16_t *src, size_t nelems) {
+	if (!sh)
+		return;
+	ser_write_tag(sh, tag, nelems * 2);
+	for (size_t i = 0; i < nelems; i++) {
+		ser_write_uint16_untagged(sh, src[i]);
+	}
+	ser_write_close_tag(sh);
+}
+
 void ser_write(struct ser_handle *sh, int tag, const void *ptr, size_t size) {
 	if (!sh)
 		return;
@@ -523,6 +537,32 @@ void ser_read(struct ser_handle *sh, void *ptr, size_t size) {
 	}
 	sh->length -= size;
 	s_read(sh, ptr, size);
+}
+
+size_t ser_read_array_uint8(struct ser_handle *sh, uint8_t **dst, size_t nelems) {
+	if (!sh || sh->error)
+		return 0;
+	assert(dst != NULL);
+	if (!nelems || nelems > sh->length)
+		nelems = sh->length;
+	if (!(*dst))
+		*dst = xmalloc(nelems);
+	ser_read(sh, *dst, nelems);
+	return nelems;
+}
+
+size_t ser_read_array_uint16(struct ser_handle *sh, uint16_t **dst, size_t nelems) {
+	if (!sh || sh->error)
+		return 0;
+	assert(dst != NULL);
+	if (!nelems || nelems > (sh->length / 2))
+		nelems = sh->length / 2;
+	if (!(*dst))
+		*dst = xmalloc(nelems * 2);
+	uint16_t *data = *dst;
+	for (size_t i = 0; i < nelems; i++)
+		data[i] = s_read_uint16(sh);
+	return nelems;
 }
 
 // These allocate their own storage:
