@@ -797,7 +797,7 @@ static _Bool dragon_finish(struct part *p) {
 	md->PIA1->a.in_sink = md->PIA1->b.in_sink = 0xff;
 	/* Machine-specific PIA connections */
 	if (md->is_dragon) {
-		// Pull-up resistor on centronics !BUSY (PIA1 PB2)
+		// Pull-up resistor on centronics !BUSY (PIA1 PB0)
 		md->PIA1->b.in_source |= (1<<0);
 	}
 	if (md->is_dragon64) {
