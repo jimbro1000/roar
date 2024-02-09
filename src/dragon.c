@@ -2,7 +2,7 @@
  *
  *  \brief Dragon and Tandy Colour Computer machines.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -47,6 +47,7 @@
 #include "ntsc.h"
 #include "part.h"
 #include "printer.h"
+#include "ram.h"
 #include "romlist.h"
 #include "serialise.h"
 #include "sound.h"
@@ -67,12 +68,6 @@ static const struct {
 	{ "@coco", "@coco_ext", NULL }
 };
 
-enum machine_ram_organisation {
-	RAM_ORGANISATION_4K,
-	RAM_ORGANISATION_16K,
-	RAM_ORGANISATION_64K
-};
-
 struct machine_dragon {
 	struct machine public;  // first element in turn is part
 
@@ -80,13 +75,12 @@ struct machine_dragon {
 	struct MC6883 *SAM;
 	struct MC6821 *PIA0, *PIA1;
 	struct MC6847 *VDG;
+	struct ram *RAM;
 
 	struct vo_interface *vo;
 	int frame;  // track frameskip
 	struct sound_interface *snd;
 
-	unsigned int ram_size;
-	uint8_t ram[0x10000];
 	uint8_t *rom;
 	uint8_t rom0[0x4000];
 	uint8_t rom1[0x4000];
@@ -124,8 +118,6 @@ struct machine_dragon {
 	_Bool has_ext_charset;
 	uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 	uint32_t crc_ext_charset;
-	enum machine_ram_organisation ram_organisation;
-	uint16_t ram_mask;
 	_Bool is_dragon;
 	_Bool is_dragon32;
 	_Bool is_dragon64;
@@ -134,13 +126,15 @@ struct machine_dragon {
 	_Bool have_acia;
 };
 
-#define DRAGON_SER_RAM     (2)
+#define DRAGON_SER_RAM      (2)
+#define DRAGON_SER_RAM_SIZE (3)
+#define DRAGON_SER_RAM_MASK (4)
 
 static const struct ser_struct ser_struct_dragon[] = {
 	SER_ID_STRUCT_NEST(1, &machine_ser_struct_data),
 	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM),
-        SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct machine_dragon, ram_size),
-        SER_ID_STRUCT_ELEM(4, ser_type_unsigned, struct machine_dragon, ram_mask),
+	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM_SIZE),
+	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM_MASK),
         SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct machine_dragon, inverted_text),
 };
 
@@ -157,8 +151,11 @@ static const struct ser_struct_data dragon_ser_struct_data = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void verify_ram_size(struct machine_config *mc) {
+	_Bool is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
+
+	// Validate requested total RAM
 	if (mc->ram < 4 || mc->ram > 64) {
-		mc->ram = (strcmp(mc->architecture, "dragon32") == 0) ? 32 : 64;
+		mc->ram = is_dragon32 ? 32 : 64;
 	} else if (mc->ram < 8) {
 		mc->ram = 4;
 	} else if (mc->ram < 16) {
@@ -167,6 +164,21 @@ static void verify_ram_size(struct machine_config *mc) {
 		mc->ram = 16;
 	} else if (mc->ram < 64) {
 		mc->ram = 32;
+	} else {
+		mc->ram = 64;
+	}
+
+	// Pick RAM org based on requested total RAM if not specified
+	if (mc->ram_org == ANY_AUTO) {
+		if (mc->ram < 16) {
+			mc->ram_org = RAM_ORG_4Kx1;
+		} else if (mc->ram < 32) {
+			mc->ram_org = RAM_ORG_16Kx1;
+		} else if (mc->ram < 64) {
+			mc->ram_org = RAM_ORG_32Kx1;
+		} else {
+			mc->ram_org = RAM_ORG_64Kx1;
+		}
 	}
 }
 
@@ -221,8 +233,11 @@ static void dragon_config_complete(struct machine_config *mc) {
 		old_arch = 1;
 	}
 
+	if (mc->ram_init == ANY_AUTO) {
+		mc->ram_init = ram_init_pattern;
+	}
+
 	_Bool is_dragon = old_arch == 0 || old_arch == 1;
-	verify_ram_size(mc);
 	if (mc->keymap == ANY_AUTO) {
 		if (is_dragon) {
 			mc->keymap = dkbd_layout_dragon;
@@ -401,6 +416,34 @@ static struct part *dragon_allocate(void) {
 	return p;
 }
 
+static void create_ram(struct machine_dragon *md) {
+	struct machine *m = &md->public;
+	struct part *p = &m->part;
+	struct machine_config *mc = m->config;
+
+	verify_ram_size(mc);
+
+	struct ram_config ram_config = {
+		.d_width = 8,
+		.organisation = mc->ram_org,
+	};
+	struct ram *ram = (struct ram *)part_create("ram", &ram_config);
+
+	unsigned bank_size = ram->bank_nelems / 1024;
+	if (bank_size == 0)
+		bank_size = 1;
+	unsigned nbanks = mc->ram / bank_size;
+	if (nbanks < 1)
+		nbanks = 1;
+	if (nbanks > 2)
+		nbanks = 2;
+
+	for (unsigned i = 0; i < nbanks; i++)
+		ram_add_bank(ram, i);
+
+	part_add_component(p, (struct part *)ram, "RAM");
+}
+
 static void dragon_initialise(struct part *p, void *options) {
 	struct machine_config *mc = options;
 	assert(mc != NULL);
@@ -424,6 +467,9 @@ static void dragon_initialise(struct part *p, void *options) {
 	// VDG
 	part_add_component(&m->part, part_create("MC6847", (mc->vdg_type == VDG_6847T1 ? "6847T1" : "6847")), "VDG");
 
+	// RAM
+	create_ram(md);
+
 	// Keyboard
 	m->keyboard.type = mc->keymap;
 }
@@ -446,11 +492,20 @@ static _Bool dragon_finish(struct part *p) {
 	md->PIA0 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA0", "MC6821");
 	md->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
 	md->VDG = (struct MC6847 *)part_component_by_id_is_a(p, "VDG", "MC6847");
+	md->RAM = (struct ram *)part_component_by_id_is_a(p, "RAM", "ram");
 
 	// Check all required parts are attached
 	if (!md->SAM || !md->CPU || !md->PIA0 || !md->PIA1 || !md->VDG ||
-	    !md->vo || !md->snd || !md->tape_interface) {
+	    !md->RAM || !md->vo || !md->snd || !md->tape_interface) {
 		return 0;
+	}
+
+	// RAM configuration
+	{
+		unsigned nbanks = md->RAM->nbanks;
+		unsigned bank_k = md->RAM->bank_nelems / 1024;
+		unsigned total_k = nbanks * bank_k;
+		LOG_DEBUG(1, "\t%d banks * %dK = %dK total RAM\n", nbanks, bank_k, total_k);
 	}
 
 	// Connect any cartridge part
@@ -594,7 +649,6 @@ static _Bool dragon_finish(struct part *p) {
 	}
 
 	verify_ram_size(mc);
-	md->ram_size = mc->ram * 1024;
 
 	/* Load appropriate ROMs */
 	memset(md->rom0, 0, sizeof(md->rom0));
@@ -800,63 +854,69 @@ static _Bool dragon_finish(struct part *p) {
 		// Pull-up resistor on centronics !BUSY (PIA1 PB0)
 		md->PIA1->b.in_source |= (1<<0);
 	}
+	if (md->is_dragon32) {
+		switch (mc->ram_org) {
+		case RAM_ORG_4Kx1:
+		case RAM_ORG_16Kx1:
+			md->PIA1->b.in_source |= (1<<2);
+			break;
+		default:
+			md->PIA1->b.in_sink &= ~(1<<2);
+		}
+	}
 	if (md->is_dragon64) {
 		md->have_acia = 1;
 		// Pull-up resistor on ROMSEL (PIA1 PB2)
 		md->PIA1->b.in_source |= (1<<2);
-	} else if (!md->is_dragon && mc->ram <= 4) {
-		// 4K CoCo ties PIA1 PB2 low
-		md->PIA1->b.in_sink &= ~(1<<2);
-	} else if (!md->is_dragon && mc->ram <= 16) {
-		// 16K CoCo pulls PIA1 PB2 high
-		md->PIA1->b.in_source |= (1<<2);
 	}
+	if (!md->is_dragon) {
+		if (RAM_ORG_A(mc->ram_org) == 12) {
+			// 4K CoCo ties PIA1 PB2 low
+			md->PIA1->b.in_sink &= ~(1<<2);
+		} else if (RAM_ORG_A(mc->ram_org) == 14) {
+			// 16K CoCo pulls PIA1 PB2 high
+			md->PIA1->b.in_source |= (1<<2);
+		} else {
+			// 64K CoCo connects PIA0 PB6 to PIA1 PB2:
+			// Deal with this through a postwrite.
+			md->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco64k, md);
+			md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_coco64k, md);
+		}
+	}
+
 	md->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread, md);
 	if (md->is_dragon) {
 		/* Dragons need to poll printer BUSY state */
 		md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_dragon, md);
 	}
-	if (!md->is_dragon && mc->ram > 16) {
-		// 64K CoCo connects PIA0 PB6 to PIA1 PB2:
-		// Deal with this through a postwrite.
-		md->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco64k, md);
-		md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_coco64k, md);
-	}
 
-	// RAM configuration
-
+	// XXX this introspection is out of date wrt how RAM is handled now,
+	// needs attention or removal.
 	md->ram0.max_size = 0x8000;
-	md->ram0.size = (md->ram_size > 0x8000) ? 0x8000 : md->ram_size;
-	md->ram0.data = md->ram;
 	md->ram1.max_size = 0x8000;
-	md->ram1.size = (md->ram_size > 0x8000) ? (md->ram_size - 0x8000) : 0;
-	md->ram1.data = md->ram + 0x8000;
+	md->ram0.size = md->ram1.size = 0;
+	md->ram0.data = md->ram1.data = NULL;
+	if (md->RAM->nbanks >= 1 && md->RAM->d[0].as_u8) {
+		md->ram0.size = md->RAM->bank_nelems;
+		md->ram0.data = md->RAM->d[0].as_u8;
+		if (md->RAM->bank_nelems > 0x8000) {
+			md->ram1.size = md->RAM->bank_nelems - 0x8000;
+			md->ram1.data = md->RAM->d[0].as_u8 + 0x8000;
+		}
+	}
 
 	// Defaults: Dragon 64 with 64K
 	md->unexpanded_dragon32 = 0;
 	md->relaxed_pia_decode = 0;
-	md->ram_mask = 0xffff;
 
 	if (!md->is_dragon) {
-		if (mc->ram <= 4) {
-			md->ram_organisation = RAM_ORGANISATION_4K;
-			md->ram_mask = 0x3f3f;
-		} else if (mc->ram <= 16) {
-			md->ram_organisation = RAM_ORGANISATION_16K;
-		} else {
-			md->ram_organisation = RAM_ORGANISATION_64K;
-			if (mc->ram <= 32)
-				md->ram_mask = 0x7fff;
-		}
 		md->relaxed_pia_decode = 1;
 	}
 
 	if (md->is_dragon) {
-		md->ram_organisation = RAM_ORGANISATION_64K;
 		if (md->is_dragon32 && mc->ram <= 32) {
 			md->unexpanded_dragon32 = 1;
 			md->relaxed_pia_decode = 1;
-			md->ram_mask = 0x7fff;
 		}
 	}
 
@@ -908,18 +968,32 @@ static void dragon_free(struct part *p) {
 
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct machine_dragon *md = sptr;
+	struct machine *m = &md->public;
+	struct part *p = &m->part;
 	size_t length = ser_data_length(sh);
 	switch (tag) {
 	case DRAGON_SER_RAM:
-		if (!md->public.config) {
-			return 0;
+		{
+			if (!md->public.config) {
+				return 0;
+			}
+			if (length != ((unsigned)md->public.config->ram * 1024)) {
+				LOG_WARN("DRAGON/DESERIALISE: RAM size mismatch\n");
+				return 0;
+			}
+			part_free(part_component_by_id_is_a(p, "RAM", "ram"));
+			create_ram(md);
+			struct ram *ram = (struct ram *)part_component_by_id_is_a(p, "RAM", "ram");
+			assert(ram != NULL);
+			ram_ser_read(ram, sh);
 		}
-		if (length != ((unsigned)md->public.config->ram * 1024)) {
-			LOG_WARN("DRAGON/DESERIALISE: RAM size mismatch\n");
-			return 0;
-		}
-		ser_read(sh, md->ram, length);
 		break;
+
+	case DRAGON_SER_RAM_SIZE:
+	case DRAGON_SER_RAM_MASK:
+		// no-op: RAM is now a sub-component
+		break;
+
 	default:
 		return 0;
 	}
@@ -928,10 +1002,15 @@ static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct machine_dragon *md = sptr;
+	(void)md;
+	(void)sh;
 	switch (tag) {
 	case DRAGON_SER_RAM:
-		ser_write(sh, tag, md->ram, md->ram_size);
+	case DRAGON_SER_RAM_SIZE:
+	case DRAGON_SER_RAM_MASK:
+		// no-op: RAM is now a sub-component
 		break;
+
 	default:
 		return 0;
 	}
@@ -967,21 +1046,10 @@ static void dragon_remove_cart(struct machine *m) {
 
 static void dragon_reset(struct machine *m, _Bool hard) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
+	struct machine_config *mc = m->config;
 	xroar_set_keyboard_type(1, m->keyboard.type);
 	if (hard) {
-		// Initial RAM pattern is approximately what I see on my Dragon
-		// 64, though it can probably vary based on manufacturer.  It
-		// actually does matter that we set it to something
-		// non-uniform, else Wildcatting won't work on the CoCo.
-		unsigned loc = 0, val = 0xff;
-		while (loc <= 0xfffc) {
-			md->ram[loc++] = val;
-			md->ram[loc++] = val;
-			md->ram[loc++] = val;
-			md->ram[loc++] = val;
-			if ((loc & 0xff) != 0)
-				val ^= 0xff;
-		}
+		ram_clear(md->RAM, mc->ram_init);
 	}
 	mc6821_reset(md->PIA0);
 	mc6821_reset(md->PIA1);
@@ -1200,17 +1268,6 @@ static void dragon_instruction_posthook(void *sptr) {
 	md->single_step = 0;
 }
 
-static uint16_t decode_Z(struct machine_dragon *md, unsigned Z) {
-	switch (md->ram_organisation) {
-	case RAM_ORGANISATION_4K:
-		return (Z & 0x3f) | ((Z & 0x3f00) >> 2) | ((~Z & 0x8000) >> 3);
-	case RAM_ORGANISATION_16K:
-		return (Z & 0x7f) | ((Z & 0x7f00) >> 1) | ((~Z & 0x8000) >> 1);
-	case RAM_ORGANISATION_64K: default:
-		return Z & md->ram_mask;
-	}
-}
-
 static void read_byte(struct machine_dragon *md, unsigned A) {
 	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
 	// produce a different "null" result on his 16K CoCo
@@ -1222,12 +1279,13 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 			return;
 		}
 	}
+	unsigned nWE = 1;
+	unsigned Zrow = md->SAM->Z;
+	unsigned Zcol = md->SAM->Z >> 8;
 	switch (md->SAM->S) {
 	case 0:
 		if (md->SAM->RAS) {
-			unsigned Z = decode_Z(md, md->SAM->Z);
-			if (Z < md->ram_size)
-				md->CPU->D = md->ram[Z];
+			ram_d8(md->RAM, nWE, 0, Zrow, Zcol, &md->CPU->D);
 		}
 		break;
 	case 1:
@@ -1314,9 +1372,11 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			break;
 		}
 	}
+	unsigned nWE = 0;
+	unsigned Zrow = md->SAM->Z;
+	unsigned Zcol = md->SAM->Z >> 8;
 	if (md->SAM->RAS) {
-		unsigned Z = decode_Z(md, md->SAM->Z);
-		md->ram[Z] = md->CPU->D;
+		ram_d8(md->RAM, nWE, 0, Zrow, Zcol, &md->CPU->D);
 	}
 }
 
@@ -1360,10 +1420,12 @@ static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest
 	uint16_t attr = (PIA_VALUE_B(md->PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
 		int n = mc6883_vdg_bytes(md->SAM, nbytes);
-		if (dest) {
-			uint16_t V = decode_Z(md, md->SAM->V);
+		unsigned Zrow = md->SAM->V;
+		unsigned Zcol = md->SAM->V >> 8;
+		uint8_t *Vp = ram_a8(md->RAM, 0, Zrow, Zcol);
+		if (dest && Vp) {
 			for (int i = n; i; i--) {
-				uint16_t D = md->ram[V++] | attr;
+				uint16_t D = *(Vp++) | attr;
 				D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
 				*(dest++) = D;
 			}
@@ -1385,10 +1447,12 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 	uint16_t Aram7 = EnI ? 0x80 : 0;
 	while (nbytes > 0) {
 		int n = mc6883_vdg_bytes(md->SAM, nbytes);
-		if (dest) {
-			uint16_t V = decode_Z(md, md->SAM->V);
+		unsigned Zrow = md->SAM->V;
+		unsigned Zcol = md->SAM->V >> 8;
+		uint8_t *Vp = ram_a8(md->RAM, 0, Zrow, Zcol);
+		if (dest && Vp) {
 			for (int i = n; i; i--) {
-				uint16_t Dram = md->ram[V++];
+				uint16_t Dram = *(Vp++);
 				_Bool SnA = Dram & 0x80;
 				uint16_t D;
 				if (!GnA && !SnA) {
@@ -1438,7 +1502,12 @@ static void dragon_op_rts(struct machine *m) {
 
 static void dragon_dump_ram(struct machine *m, FILE *fd) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	fwrite(md->ram, md->ram_size, 1, fd);
+	struct ram *ram = md->RAM;
+	for (unsigned bank = 0; bank < ram->nbanks; bank++) {
+		if (ram->d && ram->d[bank]) {
+			fwrite(ram->d[bank], ram->bank_nelems, 1, fd);
+		}
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
