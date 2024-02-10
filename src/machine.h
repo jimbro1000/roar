@@ -144,6 +144,7 @@ struct machine_config {
 	int tv_standard;
 	int tv_input;
 	int vdg_type;
+	int ram_org;
 	int ram;
 	_Bool bas_dfn;
 	char *bas_rom;
@@ -164,6 +165,7 @@ extern struct xconfig_enum machine_cpu_list[];
 extern struct xconfig_enum machine_tv_type_list[];
 extern struct xconfig_enum machine_tv_input_list[];
 extern struct xconfig_enum machine_vdg_type_list[];
+extern struct xconfig_enum machine_ram_org_list[];
 
 /** \brief Create a new machine config.
  */

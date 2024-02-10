@@ -35,6 +35,7 @@
 #include "fs.h"
 #include "machine.h"
 #include "logging.h"
+#include "ram.h"
 #include "serialise.h"
 #include "xroar.h"
 
@@ -53,6 +54,7 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_ID_STRUCT_ELEM(6,  ser_type_int,      struct machine_config, tv_standard),
 	SER_ID_STRUCT_ELEM(7,  ser_type_int,      struct machine_config, tv_input),
 	SER_ID_STRUCT_ELEM(8,  ser_type_int,      struct machine_config, vdg_type),
+	SER_ID_STRUCT_ELEM(22, ser_type_int,      struct machine_config, ram_org),
 	SER_ID_STRUCT_ELEM(9,  ser_type_int,      struct machine_config, ram),
 	SER_ID_STRUCT_ELEM(10, ser_type_bool,     struct machine_config, bas_dfn),
 	SER_ID_STRUCT_ELEM(11, ser_type_string,   struct machine_config, bas_rom),
@@ -142,6 +144,16 @@ struct xconfig_enum machine_vdg_type_list[] = {
 	{ XC_ENUM_END() }
 };
 
+struct xconfig_enum machine_ram_org_list[] = {
+	{ XC_ENUM_INT("4kx1", RAM_ORG_4Kx1, "4K x 1 (e.g. MK4096)") },
+	{ XC_ENUM_INT("16kx1", RAM_ORG_16Kx1, "16K x 1 (e.g. 4116)") },
+	//{ XC_ENUM_INT("16kx4", RAM_ORG_16Kx4, "16K x 4 (e.g. 4416)") },
+	{ XC_ENUM_INT("32kx1", RAM_ORG_32Kx1, "32K x 1 (e.g. 4532)") },
+	{ XC_ENUM_INT("64kx1", RAM_ORG_64Kx1, "64K x 1 (e.g. 4164)") },
+	//{ XC_ENUM_INT("256kx1", RAM_ORG_256Kx1, "256K x 1 (e.g. 41256)") },
+	{ XC_ENUM_END() }
+};
+
 static struct slist *config_list = NULL;
 static int next_id = 0;
 
@@ -156,6 +168,7 @@ struct machine_config *machine_config_new(void) {
 	new->tv_standard = ANY_AUTO;
 	new->tv_input = ANY_AUTO;
 	new->vdg_type = ANY_AUTO;
+	new->ram_org = ANY_AUTO;
 	new->ram = ANY_AUTO;
 	new->cart_enabled = 1;
 	config_list = slist_append(config_list, new);
@@ -359,6 +372,7 @@ void machine_config_print_all(FILE *f, _Bool all) {
 		xroar_cfg_print_enum(f, all, "tv-type", mc->tv_standard, ANY_AUTO, machine_tv_type_list);
 		xroar_cfg_print_enum(f, all, "tv-input", mc->tv_input, ANY_AUTO, machine_tv_input_list);
 		xroar_cfg_print_enum(f, all, "vdg-type", mc->vdg_type, ANY_AUTO, machine_vdg_type_list);
+		xroar_cfg_print_enum(f, all, "ram-org", mc->ram_org, ANY_AUTO, machine_ram_org_list);
 		xroar_cfg_print_int_nz(f, all, "ram", mc->ram);
 		xroar_cfg_print_string(f, all, "machine-cart", mc->default_cart, NULL); // XXX definedness?
 		for (struct slist *i2 = mc->opts; i2; i2 = i2->next) {
