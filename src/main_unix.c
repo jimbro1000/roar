@@ -2,7 +2,7 @@
  *
  *  \brief main() function.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -20,6 +20,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
 #ifdef HAVE_WASM
 #include <emscripten.h>
@@ -40,6 +42,9 @@
 
 int main(int argc, char **argv) {
 	atexit(xroar_shutdown);
+
+	srand(getpid() ^ time(NULL));
+
 	struct ui_interface *ui = xroar_init(argc, argv);
 	if (!ui) {
 		exit(EXIT_FAILURE);

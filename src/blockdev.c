@@ -2,7 +2,7 @@
  *
  * \brief Block device abstraction.
  *
- * \copyright Copyright 2022 Ciaran Anscomb
+ * \copyright Copyright 2022-2024 Ciaran Anscomb
  *
  * \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,13 +26,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// for getpid()
-#include <sys/types.h>
-#include <unistd.h>
-
-// for time()
-#include <time.h>
 
 #include "slist.h"
 #include "xalloc.h"
@@ -390,7 +383,7 @@ static void bp_ide_identify_init(struct blkdev *bd) {
 
 	{
 		char rbuf[21];
-		srand(getpid() ^ time(NULL));
+		// assume srand() called at startup
 		snprintf(rbuf, sizeof(rbuf), "%04x%04x%04x%04x%04x",
 			 rand() & 0xffff, rand() & 0xffff, rand() & 0xffff,
 			 rand() & 0xffff, rand() & 0xffff);

@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2021-2022 Ciaran Anscomb
+ *  \copyright Copyright 2021-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -20,14 +20,12 @@
 
 #include "top-config.h"
 
-#include <stdio.h>
+#include <errno.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <time.h>
 
 #include "array.h"
 #include "xalloc.h"
@@ -831,7 +829,7 @@ static void make_ascii(uint16_t *p, const char *t, int len)
 static void make_serial(uint16_t *p)
 {
   char buf[21];
-  srand(getpid()^time(NULL));
+  // assume srand() called at startup
   snprintf(buf, 21, "%08d%08d%04d", rand(), rand(), rand());
   make_ascii(p, buf, 20);
 }
