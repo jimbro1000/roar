@@ -2,7 +2,7 @@
  *
  *  \brief Tandy Colour Computer 3 machine.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -892,12 +892,14 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 		// ROM
 		mcc3->CPU->D = mcc3->rom0[A & 0x7fff];
 		break;
+
 	case 1:
 		// CTS (cartridge ROM)
 		if (mcc3->cart) {
 			mcc3->CPU->D = mcc3->cart->read(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU->D);
 		}
 		break;
+
 	case 2:
 		// IO
 		if ((A & 32) == 0) {
@@ -906,11 +908,13 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 			mcc3->CPU->D = mc6821_read(mcc3->PIA1, A);
 		}
 		break;
+
 	case 6:
 		// SCS (cartridge IO)
 		if (mcc3->cart)
 			mcc3->CPU->D = mcc3->cart->read(mcc3->cart, A, 1, 0, mcc3->CPU->D);
 		break;
+
 	case 7:
 		if (!mcc3->dat.enabled || !mcc3->dat.readable) {
 			break;
@@ -921,6 +925,8 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 		} else if (A >= 0xffa0 && A < 0xffb0) {
 			mcc3->CPU->D = (mcc3->CPU->D & ~0xc0) | (mcc3->dat.mmu_bank[A & 15] >> 13);
 		}
+		break;
+
 	default:
 		// All the rest are N/C
 		break;
@@ -948,11 +954,13 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 			// ROM
 			mcc3->CPU->D = mcc3->rom0[A & 0x7fff];
 			break;
+
 		case 1:
 			// CTS (cartridge ROM)
 			if (mcc3->cart)
 				mcc3->cart->write(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU->D);
 			break;
+
 		case 2:
 			// IO
 			if ((A & 32) == 0) {
@@ -961,11 +969,13 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 				mc6821_write(mcc3->PIA1, A, mcc3->CPU->D);
 			}
 			break;
+
 		case 6:
 			// SCS (cartridge IO)
 			if (mcc3->cart)
 				mcc3->cart->write(mcc3->cart, A, 1, 0, mcc3->CPU->D);
 			break;
+
 		case 7:
 			if (!mcc3->dat.enabled) {
 				break;
@@ -984,6 +994,8 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 				// MMU banking extended by 2 bits
 				mcc3->dat.mmu_bank[A & 15] = ((mcc3->CPU->D & 0xc0) << 13) & mcc3->dat.mask;
 			}
+			break;
+
 		default:
 			// All the rest are N/C
 			break;
