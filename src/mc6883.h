@@ -2,7 +2,7 @@
  *
  *  \brief Motorola SN74LS783/MC6883 Synchronous Address Multiplexer.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -31,7 +31,10 @@ struct MC6883 {
 	unsigned S;
 	unsigned Z;
 	unsigned V;
-	_Bool RAS;
+
+	_Bool RAS0;
+	_Bool RAS1;
+
 	DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
 	DELEGATE_T0(void) vdg_update;
 };

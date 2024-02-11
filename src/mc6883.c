@@ -189,7 +189,8 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct MC6883, S),
 	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct MC6883, Z),
 	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct MC6883, V),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6883, RAS),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6883, RAS0),
+	SER_ID_STRUCT_ELEM(31, ser_type_bool, struct MC6883, RAS1),
 
 	SER_ID_STRUCT_UNHANDLED(MC6883_SER_REG),
 
@@ -351,7 +352,7 @@ void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	if ((A >> 8) == 0xff) {
 		// I/O area
 		samp->S = io_S[(A >> 5) & 7];
-		samp->RAS = 0;
+		samp->RAS0 = samp->RAS1 = 0;
 		fast_cycle = sam->mpu_rate_fast || (samp->S != 4 && sam->mpu_rate_ad);
 		if (samp->S == 7 && !RnW && A >= 0xffc0) {
 			if (A <= 0xffc5 || (A >= 0xffda && A <= 0xffdd)) {
@@ -381,11 +382,12 @@ void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		}
 	} else if ((A & 0x8000) && !sam->TY) {
 		samp->S = data_S[A >> 13];
-		samp->RAS = 0;
+		samp->RAS0 = samp->RAS1 = 0;
 		fast_cycle = sam->mpu_rate_fast || sam->mpu_rate_ad;
 	} else {
 		samp->S = RnW ? 0 : data_S[A >> 13];
-		samp->RAS = 1;
+		samp->RAS1 = A & sam->ram_ras1_bit;
+		samp->RAS0 = !samp->RAS1;
 		samp->Z = RAM_TRANSLATE(A);
 		fast_cycle = sam->mpu_rate_fast;
 	}
