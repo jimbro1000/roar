@@ -809,20 +809,17 @@ void ide_write_latched(struct ide_controller *c, uint8_t reg, uint8_t v)
   ide_write16(c, reg, d);
 }
 
+// If there's a bug in this now, it's mine, not Alan's ..ciaran
 static void make_ascii(uint16_t *p, const char *t, int len)
 {
-  int i;
   char *d = (char *)p;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-truncation"
-  strncpy(d, t, len);
-#pragma GCC diagnostic pop
-
-  for (i = 0; i < len; i += 2) {
-    char c = *d;
-    *d = d[1];
-    d[1] = c;
-    d += 2;
+  for (int i = 0; i < len; i += 2) {
+    char c1 = t ? *t : 0;
+    t = c1 ? t : NULL;
+    char c0 = t ? *(t+1) : 0;
+    t = c0 ? t + 2 : NULL;
+    *(d++) = c0;
+    *(d++) = c1;
   }
 }
 
