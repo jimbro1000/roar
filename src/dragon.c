@@ -85,8 +85,6 @@ struct machine_dragon {
 	uint8_t rom0[0x4000];
 	uint8_t rom1[0x4000];
 	uint8_t ext_charset[0x1000];
-	struct machine_memory ram0;  // introspection
-	struct machine_memory ram1;  // introspection
 
 	_Bool inverted_text;
 	struct cart *cart;
@@ -303,7 +301,6 @@ static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n
 static int dragon_set_keyboard_type(struct machine *m, int action);
 static _Bool dragon_set_pause(struct machine *m, int state);
 static _Bool dragon_set_inverted_text(struct machine *m, int state);
-static void *dragon_get_component(struct machine *m, const char *cname);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
 static void dragon_set_frameskip(struct machine *m, unsigned fskip);
 static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit);
@@ -401,7 +398,6 @@ static struct part *dragon_allocate(void) {
 	m->set_keyboard_type = dragon_set_keyboard_type;
 	m->set_pause = dragon_set_pause;
 	m->set_inverted_text = dragon_set_inverted_text;
-	m->get_component = dragon_get_component;
 	m->get_interface = dragon_get_interface;
 	m->set_frameskip = dragon_set_frameskip;
 	m->set_ratelimit = dragon_set_ratelimit;
@@ -648,8 +644,6 @@ static _Bool dragon_finish(struct part *p) {
 		break;
 	}
 
-	verify_ram_size(mc);
-
 	/* Load appropriate ROMs */
 	memset(md->rom0, 0, sizeof(md->rom0));
 	memset(md->rom1, 0, sizeof(md->rom1));
@@ -888,21 +882,6 @@ static _Bool dragon_finish(struct part *p) {
 	if (md->is_dragon) {
 		/* Dragons need to poll printer BUSY state */
 		md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_dragon, md);
-	}
-
-	// XXX this introspection is out of date wrt how RAM is handled now,
-	// needs attention or removal.
-	md->ram0.max_size = 0x8000;
-	md->ram1.max_size = 0x8000;
-	md->ram0.size = md->ram1.size = 0;
-	md->ram0.data = md->ram1.data = NULL;
-	if (md->RAM->nbanks >= 1 && md->RAM->d[0].as_u8) {
-		md->ram0.size = md->RAM->bank_nelems;
-		md->ram0.data = md->RAM->d[0].as_u8;
-		if (md->RAM->bank_nelems > 0x8000) {
-			md->ram1.size = md->RAM->bank_nelems - 0x8000;
-			md->ram1.data = md->RAM->d[0].as_u8 + 0x8000;
-		}
 	}
 
 	// Defaults: Dragon 64 with 64K
@@ -1222,18 +1201,6 @@ static _Bool dragon_set_inverted_text(struct machine *m, int action) {
 /* Note, this is SLOW.  Could be sped up by maintaining a hash by component
  * name, but will only ever be used outside critical path, so don't bother for
  * now. */
-
-static void *dragon_get_component(struct machine *m, const char *cname) {
-	struct machine_dragon *md = (struct machine_dragon *)m;
-	if (0 == strcmp(cname, "RAM0")) {
-		return &md->ram0;
-	} else if (0 == strcmp(cname, "RAM1")) {
-		return &md->ram1;
-	}
-	return NULL;
-}
-
-/* Similarly SLOW.  Used to populate UI. */
 
 static void *dragon_get_interface(struct machine *m, const char *ifname) {
 	struct machine_dragon *md = (struct machine_dragon *)m;

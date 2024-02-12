@@ -38,6 +38,7 @@
 #include "mc6847/mc6847.h"
 #include "mc6883.h"
 #include "part.h"
+#include "ram.h"
 #include "serialise.h"
 #include "snapshot.h"
 #include "tape.h"
@@ -577,18 +578,28 @@ static int read_v1_snapshot(const char *filename) {
 
 			case ID_RAM_PAGE0:
 				{
-					struct machine_memory *ram0 = xroar.machine->get_component(xroar.machine, "RAM0");
-					assert(ram0 != NULL);
-					ram0->size = (size < ram0->max_size) ? size : ram0->max_size;
-					size -= fread(ram0->data, 1, ram0->size, fd);
+					struct part *p = &xroar.machine->part;
+					struct ram *ram = (struct ram *)part_component_by_id_is_a(p, "RAM", "ram");
+					if (ram && ram->d && ram->d[0]) {
+						size_t psize = (ram->bank_nelems < size) ? ram->bank_nelems : size;
+						uint8_t *ram_dst = ram->d[0];
+						if (ram_dst) {
+							size -= fread(ram_dst, 1, psize, fd);
+						}
+					}
 				}
 				break;
 			case ID_RAM_PAGE1:
 				{
-					struct machine_memory *ram1 = xroar.machine->get_component(xroar.machine, "RAM1");
-					assert(ram1 != NULL);
-					ram1->size = (size < ram1->max_size) ? size : ram1->max_size;
-					size -= fread(ram1->data, 1, ram1->size, fd);
+					struct part *p = &xroar.machine->part;
+					struct ram *ram = (struct ram *)part_component_by_id_is_a(p, "RAM", "ram");
+					if (ram && ram->d && ram->d[0]) {
+						size_t psize = (ram->bank_nelems < (size + 0x8000)) ? ram->bank_nelems - 0x8000: size;
+						uint8_t *ram_dst = (uint8_t *)ram->d[0] + 0x8000;
+						if (ram_dst) {
+							size -= fread(ram_dst, 1, psize, fd);
+						}
+					}
 				}
 				break;
 			case ID_SAM_REGISTERS:
