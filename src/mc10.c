@@ -2,7 +2,7 @@
  *
  *  \brief Tandy MC-10 machine.
  *
- *  \copyright Copyright 2021-2023 Ciaran Anscomb
+ *  \copyright Copyright 2021-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -41,6 +41,7 @@
 #include "ntsc.h"
 #include "part.h"
 #include "printer.h"
+#include "ram.h"
 #include "romlist.h"
 #include "serialise.h"
 #include "sound.h"
@@ -56,13 +57,14 @@ struct machine_mc10 {
 
 	struct MC6801 *CPU;
 	struct MC6847 *VDG;
+	struct ram *RAM0;
+	struct ram *RAM1;
 
 	struct vo_interface *vo;
 	int frame;  // track frameskip
 	struct sound_interface *snd;
 
-	unsigned ram_size;
-	uint8_t *ram;
+	unsigned ram0_inhibit_bit;
 	uint8_t rom0[0x2000];
 
 	_Bool inverted_text;
@@ -92,12 +94,13 @@ struct machine_mc10 {
 	uint32_t crc_bas;
 };
 
-#define MC10_SER_RAM (2)
+#define MC10_SER_RAM        (2)
+#define MC10_SER_RAM_SIZE   (3)
 
 static const struct ser_struct ser_struct_mc10[] = {
 	SER_ID_STRUCT_NEST(1, &machine_ser_struct_data),
 	SER_ID_STRUCT_UNHANDLED(MC10_SER_RAM),
-	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct machine_mc10, ram_size),
+	SER_ID_STRUCT_UNHANDLED(MC10_SER_RAM_SIZE),
 	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct machine_mc10, inverted_text),
 	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct machine_mc10, video_mode),
 	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct machine_mc10, video_attr),
@@ -134,12 +137,11 @@ static void mc10_config_complete(struct machine_config *mc) {
 	if (mc->architecture)
 		free(mc->architecture);
 	mc->architecture = xstrdup("mc10");
-	if (mc->ram != 2 && mc->ram != 4 && mc->ram != 20) {
-		if (mc->ram >= 16)
-			mc->ram = 20;
-		else
-			mc->ram = 4;
+
+	if (mc->ram_init == ANY_AUTO) {
+		mc->ram_init = ram_init_clear;
 	}
+
 	if (mc->keymap == ANY_AUTO) {
 		mc->keymap = dkbd_layout_mc10;
 	}
@@ -250,6 +252,64 @@ static struct part *mc10_allocate(void) {
 	return p;
 }
 
+static void create_ram(struct machine_mc10 *mp) {
+	struct machine *m = &mp->machine;
+	struct part *p = &m->part;
+	struct machine_config *mc = m->config;
+
+	// Bit if a mish-mash, but I'm suggesting here that if you specify <=
+	// 8K, assume it's all internal and in multiples of 2K.  Any more and
+	// it's in multiples of 4K as external expansion on top of an internal
+	// 4K (minimum 12K).  More control over this would be useful
+
+	unsigned ram0_nbanks = 0;
+	unsigned ram1_nbanks = 0;
+	if (mc->ram >= 12) {
+		ram0_nbanks = 2;
+		ram1_nbanks = (mc->ram - 4) / 4;
+		if (ram1_nbanks > 4)
+			ram1_nbanks = 4;
+	} else {
+		if (mc->ram >= 8) {
+			mc->ram = 8;
+		}
+		ram0_nbanks = mc->ram / 2;
+		if (ram0_nbanks < 1)
+			ram0_nbanks = 1;
+	}
+
+	struct ram_config ram0_config = {
+		.d_width = 8,
+		.organisation = RAM_ORG(11, 11, 0),
+	};
+	struct ram_config ram1_config = {
+		.d_width = 8,
+		.organisation = RAM_ORG(12, 12, 0),
+	};
+
+	// Device inhibit is an OR of cartridge SEL line and A12.  Mods to add
+	// more internal RAM would change this.
+	mp->ram0_inhibit_bit = (1 << 12);
+	if (ram0_nbanks > 2) {
+		mp->ram0_inhibit_bit = (1 << 13);
+	}
+
+	struct ram *ram0 = (struct ram *)part_create("ram", &ram0_config);
+	for (unsigned i = 0; i < ram0_nbanks; i++)
+		ram_add_bank(ram0, i);
+	part_add_component(p, (struct part *)ram0, "RAM0");
+
+	// Specifying 20K implies an external 16K expansion on top of the
+	// internal 4K (I can only assume the expansion would preempt any
+	// internal mod).
+	if (ram1_nbanks > 0) {
+		struct ram *ram1 = (struct ram *)part_create("ram", &ram1_config);
+		for (unsigned i = 0; i < ram1_nbanks; i++)
+			ram_add_bank(ram1, (i + 1) & 3);
+		part_add_component(p, (struct part *)ram1, "RAM1");
+	}
+}
+
 static void mc10_initialise(struct part *p, void *options) {
         struct machine_config *mc = options;
         assert(mc != NULL);
@@ -265,6 +325,9 @@ static void mc10_initialise(struct part *p, void *options) {
 
 	// VDG
 	part_add_component(&m->part, part_create("MC6847", "6847"), "VDG");
+
+	// RAM
+	(void)create_ram(mp);
 
 	// Keyboard
 	m->keyboard.type = mc->keymap;
@@ -285,11 +348,30 @@ static _Bool mc10_finish(struct part *p) {
 	// Find attached parts
 	mp->CPU = (struct MC6801 *)part_component_by_id_is_a(p, "CPU", "MC6803");
 	mp->VDG = (struct MC6847 *)part_component_by_id_is_a(p, "VDG", "MC6847");
+	mp->RAM0 = (struct ram *)part_component_by_id_is_a(p, "RAM0", "ram");
+	mp->RAM1 = (struct ram *)part_component_by_id_is_a(p, "RAM1", "ram");
 
 	// Check all required parts are attached
-	if (!mp->CPU || !mp->VDG ||
+	if (!mp->CPU || !mp->VDG || !mp->RAM0 ||
 	    !mp->vo || !mp->snd || !mp->tape_interface) {
 		return 0;
+	}
+
+	// RAM configuration
+	{
+		unsigned ram0_nbanks = mp->RAM0 ? mp->RAM0->nbanks : 0;
+		unsigned ram0_bank_k = mp->RAM0 ? (mp->RAM0->bank_nelems / 1024) : 0;
+		unsigned ram0_k = ram0_nbanks * ram0_bank_k;
+		LOG_DEBUG(1, "\t%d banks * %dK = %dK internal RAM\n", ram0_nbanks, ram0_bank_k, ram0_k);
+
+		unsigned ram1_nbanks = mp->RAM1 ? mp->RAM1->nbanks : 0;
+		unsigned ram1_bank_k = mp->RAM1 ? (mp->RAM1->bank_nelems / 1024) : 0;
+		unsigned ram1_k = ram1_nbanks * ram1_bank_k;
+		if (ram1_k > 0) {
+			LOG_DEBUG(1, "\t%d banks * %dK = %dK external RAM\n", ram1_nbanks, ram1_bank_k, ram1_k);
+			unsigned total_k = ram0_k + ram1_k;
+			LOG_DEBUG(1, "\t%dK total RAM\n", total_k);
+		}
 	}
 
 	mp->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, mc10_mem_cycle, mp);
@@ -390,11 +472,6 @@ static _Bool mc10_finish(struct part *p) {
 		}
 	}
 
-	mp->ram_size = mc->ram * 1024;
-	if (!mp->ram) {
-		mp->ram = xmalloc(mp->ram_size);
-	}
-
 	if (mp->has_bas) {
 		_Bool forced = 0, valid_crc = 0;
 
@@ -440,10 +517,6 @@ static void mc10_free(struct part *p) {
 		gdb_interface_free(mp->gdb_interface);
 	} */
 #endif
-	if (mp->ram) {
-		free(mp->ram);
-		mp->ram = NULL;
-	}
 	if (mp->keyboard.interface) {
 		keyboard_interface_free(mp->keyboard.interface);
 	}
@@ -457,21 +530,38 @@ static void mc10_free(struct part *p) {
 
 static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct machine_mc10 *mp = sptr;
+        struct part *p = &mp->machine.part;
 	size_t length = ser_data_length(sh);
 	switch (tag) {
 	case MC10_SER_RAM:
-		if (!mp->machine.config) {
-			return 0;
+		{
+			if (!mp->machine.config) {
+				return 0;
+			}
+			if (length != ((unsigned)mp->machine.config->ram * 1024)) {
+				LOG_WARN("MC10/DESERIALISE: RAM size mismatch\n");
+				return 0;
+			}
+			part_free(part_component_by_id_is_a(p, "RAM0", "ram"));
+			part_free(part_component_by_id_is_a(p, "RAM1", "ram"));
+			create_ram(mp);
+
+			struct ram *ram0 = (struct ram *)part_component_by_id_is_a(p, "RAM0", "ram");
+			ram_ser_read(ram0, sh);
+
+			struct ram *ram1 = (struct ram *)part_component_by_id_is_a(p, "RAM1", "ram");
+			if (ram1) {
+				for (unsigned i = 0; i <= 3; i++) {
+					ram_ser_read_bank(ram1, sh, (i + 1) & 3);
+				}
+			}
 		}
-		if (length != ((unsigned)mp->machine.config->ram * 1024)) {
-			LOG_WARN("MC10/DESERIALISE: RAM size mismatch\n");
-			return 0;
-		}
-		if (mp->ram) {
-			free(mp->ram);
-		}
-		mp->ram = ser_read_new(sh, length);
 		break;
+
+	case MC10_SER_RAM_SIZE:
+		// no-op: RAM is now a sub-component
+		break;
+
 	default:
 		return 0;
 	}
@@ -480,10 +570,14 @@ static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct machine_mc10 *mp = sptr;
+	(void)mp;
+	(void)sh;
 	switch (tag) {
 	case MC10_SER_RAM:
-		ser_write(sh, tag, mp->ram, mp->ram_size);
+	case MC10_SER_RAM_SIZE:
+		// no-op: RAM is now a sub-component
 		break;
+
 	default:
 		return 0;
 	}
@@ -494,9 +588,12 @@ static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 static void mc10_reset(struct machine *m, _Bool hard) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct machine_config *mc = m->config;
 	xroar_set_keyboard_type(1, xroar.machine_config->keymap);
 	if (hard) {
-		memset(mp->ram, 0, mp->ram_size);
+		ram_clear(mp->RAM0, mc->ram_init);
+		if (mp->RAM1)
+			ram_clear(mp->RAM1, mc->ram_init);
 	}
 	/* if (mp->cart && mp->cart->reset) {
 		mp->cart->reset(mp->cart, hard);
@@ -594,26 +691,42 @@ static void mc10_bp_remove_n(struct machine *m, struct machine_bp *list, int n) 
 	}
 }
 
-// Note: MC-10 address decoding appears to consist mostly of the top
-// two address lines being fed to a 2-to-4 demux.
+// Notes:
+//
+// MC-10 address decoding appears to consist mostly of the top two address
+// lines being fed to a 2-to-4 demux.
+//
+// External RAM should be handled by a cart, and wouldn't actually be tied to
+// that 2-to-4 demux itself (indeed, it would only act to inhibit it).  Until I
+// implement MC-10 carts, this is how it's going to be though.
 
 static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
 
 	switch ((A >> 14) & 3) {
 	case 1:
-		if (A < (0x4000 + mp->ram_size)) {
-			D = mp->ram[A - 0x4000];
+		{
+			unsigned bank_4k = (A >> 12) & 3;
+			if (mp->RAM1 && bank_4k != 0) {
+				ram_d8(mp->RAM1, 1, bank_4k, A, 0, &D);
+			} else if (!(A & mp->ram0_inhibit_bit)) {
+				unsigned bank_2k = (A >> 11) & 3;
+				ram_d8(mp->RAM0, 1, bank_2k, A, 0, &D);
+			}
 		}
 		break;
 
 	case 2:
-		if (mp->ram_size > 0x4000 && A < (0x4000 + mp->ram_size)) {
-			D = mp->ram[A - 0x4000];
-		} else {
-			// 16K of address space to read the keyboard rows...
-			mc10_keyboard_update(mp);
-			D = (D & 0xc0) | mp->keyboard.rows;
+		{
+			unsigned bank_4k = (A >> 12) & 3;
+			if (mp->RAM1 && bank_4k == 0) {
+				ram_d8(mp->RAM1, 1, bank_4k, A, 0, &D);
+			} else {
+				// up to 16K of address space to read the
+				// keyboard rows...
+				mc10_keyboard_update(mp);
+				D = (D & 0xc0) | mp->keyboard.rows;
+			}
 		}
 		break;
 
@@ -633,25 +746,36 @@ static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D) {
 
 	switch ((A >> 14) & 3) {
 	case 1:
-		if (A < (0x4000 + mp->ram_size)) {
-			mp->ram[A - 0x4000] = D;
+		{
+			unsigned bank_4k = (A >> 12) & 3;
+			if (mp->RAM1 && bank_4k != 0) {
+				ram_d8(mp->RAM1, 0, bank_4k, A, 0, &D);
+			} else if (!(A & mp->ram0_inhibit_bit)) {
+				unsigned bank_2k = (A >> 11) & 3;
+				ram_d8(mp->RAM0, 0, bank_2k, A, 0, &D);
+			}
 		}
 		break;
 
 	case 2:
-		if (mp->ram_size > 0x4000 && A < (0x4000 + mp->ram_size)) {
-			mp->ram[A - 0x4000] = D;
-		} else {
-			unsigned vmode = 0;
-			vmode |= (mp->CPU->D & 0x20) ? 0x80 : 0;  // D5 -> GnA
-			vmode |= (mp->CPU->D & 0x04) ? 0x40 : 0;  // D2 -> GM2
-			vmode |= (mp->CPU->D & 0x08) ? 0x20 : 0;  // D3 -> GM1
-			vmode |= (mp->CPU->D & 0x10) ? 0x10 : 0;  // D4 -> GM0
-			vmode |= (mp->CPU->D & 0x40) ? 0x08 : 0;  // D6 -> CSS
-			mp->video_mode = vmode;
-			mp->video_attr = (mp->CPU->D & 0x04) << 8;  // GM2 -> ¬INT/EXT
-			sound_set_sbs(mp->snd, 1, D & 0x80);  // D7 -> sound bit
-			mc10_vdg_update_mode(mp);
+		{
+			unsigned bank_4k = (A >> 12) & 3;
+			if (mp->RAM1 && bank_4k == 0) {
+				ram_d8(mp->RAM1, 0, bank_4k, A, 0, &D);
+			} else {
+				// And for writes, up to 16K address space to
+				// update video mode...
+				unsigned vmode = 0;
+				vmode |= (mp->CPU->D & 0x20) ? 0x80 : 0;  // D5 -> GnA
+				vmode |= (mp->CPU->D & 0x04) ? 0x40 : 0;  // D2 -> GM2
+				vmode |= (mp->CPU->D & 0x08) ? 0x20 : 0;  // D3 -> GM1
+				vmode |= (mp->CPU->D & 0x10) ? 0x10 : 0;  // D4 -> GM0
+				vmode |= (mp->CPU->D & 0x40) ? 0x08 : 0;  // D6 -> CSS
+				mp->video_mode = vmode;
+				mp->video_attr = (mp->CPU->D & 0x04) << 8;  // GM2 -> ¬INT/EXT
+				sound_set_sbs(mp->snd, 1, D & 0x80);  // D7 -> sound bit
+				mc10_vdg_update_mode(mp);
+			}
 		}
 		break;
 
@@ -670,7 +794,21 @@ static void mc10_op_rts(struct machine *m) {
 
 static void mc10_dump_ram(struct machine *m, FILE *fd) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
-	fwrite(mp->ram, mp->ram_size, 1, fd);
+	struct ram *ram0 = mp->RAM0;
+	for (unsigned bank = 0; bank < ram0->nbanks; bank++) {
+		if (ram0->d && ram0->d[bank]) {
+			fwrite(ram0->d[bank], ram0->bank_nelems, 1, fd);
+		}
+	}
+	struct ram *ram1 = mp->RAM1;
+	if (ram1) {
+		for (unsigned i = 0; i < ram1->nbanks; i++) {
+			unsigned bank = (i + 1) & 3;
+			if (ram1->d && ram1->d[bank]) {
+				fwrite(ram1->d[bank], ram1->bank_nelems, 1, fd);
+			}
+		}
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -730,10 +868,11 @@ static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t 
 	struct machine_mc10 *mp = sptr;
 	if (!dest)
 		return;
+	unsigned bank_4k = (A >> 11) & 3;
+	uint8_t *Vp = ram_a8(mp->RAM0, bank_4k, A, 0);
 	uint16_t attr = mp->video_attr;
-	for (int i = nbytes; i; i--) {
-		uint16_t D = mp->ram[A & 0x0fff] | attr;
-		A++;
+	for (int i = 0; i < nbytes; i++) {
+		uint16_t D = Vp[i] | attr;
 		D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
 		*(dest++) = D;
 	}
