@@ -116,6 +116,7 @@ struct private_cfg {
 		int tv_input;
 		int vdg_type;
 		int ram_org;
+		int ram_init;
 		_Bool cart_dfn;
 		char *cart;
 		int ram;
@@ -225,6 +226,7 @@ static struct private_cfg private_cfg = {
 	.machine.tv_input = ANY_AUTO,
 	.machine.vdg_type = -1,
 	.machine.ram_org = ANY_AUTO,
+	.machine.ram_init = ANY_AUTO,
 	.cart.becker = ANY_AUTO,
 	.cart.autorun = ANY_AUTO,
 	.cart.mpi.initial_slot = ANY_AUTO,
@@ -2071,6 +2073,10 @@ static void set_machine(const char *name) {
 			xroar.machine_config->ram = private_cfg.machine.ram;
 			private_cfg.machine.ram = 0;
 		}
+		if (private_cfg.machine.ram_init != ANY_AUTO) {
+			xroar.machine_config->ram_init = private_cfg.machine.ram_init;
+			private_cfg.machine.ram_init = ANY_AUTO;
+		}
 		if (private_cfg.machine.bas_dfn) {
 			private_cfg.machine.bas_dfn = 0;
 			xroar.machine_config->bas_dfn = 1;
@@ -2532,6 +2538,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_ENUM("vdg-type", &private_cfg.machine.vdg_type, machine_vdg_type_list) },
 	{ XC_SET_ENUM("ram-org", &private_cfg.machine.ram_org, machine_ram_org_list) },
 	{ XC_SET_INT("ram", &private_cfg.machine.ram) },
+	{ XC_SET_ENUM("ram-init", &private_cfg.machine.ram_init, machine_ram_init_list) },
 	{ XC_SET_STRING("machine-cart", &private_cfg.machine.cart), .defined = &private_cfg.machine.cart_dfn },
 	{ XC_SET_STRING_LIST_NE("machine-opt", &private_cfg.machine.opts) },
 	// Shorthand:
@@ -2739,6 +2746,7 @@ static void helptext(void) {
 "    -vdg-type TYPE          VDG type (6847 or 6847t1)\n"
 "    -ram-org ORG            RAM organisation (-ram-org help for list)\n"
 "    -ram KBYTES             amount of RAM in K\n"
+"    -ram-init METHOD        RAM start pattern (-ram-init help for list)\n"
 "    -machine-cart NAME      default cartridge for selected machine\n"
 
 "\n Cartridges:\n"

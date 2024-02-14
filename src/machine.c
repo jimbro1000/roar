@@ -56,6 +56,7 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_ID_STRUCT_ELEM(8,  ser_type_int,      struct machine_config, vdg_type),
 	SER_ID_STRUCT_ELEM(22, ser_type_int,      struct machine_config, ram_org),
 	SER_ID_STRUCT_ELEM(9,  ser_type_int,      struct machine_config, ram),
+	SER_ID_STRUCT_ELEM(23, ser_type_int,      struct machine_config, ram_init),
 	SER_ID_STRUCT_ELEM(10, ser_type_bool,     struct machine_config, bas_dfn),
 	SER_ID_STRUCT_ELEM(11, ser_type_string,   struct machine_config, bas_rom),
 	SER_ID_STRUCT_ELEM(12, ser_type_bool,     struct machine_config, extbas_dfn),
@@ -154,6 +155,14 @@ struct xconfig_enum machine_ram_org_list[] = {
 	{ XC_ENUM_END() }
 };
 
+struct xconfig_enum machine_ram_init_list[] = {
+	{ XC_ENUM_INT("clear", ram_init_clear, "Clear (all bits 0)") },
+	{ XC_ENUM_INT("set", ram_init_set, "Set (all bits 1)") },
+	{ XC_ENUM_INT("pattern", ram_init_pattern, "Pattern") },
+	{ XC_ENUM_INT("random", ram_init_random, "Random") },
+	{ XC_ENUM_END() }
+};
+
 static struct slist *config_list = NULL;
 static int next_id = 0;
 
@@ -170,6 +179,7 @@ struct machine_config *machine_config_new(void) {
 	new->vdg_type = ANY_AUTO;
 	new->ram_org = ANY_AUTO;
 	new->ram = ANY_AUTO;
+	new->ram_init = ANY_AUTO;
 	new->cart_enabled = 1;
 	config_list = slist_append(config_list, new);
 	next_id++;
@@ -374,6 +384,7 @@ void machine_config_print_all(FILE *f, _Bool all) {
 		xroar_cfg_print_enum(f, all, "vdg-type", mc->vdg_type, ANY_AUTO, machine_vdg_type_list);
 		xroar_cfg_print_enum(f, all, "ram-org", mc->ram_org, ANY_AUTO, machine_ram_org_list);
 		xroar_cfg_print_int_nz(f, all, "ram", mc->ram);
+		xroar_cfg_print_enum(f, all, "ram-init", mc->ram_init, ANY_AUTO, machine_ram_init_list);
 		xroar_cfg_print_string(f, all, "machine-cart", mc->default_cart, NULL); // XXX definedness?
 		for (struct slist *i2 = mc->opts; i2; i2 = i2->next) {
 			const char *s = i2->data;

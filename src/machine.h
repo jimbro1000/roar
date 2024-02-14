@@ -146,6 +146,7 @@ struct machine_config {
 	int vdg_type;
 	int ram_org;
 	int ram;
+	int ram_init;
 	_Bool bas_dfn;
 	char *bas_rom;
 	_Bool extbas_dfn;
@@ -166,6 +167,7 @@ extern struct xconfig_enum machine_tv_type_list[];
 extern struct xconfig_enum machine_tv_input_list[];
 extern struct xconfig_enum machine_vdg_type_list[];
 extern struct xconfig_enum machine_ram_org_list[];
+extern struct xconfig_enum machine_ram_init_list[];
 
 /** \brief Create a new machine config.
  */
