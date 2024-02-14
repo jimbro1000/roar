@@ -567,12 +567,14 @@ static int read_v1_snapshot(const char *filename) {
 					pia->a.control_register = fs_read_uint8(fd);
 					size -= 3;
 					mc6821_update_a_state(pia);
+					mc6821_write(pia, 1, pia->a.control_register);
 					if (size < 3) break;
 					pia->b.direction_register = fs_read_uint8(fd);
 					pia->b.output_register = fs_read_uint8(fd);
 					pia->b.control_register = fs_read_uint8(fd);
 					size -= 3;
 					mc6821_update_b_state(pia);
+					mc6821_write(pia, 3, pia->b.control_register);
 				}
 				break;
 
