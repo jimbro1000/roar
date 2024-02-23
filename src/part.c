@@ -61,6 +61,7 @@ extern const struct partdb_entry rsdos_part;
 
 extern const struct partdb_entry ram_part;
 
+extern const struct partdb_entry ay891x_part;
 extern const struct partdb_entry hd6309_part;
 extern const struct partdb_entry mc6801_part;
 extern const struct partdb_entry mc6803_part;
@@ -140,6 +141,8 @@ const struct partdb_entry *partdb[] = {
 	&tcc1014_1986_part,
 	&tcc1014_1987_part,
 #endif
+
+	&ay891x_part,
 
 #ifdef WANT_CART_ARCH_DRAGON
 	&sn76489_part,

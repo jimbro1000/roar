@@ -18,6 +18,7 @@ xroar_LDADD = $(top_builddir)/portalib/libporta.a -lm
 xroar_SOURCES = \
 	ao.c ao.h \
 	auto_kbd.c auto_kbd.h \
+	ay891x.c ay891x.h \
 	becker.c becker.h \
 	blockdev.c blockdev.h \
 	breakpoint.c breakpoint.h \
