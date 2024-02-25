@@ -1757,6 +1757,16 @@ void xroar_connect_machine(void) {
 		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_keymap, xroar.machine->keyboard.type, NULL);
 	}
 
+	if (xroar.machine->has_interface) {
+		struct part *p = &xroar.machine->part;
+		if (xroar.machine->has_interface(p, "floppy")) {
+			xroar.machine->attach_interface(p, "floppy", xroar.vdrive_interface);
+		}
+		if (xroar.machine->has_interface(p, "sound")) {
+			xroar.machine->attach_interface(p, "sound", xroar.ao_interface->sound_interface);
+		}
+	}
+
 	_Bool is_coco3 = strcmp(xroar.machine_config->architecture, "coco3") == 0;
 	_Bool is_coco = is_coco3 || strcmp(xroar.machine_config->architecture, "coco") == 0;
 
