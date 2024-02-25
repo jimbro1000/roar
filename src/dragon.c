@@ -138,37 +138,8 @@ static const struct ser_struct_data dragon_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void verify_ram_size(struct machine_config *mc) {
-	_Bool is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
 
-	// Validate requested total RAM
-	if (mc->ram < 4 || mc->ram > 64) {
-		mc->ram = is_dragon32 ? 32 : 64;
-	} else if (mc->ram < 8) {
-		mc->ram = 4;
-	} else if (mc->ram < 16) {
-		mc->ram = 8;
-	} else if (mc->ram < 32) {
-		mc->ram = 16;
-	} else if (mc->ram < 64) {
-		mc->ram = 32;
-	} else {
-		mc->ram = 64;
-	}
 
-	// Pick RAM org based on requested total RAM if not specified
-	if (mc->ram_org == ANY_AUTO) {
-		if (mc->ram < 16) {
-			mc->ram_org = RAM_ORG_4Kx1;
-		} else if (mc->ram < 32) {
-			mc->ram_org = RAM_ORG_16Kx1;
-		} else if (mc->ram < 64) {
-			mc->ram_org = RAM_ORG_32Kx1;
-		} else {
-			mc->ram_org = RAM_ORG_64Kx1;
-		}
-	}
-}
 
 // Set a ROM configuration to a default value if not "defined"
 static void set_default_rom(_Bool dfn, char **romp, const char *dfl) {
@@ -196,6 +167,7 @@ static void dragon_config_complete(struct machine_config *mc) {
 		mc->vdg_type = VDG_6847;
 	if (mc->vdg_type != VDG_6847 && mc->vdg_type != VDG_6847T1)
 		mc->vdg_type = VDG_6847;
+
 	/* Various heuristics to find a working architecture */
 	if (!mc->architecture) {
 		/* TODO: checksum ROMs to help determine arch */
@@ -216,18 +188,23 @@ static void dragon_config_complete(struct machine_config *mc) {
 		}
 	}
 
+	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
+	_Bool is_dragon64 = strcmp(mc->architecture, "dragon64") == 0;
+	_Bool is_dragon = is_dragon32 || is_dragon64;
+	_Bool is_coco = strcmp(mc->architecture, "coco") == 0;
+
+	assert(is_dragon || is_coco);
+
 	// Default ROMs
-	_Bool is_dragon = 1;
-	if (strcmp(mc->architecture, "dragon32") == 0) {
-		// Dragon 32
+
+	if (is_dragon32) {
 		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon32");
-	} else if (strcmp(mc->architecture, "dragon64") == 0) {
-		// Dragon 64
+	}
+	if (is_dragon64) {
 		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon64");
 		set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragon64_alt");
-	} else {
-		// CoCo
-		is_dragon = 0;
+	}
+	if (is_coco) {
 		set_default_rom(mc->bas_dfn, &mc->bas_rom, "@coco");
 		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@coco_ext");
 	}
@@ -273,6 +250,40 @@ static _Bool dragon_is_working_config(struct machine_config *mc) {
 		return 0;
 	// No need to check altbas - it's an alternate, not a requirement.
 	return 1;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void verify_ram_size(struct machine_dragon *md) {
+	struct machine_config *mc = md->public.config;
+
+	// Validate requested total RAM
+	if (mc->ram < 4 || mc->ram > 64) {
+		mc->ram = md->is_dragon32 ? 32 : 64;
+	} else if (mc->ram < 8) {
+		mc->ram = 4;
+	} else if (mc->ram < 16) {
+		mc->ram = 8;
+	} else if (mc->ram < 32) {
+		mc->ram = 16;
+	} else if (mc->ram < 64) {
+		mc->ram = 32;
+	} else {
+		mc->ram = 64;
+	}
+
+	// Pick RAM org based on requested total RAM if not specified
+	if (mc->ram_org == ANY_AUTO) {
+		if (mc->ram < 16) {
+			mc->ram_org = RAM_ORG_4Kx1;
+		} else if (mc->ram < 32) {
+			mc->ram_org = RAM_ORG_16Kx1;
+		} else if (mc->ram < 64) {
+			mc->ram_org = RAM_ORG_32Kx1;
+		} else {
+			mc->ram_org = RAM_ORG_64Kx1;
+		}
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -419,7 +430,7 @@ static void create_ram(struct machine_dragon *md) {
 	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
 
-	verify_ram_size(mc);
+	verify_ram_size(md);
 
 	struct ram_config ram_config = {
 		.d_width = 8,
@@ -451,6 +462,10 @@ static void dragon_initialise(struct part *p, void *options) {
 
 	dragon_config_complete(mc);
 	m->config = mc;
+
+	md->is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
+	md->is_dragon64 = (strcmp(mc->architecture, "dragon64") == 0);
+	md->is_dragon = md->is_dragon32 || md->is_dragon64;
 
 	// SAM
 	part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM");
@@ -508,10 +523,6 @@ static _Bool dragon_finish(struct part *p) {
 
 	// Connect any cartridge part
 	dragon_connect_cart(p);
-
-	md->is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
-	md->is_dragon64 = (strcmp(mc->architecture, "dragon64") == 0);
-	md->is_dragon = md->is_dragon32 || md->is_dragon64;
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
 	md->SAM->vdg_update = DELEGATE_AS0(void, mc6847_update, md->VDG);
@@ -845,11 +856,14 @@ static _Bool dragon_finish(struct part *p) {
 	md->PIA1->b.in_source = 0;
 	md->PIA0->a.in_sink = md->PIA0->b.in_sink = 0xff;
 	md->PIA1->a.in_sink = md->PIA1->b.in_sink = 0xff;
+
 	/* Machine-specific PIA connections */
+
 	if (md->is_dragon) {
 		// Pull-up resistor on centronics !BUSY (PIA1 PB0)
 		md->PIA1->b.in_source |= (1<<0);
 	}
+
 	if (md->is_dragon32) {
 		switch (mc->ram_org) {
 		case RAM_ORG_4Kx1:
@@ -865,6 +879,7 @@ static _Bool dragon_finish(struct part *p) {
 		// Pull-up resistor on ROMSEL (PIA1 PB2)
 		md->PIA1->b.in_source |= (1<<2);
 	}
+
 	if (!md->is_dragon) {
 		if (RAM_ORG_A(mc->ram_org) == 12) {
 			// 4K CoCo ties PIA1 PB2 low
