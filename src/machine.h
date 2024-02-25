@@ -245,6 +245,11 @@ struct machine {
 	void (*set_frameskip)(struct machine *m, unsigned fskip);
 	void (*set_ratelimit)(struct machine *m, _Bool ratelimit);
 
+	// Query if machine (or possibly sub-part) supports a named interface.
+	_Bool (*has_interface)(struct part *p, const char *ifname);
+	// Connect a named interface.
+	void (*attach_interface)(struct part *p, const char *ifname, void *intf);
+
 	/* simplified read & write byte for convenience functions */
 	uint8_t (*read_byte)(struct machine *m, unsigned A, uint8_t D);
 	void (*write_byte)(struct machine *m, unsigned A, uint8_t D);
