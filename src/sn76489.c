@@ -284,11 +284,7 @@ static void update_reg(struct SN76489_private *csg_, unsigned reg_sel, unsigned 
 		csg_->level[c] = csg_->amplitude[c][state];
 	} else {
 		if (c < 3) {
-			if (reg_val == 0) {
-				csg_->frequency[c] = 0x400;
-			} else {
-				csg_->frequency[c] = reg_val;
-			}
+			csg_->frequency[c] = reg_val ? reg_val : 0x400;
 		} else {
 			// noise channel is special
 			csg_->noise_white = reg_val & 0x04;
