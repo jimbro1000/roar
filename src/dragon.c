@@ -58,16 +58,6 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static const struct {
-	const char *bas;
-	const char *extbas;
-	const char *altbas;
-} rom_list[] = {
-	{ NULL, "@dragon32", NULL },
-	{ NULL, "@dragon64", "@dragon64_alt" },
-	{ "@coco", "@coco_ext", NULL }
-};
-
 struct machine_dragon {
 	struct machine public;  // first element in turn is part
 
@@ -180,6 +170,13 @@ static void verify_ram_size(struct machine_config *mc) {
 	}
 }
 
+// Set a ROM configuration to a default value if not "defined"
+static void set_default_rom(_Bool dfn, char **romp, const char *dfl) {
+	if (!dfn && romp && !*romp && dfl) {
+		*romp = xstrdup(dfl);
+	}
+}
+
 static void dragon_config_complete(struct machine_config *mc) {
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
@@ -218,24 +215,27 @@ static void dragon_config_complete(struct machine_config *mc) {
 			mc->architecture = xstrdup("dragon64");
 		}
 	}
-	int old_arch;
+
+	// Default ROMs
+	_Bool is_dragon = 1;
 	if (strcmp(mc->architecture, "dragon32") == 0) {
-		old_arch = 0;
-	} else if (strcmp(mc->architecture, "coco") == 0) {
-		old_arch = 2;
-	} else if (strcmp(mc->architecture, "coco3") == 0) {
-		old_arch = 3;
-	} else if (strcmp(mc->architecture, "mc10") == 0) {
-		old_arch = 4;
+		// Dragon 32
+		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon32");
+	} else if (strcmp(mc->architecture, "dragon64") == 0) {
+		// Dragon 64
+		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon64");
+		set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragon64_alt");
 	} else {
-		old_arch = 1;
+		// CoCo
+		is_dragon = 0;
+		set_default_rom(mc->bas_dfn, &mc->bas_rom, "@coco");
+		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@coco_ext");
 	}
 
 	if (mc->ram_init == ANY_AUTO) {
 		mc->ram_init = ram_init_pattern;
 	}
 
-	_Bool is_dragon = old_arch == 0 || old_arch == 1;
 	if (mc->keymap == ANY_AUTO) {
 		if (is_dragon) {
 			mc->keymap = dkbd_layout_dragon;
@@ -243,16 +243,7 @@ static void dragon_config_complete(struct machine_config *mc) {
 			mc->keymap = dkbd_layout_coco;
 		}
 	}
-	/* Now find which ROMs we're actually going to use */
-	if (!mc->bas_dfn && !mc->bas_rom && rom_list[old_arch].bas) {
-		mc->bas_rom = xstrdup(rom_list[old_arch].bas);
-	}
-	if (!mc->extbas_dfn && !mc->extbas_rom && rom_list[old_arch].extbas) {
-		mc->extbas_rom = xstrdup(rom_list[old_arch].extbas);
-	}
-	if (!mc->altbas_dfn && !mc->altbas_rom && rom_list[old_arch].altbas) {
-		mc->altbas_rom = xstrdup(rom_list[old_arch].altbas);
-	}
+
 	// Determine a default DOS cartridge if necessary
 	if (!mc->default_cart_dfn && !mc->default_cart) {
 		struct cart_config *cc = cart_find_working_dos(mc);
