@@ -216,6 +216,9 @@ static _Bool coco3_is_working_config(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static _Bool coco3_has_interface(struct part *p, const char *ifname);
+static void coco3_attach_interface(struct part *p, const char *ifname, void *intf);
+
 static void coco3_connect_cart(struct part *p);
 static void coco3_insert_cart(struct machine *m, struct cart *c);
 static void coco3_remove_cart(struct machine *m);
@@ -307,6 +310,9 @@ static struct part *coco3_allocate(void) {
         struct part *p = &m->part;
 
 	*mcc3 = (struct machine_coco3){0};
+
+	m->has_interface = coco3_has_interface;
+	m->attach_interface = coco3_attach_interface;
 
 	m->insert_cart = coco3_insert_cart;
 	m->remove_cart = coco3_remove_cart;
@@ -691,6 +697,32 @@ static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 		return 0;
 	}
 	return 1;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static _Bool coco3_has_interface(struct part *p, const char *ifname) {
+	struct machine_coco3 *mp = (struct machine_coco3 *)p;
+
+	struct cart *c = mp->cart;
+	if (c) {
+		if (c->has_interface) {
+			return c->has_interface(c, ifname);
+		}
+	}
+
+	return 0;
+}
+
+static void coco3_attach_interface(struct part *p, const char *ifname, void *intf) {
+	struct machine_coco3 *mp = (struct machine_coco3 *)p;
+
+	struct cart *c = mp->cart;
+	if (c) {
+		if (c->attach_interface) {
+			return c->attach_interface(c, ifname, intf);
+		}
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

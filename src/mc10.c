@@ -167,6 +167,9 @@ static _Bool mc10_is_working_config(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static _Bool mc10_has_interface(struct part *p, const char *ifname);
+static void mc10_attach_interface(struct part *p, const char *ifname, void *intf);
+
 static void mc10_reset(struct machine *m, _Bool hard);
 static enum machine_run_state mc10_run(struct machine *m, int ncycles);
 static void mc10_single_step(struct machine *m);
@@ -230,6 +233,9 @@ static struct part *mc10_allocate(void) {
         struct part *p = &m->part;
 
         *mp = (struct machine_mc10){0};
+
+	m->has_interface = mc10_has_interface;
+	m->attach_interface = mc10_attach_interface;
 
 	m->reset = mc10_reset;
 	m->run = mc10_run;
@@ -582,6 +588,22 @@ static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 		return 0;
 	}
 	return 1;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static _Bool mc10_has_interface(struct part *p, const char *ifname) {
+	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	(void)mp;
+	(void)ifname;
+	return 0;
+}
+
+static void mc10_attach_interface(struct part *p, const char *ifname, void *intf) {
+	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	(void)mp;
+	(void)ifname;
+	(void)intf;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

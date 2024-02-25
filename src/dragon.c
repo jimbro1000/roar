@@ -277,6 +277,9 @@ static _Bool dragon_is_working_config(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static _Bool dragon_has_interface(struct part *p, const char *ifname);
+static void dragon_attach_interface(struct part *p, const char *ifname, void *intf);
+
 static void dragon_connect_cart(struct part *p);
 static void dragon_insert_cart(struct machine *m, struct cart *c);
 static void dragon_remove_cart(struct machine *m);
@@ -373,6 +376,8 @@ const struct partdb_entry coco_part = { .name = "coco", .funcs = &dragon_funcs, 
 static void dragon_allocate_common(struct machine_dragon *md) {
 	struct machine *m = &md->public;
 
+	m->has_interface = dragon_has_interface;
+	m->attach_interface = dragon_attach_interface;
 
 	m->insert_cart = dragon_insert_cart;
 	m->remove_cart = dragon_remove_cart;
@@ -991,6 +996,32 @@ static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 		return 0;
 	}
 	return 1;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static _Bool dragon_has_interface(struct part *p, const char *ifname) {
+	struct machine_dragon *md = (struct machine_dragon *)p;
+
+	struct cart *c = md->cart;
+	if (c) {
+		if (c->has_interface) {
+			return c->has_interface(c, ifname);
+		}
+	}
+
+	return 0;
+}
+
+static void dragon_attach_interface(struct part *p, const char *ifname, void *intf) {
+	struct machine_dragon *md = (struct machine_dragon *)p;
+
+	struct cart *c = md->cart;
+	if (c) {
+		if (c->attach_interface) {
+			return c->attach_interface(c, ifname, intf);
+		}
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
