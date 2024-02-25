@@ -1725,6 +1725,27 @@ void xroar_cycle_joysticks(_Bool notify) {
 	}
 }
 
+// Connect various external interfaces to the machine.  May well end up
+// delegated to a sub-part of the machine.  Called during
+// xroar_connect_machine(), and when cartridge is changed with
+// xroar_set_cart().
+
+static void connect_interfaces(void) {
+	struct machine *m = xroar.machine;
+	if (!m)
+		return;
+	struct part *p = &m->part;
+
+	if (xroar.machine->has_interface) {
+		if (xroar.machine->has_interface(p, "floppy")) {
+			xroar.machine->attach_interface(p, "floppy", xroar.vdrive_interface);
+		}
+		if (xroar.machine->has_interface(p, "sound")) {
+			xroar.machine->attach_interface(p, "sound", xroar.ao_interface->sound_interface);
+		}
+	}
+}
+
 /** \brief Connect UI to machine.
  */
 
@@ -1757,15 +1778,7 @@ void xroar_connect_machine(void) {
 		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_keymap, xroar.machine->keyboard.type, NULL);
 	}
 
-	if (xroar.machine->has_interface) {
-		struct part *p = &xroar.machine->part;
-		if (xroar.machine->has_interface(p, "floppy")) {
-			xroar.machine->attach_interface(p, "floppy", xroar.vdrive_interface);
-		}
-		if (xroar.machine->has_interface(p, "sound")) {
-			xroar.machine->attach_interface(p, "sound", xroar.ao_interface->sound_interface);
-		}
-	}
+	connect_interfaces();
 
 	_Bool is_coco3 = strcmp(xroar.machine_config->architecture, "coco3") == 0;
 	_Bool is_coco = is_coco3 || strcmp(xroar.machine_config->architecture, "coco") == 0;
@@ -1859,21 +1872,6 @@ void xroar_toggle_cart(void) {
 	}
 }
 
-void xroar_connect_cart(void) {
-	assert(xroar.machine != NULL);
-	struct cart *c = (struct cart *)part_component_by_id_is_a(&xroar.machine->part, "cart", "cart");
-	if (!c)
-		return;
-	if (c->has_interface) {
-		if (c->has_interface(c, "floppy")) {
-			c->attach_interface(c, "floppy", xroar.vdrive_interface);
-		}
-		if (c->has_interface(c, "sound")) {
-			c->attach_interface(c, "sound", xroar.ao_interface->sound_interface);
-		}
-	}
-}
-
 void xroar_set_cart_by_id(_Bool notify, int id) {
 	struct cart_config *cc = cart_config_by_id(id);
 	const char *name = cc ? cc->name : NULL;
@@ -1918,7 +1916,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		new_cart = cart_create(cc_name);
 		if (new_cart) {
 			xroar.machine->insert_cart(xroar.machine, new_cart);
-			xroar_connect_cart();
+			connect_interfaces();
 			// Reset the cart once all interfaces are attached
 			if (new_cart->reset)
 				new_cart->reset(new_cart, 1);

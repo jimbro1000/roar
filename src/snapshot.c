@@ -229,7 +229,6 @@ static int read_v2_snapshot(const char *filename) {
 	xroar.machine_config = m->config;
 	xroar.machine = m;
 	xroar_connect_machine();
-	xroar_connect_cart();
 
 	return 0;
 }

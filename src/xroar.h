@@ -221,7 +221,6 @@ void xroar_configure_machine(struct machine_config *mc);
 void xroar_set_machine(_Bool notify, int id);
 void xroar_update_cartridge_menu(void);
 void xroar_toggle_cart(void);
-void xroar_connect_cart(void);
 void xroar_set_cart(_Bool notify, const char *cc_name);
 void xroar_set_cart_by_id(_Bool notify, int id);
 void xroar_save_snapshot(void);
