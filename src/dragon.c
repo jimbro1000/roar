@@ -366,16 +366,13 @@ const struct machine_partdb_extra dragon_machine_extra = {
 	.cart_arch = "dragon-cart",
 };
 
-const struct partdb_entry dragon64_part = { .name = "dragon64", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
 const struct partdb_entry dragon32_part = { .name = "dragon32", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
+const struct partdb_entry dragon64_part = { .name = "dragon64", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
 const struct partdb_entry coco_part = { .name = "coco", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
 
-static struct part *dragon_allocate(void) {
-	struct machine_dragon *md = part_new(sizeof(*md));
+static void dragon_allocate_common(struct machine_dragon *md) {
 	struct machine *m = &md->public;
-	struct part *p = &m->part;
 
-	*md = (struct machine_dragon){0};
 
 	m->insert_cart = dragon_insert_cart;
 	m->remove_cart = dragon_remove_cart;
@@ -399,6 +396,15 @@ static struct part *dragon_allocate(void) {
 	m->dump_ram = dragon_dump_ram;
 
 	m->keyboard.type = dkbd_layout_dragon;
+}
+
+static struct part *dragon_allocate(void) {
+	struct machine_dragon *md = part_new(sizeof(*md));
+	struct machine *m = &md->public;
+	struct part *p = &m->part;
+
+	*md = (struct machine_dragon){0};
+	dragon_allocate_common(md);
 
 	return p;
 }
