@@ -1595,11 +1595,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 				ea = ea_direct(cpu);
 				mem_byte = fetch_byte_notrace(cpu, ea);
 				NVMA_CYCLE;
-				int dest_bit = postbyte & 7;
+				int dst_bit = postbyte & 7;
 				int src_bit = (postbyte >> 3) & 7;
-				int src_lsl = dest_bit - src_bit;
 				unsigned reg_code = (postbyte >> 6) & 3;
-				unsigned dst_mask = (1 << dest_bit);
+				unsigned dst_mask = (1 << dst_bit);
 				unsigned reg_val;
 				switch (reg_code) {
 				case 0: reg_val = REG_CC; break;
@@ -1613,46 +1612,47 @@ static void hd6309_run(struct MC6809 *cpu) {
 				unsigned out;
 				switch (op & 7) {
 				case 0: // BAND
-					out = ((mem_byte << src_lsl) & reg_val) & dst_mask;
+					out = (mem_byte >> src_bit) & (reg_val >> dst_bit);
 					break;
 				case 1: // BIAND
-					out = ((~mem_byte << src_lsl) & reg_val) & dst_mask;
+					out = (~mem_byte >> src_bit) & (reg_val >> dst_bit);
 					break;
 				case 2: // BOR
-					out = ((mem_byte << src_lsl) | reg_val) & dst_mask;
+					out = (mem_byte >> src_bit) | (reg_val >> dst_bit);
 					break;
 				case 3: // BIOR
-					out = ((~mem_byte << src_lsl) | reg_val) & dst_mask;
+					out = (~mem_byte >> src_bit) | (reg_val >> dst_bit);
 					break;
 				case 4: // BEOR
-					out = ((mem_byte << src_lsl) ^ reg_val) & dst_mask;
+					out = (mem_byte >> src_bit) ^ (reg_val >> dst_bit);
 					break;
 				case 5: // BIEOR
-					out = ((~mem_byte << src_lsl) ^ reg_val) & dst_mask;
+					out = (~mem_byte >> src_bit) ^ (reg_val >> dst_bit);
 					break;
 				case 6: // LDBT
-					out = (mem_byte << src_lsl) & dst_mask;
+					out = mem_byte >> src_bit;
 					break;
 				case 7: // STBT
-					out = (reg_val << src_lsl) & dst_mask;
+					out = reg_val >> src_bit;
 					break;
 				default: out = 0; break;
 				}
+				out &= 1;
 				if ((op & 7) == 7) {
 					// STBT
-					out |= (mem_byte & ~dst_mask);
-					store_byte(cpu, ea, out);
+					mem_byte = (mem_byte & ~dst_mask) | (out << dst_bit);
+					store_byte(cpu, ea, mem_byte);
 				} else {
 					switch (reg_code) {
 					default:
 					case 0:
-						REG_CC = (REG_CC & ~dst_mask) | (out & dst_mask);
+						REG_CC = (REG_CC & ~dst_mask) | (out << dst_bit);
 						break;
 					case 1:
-						REG_A = (REG_A & ~dst_mask) | (out & dst_mask);
+						REG_A = (REG_A & ~dst_mask) | (out << dst_bit);
 						break;
 					case 2:
-						REG_B = (REG_B & ~dst_mask) | (out & dst_mask);
+						REG_B = (REG_B & ~dst_mask) | (out << dst_bit);
 						break;
 					}
 				}
