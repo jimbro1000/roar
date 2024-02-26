@@ -335,6 +335,12 @@ static char const * const default_config[] = {
 	"machine-arch dragon64",
 	"tv-type ntsc",
 	"ram 64",
+	// Dragon Professional (Alpha)
+	"machine dragonpro",
+	"machine-desc 'Dragon Professional (Alpha)'",
+	"machine-arch dragonpro",
+	"tv-type pal",
+	"ram 64",
 	// Dragon 200-E
 	"machine dragon200e",
 	"machine-desc 'Dragon 200-E'",
@@ -571,6 +577,8 @@ static char const * const default_config[] = {
 	"crclist woolham_d64_1=0xee33ae92",
 	"crclist woolham_d64_2=0x1660ae35",
 	"crclist woolham_d32=0xff7bf41e,0x9c7eed69",
+	// Dragon Pro
+	"crclist dragonpro_boot=0xd6172b56,0xc3dab585",
 	// CoCo BASIC
 	"crclist bas10=0x00b50aaa",
 	"crclist bas11=0x6270955a",
