@@ -301,7 +301,9 @@ static void latch_write(struct dragondos *d, unsigned D) {
 		d->latch_old = D;
 	}
 	d->latch_drive_select = D & 0x03;
-	d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
+	if (d->vdrive_interface) {
+		d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
+	}
 	d->latch_motor_enable = D & 0x04;
 	d->latch_density = D & 0x08;
 	wd279x_set_dden(d->fdc, !d->latch_density);

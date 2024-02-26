@@ -247,9 +247,11 @@ static void latch_write(struct deltados *d, unsigned D) {
 		d->latch_old = D;
 	}
 	d->latch_drive_select = D & 0x03;
-	d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
 	d->latch_side_select = D & 0x04;
-	d->vdrive_interface->set_sso(d->vdrive_interface, d->latch_side_select ? 1 : 0);
+	if (d->vdrive_interface) {
+		d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
+		d->vdrive_interface->set_sso(d->vdrive_interface, d->latch_side_select ? 1 : 0);
+	}
 	d->latch_density = !(D & 0x10);
 	wd279x_set_dden(d->fdc, !d->latch_density);
 }

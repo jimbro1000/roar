@@ -294,7 +294,6 @@ static void latch_write(struct rsdos *d, unsigned D) {
 		new_drive_select = 3;
 		D &= ~0x40;  // prevent interpreting as side select
 	}
-	d->vdrive_interface->set_sso(d->vdrive_interface, (D & 0x40) ? 1 : 0);
 	if (D != d->latch_old) {
 		LOG_DEBUG(2, "RSDOS: Write to latch: ");
 		if (new_drive_select != d->latch_drive_select) {
@@ -319,7 +318,10 @@ static void latch_write(struct rsdos *d, unsigned D) {
 		d->latch_old = D;
 	}
 	d->latch_drive_select = new_drive_select;
-	d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
+	if (d->vdrive_interface) {
+		d->vdrive_interface->set_sso(d->vdrive_interface, (D & 0x40) ? 1 : 0);
+		d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
+	}
 	d->latch_density = D & 0x20;
 	wd279x_set_dden(d->fdc, !d->latch_density);
 	if (!d->latch_density && d->intrq_flag) {
