@@ -1,3 +1,7 @@
+Version 1.5.4, Mon 26 Feb 2024
+
+ * Fixed 6309 register-memory bit ops [R. Allen Murphy]
+
 Version 1.5.3, Tue  6 Feb 2024
 
  * GIME: fix interrupt fixes fix (fixes RoboCop)
