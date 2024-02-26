@@ -76,6 +76,9 @@ AC_ARG_ENABLE([mc10],
 	AS_HELP_STRING([--enable-mc10], [support Tandy MC-10]) )
 test "x$enable_mc10" = "xyes" && _machine_arch_default="no"
 
+AC_ARG_ENABLE([experimental],
+	AS_HELP_STRING([--enable-experimental], [include experimental/incomplete code]) )
+
 AC_ARG_ENABLE([wasm],
 	AS_HELP_STRING([--enable-wasm], [build for WebAssembly using emscripten]) )
 
@@ -159,6 +162,9 @@ AM_COND_IF([MACHINE_ARCH_COCO3], [AC_DEFINE([WANT_MACHINE_ARCH_COCO3], 1, [Want 
 test -z "$enable_mc10" && enable_mc10="$_machine_arch_default"
 AM_CONDITIONAL([MACHINE_ARCH_MC10], [test "x$enable_mc10" = "xyes"])
 AM_COND_IF([MACHINE_ARCH_MC10], [AC_DEFINE([WANT_MACHINE_ARCH_MC10], 1, [Want Tandy MC-10])])
+
+AM_CONDITIONAL([EXPERIMENTAL], [test "x$enable_experimental" = "xyes"])
+AM_COND_IF([EXPERIMENTAL], [AC_DEFINE([WANT_EXPERIMENTAL], 1, [Want experimental/incomplete code])])
 
 enable_part_mc6801=no
 enable_part_mc6809=no
