@@ -39,6 +39,7 @@ struct sound_interface {
 	int framerate;  // output rate
 	_Bool ratelimit;  // ratelimit
 	DELEGATE_T1(void, bool) sbs_feedback;  // single-bit sound feedback
+	DELEGATE_T3(float, uint32, int, floatp) get_non_muxed_audio;
 	DELEGATE_T3(float, uint32, int, floatp) get_tape_audio;
 	DELEGATE_T3(float, uint32, int, floatp) get_cart_audio;
 	DELEGATE_T1(voidp, voidp) write_buffer;

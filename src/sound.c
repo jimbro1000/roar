@@ -81,6 +81,7 @@ struct sound_interface_private {
 	// Inputs to audio mux.  Suitable for mixing to the output buffer, so
 	// may have been filtered.
 	float *mux_input[4];
+	float *non_muxed_output;
 
 	// The unfiltered "current" values of those inputs.  Suitable for
 	// feeding back to the single bit sound pin as an input.
@@ -232,6 +233,10 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 			snd->mux_input[i][j] = 0.0;
 		}
 	}
+	snd->non_muxed_output = xmalloc((nframes + 1) * sizeof(float));
+	for (unsigned j = 0; j < (nframes + 1); j++) {
+		snd->non_muxed_output[j] = 0.0;
+	}
 
 	snd->last_cycle = event_current_tick;
 
@@ -360,6 +365,12 @@ void sound_update(struct sound_interface *sndp) {
 		snd->mux_input_raw[SOURCE_CART] = 0.0;
 	}
 
+	float *non_muxed_output = NULL;
+	if (DELEGATE_DEFINED(sndp->get_non_muxed_audio)) {
+		non_muxed_output = snd->non_muxed_output;
+		DELEGATE_CALL(sndp->get_non_muxed_audio, event_current_tick, nframes, non_muxed_output);
+	}
+
 	// Only fill DAC buffer if it's selected
 	if (mux_source == SOURCE_DAC) {
 		for (unsigned i = 0; i < nframes; i++) {
@@ -383,6 +394,9 @@ void sound_update(struct sound_interface *sndp) {
 			float *ptr = (float *)snd->mix_buffer + snd->buffer_frame * snd->output_nchannels;
 			for (int i = 0; i < count; i++) {
 				float mix_sample = (*(mux_output++) * snd->mux_gain) + snd->bus_offset;
+				if (non_muxed_output) {
+					mix_sample += *(non_muxed_output++);
+				}
 				for (int j = 0; j < snd->output_nchannels; j++) {
 					*(ptr++) = (mix_sample + snd->current.external[j]) * snd->gain;
 				}
