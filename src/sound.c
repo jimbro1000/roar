@@ -80,12 +80,12 @@ struct sound_interface_private {
 
 	// Inputs to audio mux.  Suitable for mixing to the output buffer, so
 	// may have been filtered.
-	float *mux_input[4];
+	float *mux_input[5];
 	float *non_muxed_output;
 
 	// The unfiltered "current" values of those inputs.  Suitable for
 	// feeding back to the single bit sound pin as an input.
-	float mux_input_raw[4];
+	float mux_input_raw[5];
 
 	// Scale & offset to apply to the audio mux.  Intended to simulate the
 	// changing characteristics when enabling or disabling single-bit
@@ -106,6 +106,7 @@ enum sound_source {
 	SOURCE_DAC,
 	SOURCE_TAPE,
 	SOURCE_CART,
+	SOURCE_AY,  // Dragon Professional only
 	SOURCE_NONE,
 	SOURCE_SINGLE_BIT,
 	NUM_SOURCES
@@ -132,6 +133,7 @@ static const float source_gain_v[NUM_SOURCES][3] = {
 	{ 4.50/MAX_V, 2.84/MAX_V, 3.40/MAX_V },  // DAC
 	{ 0.50/MAX_V, 0.40/MAX_V, 0.50/MAX_V },  // Tape
 	{ 4.70/MAX_V, 2.84/MAX_V, 3.40/MAX_V },  // Cart
+	{ 4.70/MAX_V, 2.84/MAX_V, 3.40/MAX_V },  // AY
 	{ 0.00/MAX_V, 0.00/MAX_V, 0.00/MAX_V },  // None
 	{ 0.00/MAX_V, 0.00/MAX_V, 0.00/MAX_V }   // Single-bit
 };
@@ -141,6 +143,7 @@ static const float source_offset_v[NUM_SOURCES][3] = {
 	{ 0.20/MAX_V, 0.18/MAX_V, 1.30/MAX_V },  // DAC
 	{ 2.05/MAX_V, 1.60/MAX_V, 2.35/MAX_V },  // Tape
 	{ 0.00/MAX_V, 0.18/MAX_V, 1.30/MAX_V },  // Cart
+	{ 0.00/MAX_V, 0.18/MAX_V, 1.30/MAX_V },  // AY
 	{ 0.00/MAX_V, 0.00/MAX_V, 0.00/MAX_V },  // None
 	{ 0.00/MAX_V, 0.00/MAX_V, 3.90/MAX_V }   // Single-bit
 };
@@ -227,7 +230,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 
 	snd->current.mux_source = 0;
 	snd->next.mux_source = 0;
-	for (unsigned i = 0; i < 4; i++) {
+	for (unsigned i = 0; i < 5; i++) {
 		snd->mux_input[i] = xmalloc((nframes + 1) * sizeof(float));
 		for (unsigned j = 0; j < (nframes + 1); j++) {
 			snd->mux_input[i][j] = 0.0;
@@ -254,7 +257,7 @@ void sound_interface_free(struct sound_interface *sndp) {
 	if (snd->output_fmt != SOUND_FMT_FLOAT) {
 		free(snd->mix_buffer);
 	}
-	for (unsigned i = 0; i < 4; i++) {
+	for (unsigned i = 0; i < 5; i++) {
 		free(snd->mux_input[i]);
 	}
 	free(snd);
@@ -363,6 +366,19 @@ void sound_update(struct sound_interface *sndp) {
 		}
 	} else {
 		snd->mux_input_raw[SOURCE_CART] = 0.0;
+	}
+
+	if (DELEGATE_DEFINED(sndp->get_ay_audio)) {
+		if (mux_source == SOURCE_AY && sndp->ratelimit) {
+			snd->mux_input_raw[SOURCE_AY] = DELEGATE_CALL(sndp->get_ay_audio, event_current_tick, nframes, snd->mux_input[SOURCE_AY]);
+		} else {
+			snd->mux_input_raw[SOURCE_AY] = DELEGATE_CALL(sndp->get_ay_audio, event_current_tick, nframes, NULL);
+			if (mux_source == SOURCE_AY) {
+				mux_source = SOURCE_NONE;
+			}
+		}
+	} else {
+		snd->mux_input_raw[SOURCE_AY] = 0.0;
 	}
 
 	float *non_muxed_output = NULL;
