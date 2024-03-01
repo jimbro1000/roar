@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU.
  *
- *  \copyright Copyright 2012-2023 Ciaran Anscomb
+ *  \copyright Copyright 2012-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -32,6 +32,9 @@
  *
  *  - Undocumented 6309 Behaviours, David Banks [hoglet67]
  *    https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6309-Behaviours
+ *
+ *  - Tim Lindner's Hitachi 6309 Fuzzing Project
+ *    https://github.com/tlindner/Fuzz6309
  */
 
 #include "top-config.h"
@@ -1792,12 +1795,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x118d, 0x119d, 0x11ad, 0x11bd DIVD
-			// TODO: "The cycle count of DIVD is more complex that
-			// has previously been documented" [hoglet67]
 			case 0x038d: case 0x039d: case 0x03ad: case 0x03bd: {
-				uint16_t tmp1;
+				uint16_t tmp1 = REG_D;
 				uint8_t tmp2;
-				tmp1 = REG_D;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = byte_immediate(cpu); break;
 				case 1: tmp2 = byte_direct(cpu); break;
@@ -1805,41 +1805,80 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = byte_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				NVMA_CYCLE;
+				NVMA_CYCLE;
+				NVMA_CYCLE;
 				if (tmp2 == 0) {
 					REG_MD |= MD_D0;
+					CLR_NZV;
+					REG_CC |= CC_Z;  // [hoglet67]
 					stack_irq_registers(cpu, 1);
 					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
 					hcpu->state = hd6309_state_label_a;
 					continue;
 				}
-				int16_t stmp1 = *((int16_t *)&tmp1);
-				int8_t stmp2 = *((int8_t *)&tmp2);
-				int quotient = stmp1 / stmp2;
-				REG_M = (quotient < 0) ? 0xff : 0x00;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
+				_Bool nsign = 0;  // dividend sign
+				_Bool vsign = 0;  // divisor sign
+				if ((tmp1 >> 15) & 1) {
+					tmp1 = ~tmp1 + 1;
+					// Even if calculation is aborted, this
+					// negation is reflected in D:
+					REG_D = tmp1;
+					NVMA_CYCLE;  // [hoglet67]
+					nsign = 1;
+				}
+				if ((tmp2 >> 7) & 1) {
+					tmp2 = ~tmp2 + 1;
+					NVMA_CYCLE;  // [hoglet67]
+					vsign = 1;
+				}
+
+				for (int i = 6; i; i--)
+					NVMA_CYCLE;
+				uint16_t quotient = tmp1 / tmp2;
+				uint8_t remainder = tmp1 % tmp2;
+
 				CLR_NZVC;
-				if (quotient >= -256 && quotient < 256) {
-					REG_B = quotient;
-					REG_A = stmp1 - (quotient * stmp2);
-					REG_CC |= (REG_B & 1);
-					for (int i = 12; i; i--)
-						NVMA_CYCLE;
-					if ((quotient >= 0) == ((REG_B & 0x80) == 0)) {
-						SET_NZ8(REG_B);
-						NVMA_CYCLE;
-					} else {
-						REG_CC |= (CC_N | CC_V);
-					}
-				} else {
+				if ((quotient >> 8) != 0) {
+					// Range overflow
 					REG_CC |= CC_V;
+					if (nsign)
+						REG_CC |= CC_N;
+					break;
+				}
+
+				// According to [hoglet67] there is now a
+				// maximum of 13 cycles remaining, one fewer
+				// on 2's complement overflow.
+
+				if (nsign) {
+					remainder = ~remainder + 1;
+				}
+				if (nsign != vsign) {
+					uint16_t new_quotient = ~quotient + 1;
+					if ((new_quotient & 0x80) && !(quotient & 0x80)) {
+						quotient = new_quotient;
+					}
+					REG_M = 0xff;
+				} else {
+					REG_M = 0;
+				}
+
+				for (int i = 12; i; i--)
+					NVMA_CYCLE;
+				REG_A = remainder;
+				REG_B = quotient;
+				REG_CC |= (REG_B & 1);
+				if ((((quotient >> 15) ^ (REG_B >> 7)) & 1) == 0) {
+					// No overflow, take the extra cycle
+					SET_NZ8(REG_B);
+					NVMA_CYCLE;
+				} else {
+					// 2's complement overflow.  NOTE:
+					// [hoglet67] says N is clear here, but
+					// Tim Lindner's fuzzing suggests
+					// otherwise?
+					REG_CC |= (CC_N | CC_V);
 				}
 			} break;
 

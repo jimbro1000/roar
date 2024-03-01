@@ -1,5 +1,7 @@
  * New -ram-org option to specify RAM addressing
  * New -ram-init option to specify initial RAM state
+ * 6309 DIVD behaviour fixed against Tim Lindner's fuzzing tool
+ * 6309 DIVD timing fixed according to David Banks's behaviour notes
 
 Version 1.5.4, Mon 26 Feb 2024
 
