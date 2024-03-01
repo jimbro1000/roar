@@ -1883,12 +1883,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x118e, 0x119e, 0x11ae, 0x11be DIVQ
-			// TODO: "The cycle count of DIVQ is more complex that
-			// has previously been documented" [hoglet67]
 			case 0x038e: case 0x039e: case 0x03ae: case 0x03be: {
-				uint32_t tmp1;
+				uint32_t tmp1 = RREG_Q;
 				uint16_t tmp2;
-				tmp1 = RREG_Q;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
 				case 1: tmp2 = word_direct(cpu); break;
@@ -1896,40 +1893,80 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				NVMA_CYCLE;
+				NVMA_CYCLE;
+				NVMA_CYCLE;
 				if (tmp2 == 0) {
 					REG_MD |= MD_D0;
+					CLR_NZV;
+					REG_CC |= CC_Z;  // [hoglet67]
 					stack_irq_registers(cpu, 1);
 					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
 					hcpu->state = hd6309_state_label_a;
 					continue;
 				}
-				int32_t stmp1 = *((int32_t *)&tmp1);
-				int16_t stmp2 = *((int16_t *)&tmp2);
-				int quotient = stmp1 / stmp2;
-				REG_M = (quotient < 0) ? 0xff : 0x00;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
+				_Bool nsign = 0;  // dividend sign
+				_Bool vsign = 0;  // divisor sign
+				if ((tmp1 >> 31) & 1) {
+					tmp1 = ~tmp1 + 1;
+					// Even if calculation is aborted, this
+					// negation is reflected in Q:
+					REG_D = tmp1 >> 16;
+					REG_W = tmp1 & 0xffff;;
+					NVMA_CYCLE;  // [hoglet67]
+					nsign = 1;
+				}
+				if ((tmp2 >> 15) & 1) {
+					tmp2 = ~tmp2 + 1;
+					NVMA_CYCLE;  // [hoglet67]
+					vsign = 1;
+				}
+
+				for (int i = 6; i; i--)
+					NVMA_CYCLE;
+				uint32_t quotient = tmp1 / tmp2;
+				uint16_t remainder = tmp1 % tmp2;
+
 				CLR_NZVC;
-				if (quotient >= -65536 && quotient < 65536) {
-					REG_W = quotient;
-					REG_D = stmp1 - (quotient * stmp2);
-					REG_CC |= (REG_W & 1);
-					for (int i = 21; i; i--)
-						NVMA_CYCLE;
-					if ((quotient >= 0) == ((REG_E & 0x80) == 0)) {
-						SET_NZ16(REG_W);
-					} else {
-						REG_CC |= (CC_N | CC_V);
-					}
-				} else {
+				if ((quotient >> 16) != 0) {
+					// Range overflow
 					REG_CC |= CC_V;
+					if (nsign)
+						REG_CC |= CC_N;
+					break;
+				}
+
+				// According to [hoglet67] there are now 21
+				// cycles remaining.
+
+				if (nsign) {
+					remainder = ~remainder + 1;
+				}
+				if (nsign != vsign) {
+					uint32_t new_quotient = ~quotient + 1;
+					if ((new_quotient & 0x8000) && !(quotient & 0x8000)) {
+						quotient = new_quotient;
+					}
+					REG_M = 0xff;
+				} else {
+					REG_M = 0;
+				}
+
+				for (int i = 21; i; i--)
+					NVMA_CYCLE;
+				REG_D = remainder;
+				REG_W = quotient;
+				REG_CC |= (REG_W & 1);
+				if ((((quotient >> 31) ^ (REG_E >> 7)) & 1) == 0) {
+					// No overflow
+					SET_NZ16(REG_W);
+				} else {
+					// 2's complement overflow.  NOTE:
+					// [hoglet67] says N is clear here, but
+					// adopting results of Tim Lindner's
+					// fuzzing of DIVD (see above) until we
+					// know one way or another.
+					REG_CC |= (CC_N | CC_V);
 				}
 			} break;
 
