@@ -1279,27 +1279,28 @@ static void dragon_instruction_posthook(void *sptr) {
 }
 
 static void read_byte(struct machine_dragon *md, unsigned A) {
-	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
-	// produce a different "null" result on his 16K CoCo
-	if (md->SAM->RAS0 || md->SAM->RAS1)
-		md->CPU->D = 0xff;
 	if (md->cart) {
 		md->CPU->D = md->cart->read(md->cart, A, 0, 0, md->CPU->D);
-		if (md->cart->EXTMEM) {
-			return;
-		}
 	}
+
 	unsigned nWE = 1;
 	unsigned Zrow = md->SAM->Z;
 	unsigned Zcol = md->SAM->Z >> 8;
+	uint8_t ram_D = 0xff;
+	if (md->SAM->RAS0) {
+		ram_d8(md->RAM, nWE, 0, Zrow, Zcol, &ram_D);
+	}
+	if (md->SAM->RAS1) {
+		ram_d8(md->RAM, nWE, 1, Zrow, Zcol, &ram_D);
+	}
+
+	if (md->cart && md->cart->EXTMEM) {
+		return;
+	}
+
 	switch (md->SAM->S) {
 	case 0:
-		if (md->SAM->RAS0) {
-			ram_d8(md->RAM, nWE, 0, Zrow, Zcol, &md->CPU->D);
-		}
-		if (md->SAM->RAS1) {
-			ram_d8(md->RAM, nWE, 1, Zrow, Zcol, &md->CPU->D);
-		}
+		md->CPU->D = ram_D;
 		break;
 	case 1:
 	case 2:
@@ -1353,6 +1354,7 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 	if (md->cart) {
 		md->CPU->D = md->cart->write(md->cart, A, 0, 0, md->CPU->D);
 	}
+
 	if ((!md->cart || !md->cart->EXTMEM) && ((md->SAM->S & 4) || md->unexpanded_dragon32)) {
 		switch (md->SAM->S) {
 		case 1:
@@ -1385,6 +1387,7 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			break;
 		}
 	}
+
 	unsigned nWE = 0;
 	unsigned Zrow = md->SAM->Z;
 	unsigned Zcol = md->SAM->Z >> 8;
