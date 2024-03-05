@@ -45,9 +45,9 @@
 // SAM Data Sheet,
 //   Figure 6 - Signal routing for address multiplexer
 
-static uint16_t const ram_row_masks[4] = { 0x007f, 0x007f, 0x00ff, 0x00ff };
-static int const ram_col_shifts[4] = { 2, 1, 0, 0 };
-static uint16_t const ram_col_masks[4] = { 0x3f00, 0x7f00, 0xff00, 0xff00 };
+static uint8_t const ram_row_masks[4] = { 0x7f, 0x7f, 0xff, 0xff };
+static unsigned const ram_col_shifts[4] = { 6, 7, 8, 8 };
+static uint8_t const ram_col_masks[4] = { 0x3f, 0x7f, 0xff, 0xff };
 static uint16_t const ram_ras1_bits[4] = { 0x1000, 0x4000, 0, 0 };
 
 // VDG X & Y divider configurations and HSync clear mode.
@@ -161,7 +161,7 @@ struct MC6883_private {
 
 	// Address multiplexer
 	uint16_t ram_row_mask;
-	int ram_col_shift;
+	unsigned ram_col_shift;
 	uint16_t ram_col_mask;
 	uint16_t ram_ras1_bit;
 	uint16_t ram_ras1;
@@ -183,23 +183,37 @@ struct MC6883_private {
 
 };
 
-#define MC6883_SER_REG (5)
+#define MC6883_SER_Z             (2)
+#define MC6883_SER_V             (3)
+#define MC6883_SER_REG           (5)
+#define MC6883_SER_RAM_ROW_MASK  (7)
+#define MC6883_SER_RAM_COL_SHIFT (8)
+#define MC6883_SER_RAM_COL_MASK  (9)
+#define MC6883_SER_RAM_RAS1_BIT  (10)
+#define MC6883_SER_RAM_RAS1      (11)
+#define MC6883_SER_OLD_P         (12)
 
 static struct ser_struct ser_struct_mc6883[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct MC6883, S),
-	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct MC6883, Z),
-	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct MC6883, V),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6883, RAS0),
-	SER_ID_STRUCT_ELEM(31, ser_type_bool, struct MC6883, RAS1),
-
+	// Old values translated on read:
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_Z),
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_V),
 	SER_ID_STRUCT_UNHANDLED(MC6883_SER_REG),
 
-	SER_ID_STRUCT_ELEM(7, ser_type_uint16, struct MC6883_private, ram_row_mask),
-	SER_ID_STRUCT_ELEM(8, ser_type_int, struct MC6883_private, ram_col_shift),
-	SER_ID_STRUCT_ELEM(9, ser_type_uint16, struct MC6883_private, ram_col_mask),
-	SER_ID_STRUCT_ELEM(10, ser_type_uint16, struct MC6883_private, ram_ras1_bit),
-	SER_ID_STRUCT_ELEM(11, ser_type_uint16, struct MC6883_private, ram_ras1),
-	SER_ID_STRUCT_ELEM(12, ser_type_uint16, struct MC6883_private, P),
+	// Deprecated:
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_RAM_ROW_MASK),
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_RAM_COL_SHIFT),
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_RAM_COL_MASK),
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_RAM_RAS1_BIT),
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_RAM_RAS1),
+	SER_ID_STRUCT_UNHANDLED(MC6883_SER_OLD_P),
+
+	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct MC6883, S),
+	SER_ID_STRUCT_ELEM(32, ser_type_unsigned, struct MC6883, Zrow),
+	SER_ID_STRUCT_ELEM(33, ser_type_unsigned, struct MC6883, Zcol),
+	SER_ID_STRUCT_ELEM(34, ser_type_unsigned, struct MC6883, Vrow),
+	SER_ID_STRUCT_ELEM(35, ser_type_unsigned, struct MC6883, Vcol),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6883, RAS0),
+	SER_ID_STRUCT_ELEM(31, ser_type_bool, struct MC6883, RAS1),
 
 	SER_ID_STRUCT_ELEM(13, ser_type_bool, struct MC6883_private, mpu_rate_fast),
 	SER_ID_STRUCT_ELEM(14, ser_type_bool, struct MC6883_private, mpu_rate_ad),
@@ -212,6 +226,8 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_ELEM(29, ser_type_unsigned, struct MC6883_private, R),
 	SER_ID_STRUCT_ELEM(30, ser_type_unsigned, struct MC6883_private, M),
 	SER_ID_STRUCT_ELEM(6, ser_type_bool, struct MC6883_private, TY),
+
+	SER_ID_STRUCT_ELEM(36, ser_type_unsigned, struct MC6883_private, Vprev),
 
 	SER_ID_STRUCT_ELEM(19, ser_type_int, struct MC6883_private, clr_mode),
 
@@ -279,7 +295,9 @@ static struct part *mc6883_allocate(void) {
 
 static _Bool mc6883_finish(struct part *p) {
 	struct MC6883_private *sam = (struct MC6883_private *)p;
+	sam->Vprev = sam->V;
 	update_vcounter_inputs(sam);
+	update_from_register(sam);
 	return 1;
 }
 
@@ -293,6 +311,30 @@ static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 		}
 		break;
 
+	case MC6883_SER_Z:
+		{
+			uint16_t z = ser_read_vuint32(sh);
+			sam->public.Zrow = z & 0xff;
+			sam->public.Zcol = (z >> 8) & 0xff;
+		}
+		break;
+
+	case MC6883_SER_V:
+		{
+			uint16_t z = ser_read_vuint32(sh);
+			sam->public.Vrow = z & 0xff;
+			sam->public.Vcol = (z >> 8) & 0xff;
+		}
+		break;
+
+	case MC6883_SER_RAM_ROW_MASK:
+	case MC6883_SER_RAM_COL_SHIFT:
+	case MC6883_SER_RAM_COL_MASK:
+	case MC6883_SER_RAM_RAS1_BIT:
+	case MC6883_SER_RAM_RAS1:
+	case MC6883_SER_OLD_P:
+		break;
+
 	default:
 		return 0;
 	}
@@ -301,12 +343,18 @@ static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
+	(void)sam;
+	(void)sh;
 	switch (tag) {
 	case MC6883_SER_REG:
-		{
-			uint16_t value = mc6883_get_register(&sam->public);
-			ser_write_vuint32(sh, tag, value);
-		}
+	case MC6883_SER_Z:
+	case MC6883_SER_V:
+	case MC6883_SER_RAM_ROW_MASK:
+	case MC6883_SER_RAM_COL_SHIFT:
+	case MC6883_SER_RAM_COL_MASK:
+	case MC6883_SER_RAM_RAS1_BIT:
+	case MC6883_SER_RAM_RAS1:
+	case MC6883_SER_OLD_P:
 		break;
 
 	default:
@@ -326,13 +374,16 @@ void mc6883_reset(struct MC6883 *samp) {
 	sam->extend_slow_cycle = 0;
 }
 
-#define VRAM_TRANSLATE(a) ( \
-		((a << sam->ram_col_shift) & sam->ram_col_mask) \
-		| (a & sam->ram_row_mask) \
-		| (!(a & sam->ram_ras1_bit) ? sam->ram_ras1 : 0) \
-	)
+#define VRAM_TRANSLATE_ROW(a) \
+	( ((a) & sam->ram_row_mask) | \
+	  (!((a) & sam->ram_ras1_bit) ? sam->ram_ras1 : 0) )
 
-#define RAM_TRANSLATE(a) (VRAM_TRANSLATE(a) | sam->ram_page_bit)
+#define VRAM_TRANSLATE_COL(a) \
+	( (((a) >> sam->ram_col_shift) & sam->ram_col_mask) | \
+	  (!((a) & sam->ram_ras1_bit) ? sam->ram_ras1 : 0) )
+
+#define RAM_TRANSLATE_ROW(a) (VRAM_TRANSLATE_ROW(a))
+#define RAM_TRANSLATE_COL(a) (VRAM_TRANSLATE_COL(a) | sam->ram_page_bit)
 
 // The primary function of the SAM: translates an address (A) plus Read/!Write
 // flag (RnW) into an S value and RAM address (Z).  Writes to the SAM control
@@ -388,7 +439,8 @@ void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		samp->S = RnW ? 0 : data_S[A >> 13];
 		samp->RAS1 = A & sam->ram_ras1_bit;
 		samp->RAS0 = !samp->RAS1;
-		samp->Z = RAM_TRANSLATE(A);
+		samp->Zrow = RAM_TRANSLATE_ROW(A);
+		samp->Zcol = RAM_TRANSLATE_COL(A);
 		fast_cycle = sam->mpu_rate_fast;
 	}
 
@@ -531,7 +583,13 @@ int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	// CPU address changes.
 	uint16_t b3_0 = sam->vcounter[VC_B3_0].value;
 	uint16_t V = (sam->vcounter[VC_B15_5].value << 5) | (sam->vcounter[VC_B4].value << 4) | b3_0;
-	samp->V = sam->mpu_rate_fast ? samp->Z : VRAM_TRANSLATE(V);
+	if (sam->mpu_rate_fast) {
+		samp->Vrow = samp->Zrow;
+		samp->Vcol = samp->Zcol;
+	} else {
+		samp->Vrow = VRAM_TRANSLATE_ROW(V);
+		samp->Vcol = VRAM_TRANSLATE_COL(V);
+	}
 
 	// Either way, need to advance the VDG address pointer.
 
@@ -688,12 +746,12 @@ static void update_from_register(struct MC6883_private *sam) {
 	case 0: // 4K
 	case 1: // 16K
 		sam->ram_page_bit = 0;
-		sam->ram_ras1 = 0x8080;
+		sam->ram_ras1 = 0x80;
 		break;
 	default:
 	case 2:
 	case 3: // 64K
-		sam->ram_page_bit = sam->P ? 0x8000 : 0;
+		sam->ram_page_bit = sam->P ? 0x80 : 0;
 		sam->ram_ras1 = 0;
 		break;
 	}

@@ -29,8 +29,10 @@ struct MC6883 {
 	struct part part;
 
 	unsigned S;
-	unsigned Z;
-	unsigned V;
+	unsigned Zrow;
+	unsigned Zcol;
+	unsigned Vrow;
+	unsigned Vcol;
 
 	_Bool RAS0;
 	_Bool RAS1;

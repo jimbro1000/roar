@@ -1283,15 +1283,15 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 		md->CPU->D = md->cart->read(md->cart, A, 0, 0, md->CPU->D);
 	}
 
-	unsigned nWE = 1;
-	unsigned Zrow = md->SAM->Z;
-	unsigned Zcol = md->SAM->Z >> 8;
+	unsigned Zrow = md->SAM->Zrow;
+	unsigned Zcol = md->SAM->Zcol;
 	uint8_t ram_D = 0xff;
+
 	if (md->SAM->RAS0) {
-		ram_d8(md->RAM, nWE, 0, Zrow, Zcol, &ram_D);
+		ram_d8(md->RAM, 1, 0, Zrow, Zcol, &ram_D);
 	}
 	if (md->SAM->RAS1) {
-		ram_d8(md->RAM, nWE, 1, Zrow, Zcol, &ram_D);
+		ram_d8(md->RAM, 1, 1, Zrow, Zcol, &ram_D);
 	}
 
 	if (md->cart && md->cart->EXTMEM) {
@@ -1388,14 +1388,14 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 		}
 	}
 
-	unsigned nWE = 0;
-	unsigned Zrow = md->SAM->Z;
-	unsigned Zcol = md->SAM->Z >> 8;
+	unsigned Zrow = md->SAM->Zrow;
+	unsigned Zcol = md->SAM->Zcol;
+
 	if (md->SAM->RAS0) {
-		ram_d8(md->RAM, nWE, 0, Zrow, Zcol, &md->CPU->D);
+		ram_d8(md->RAM, 0, 0, Zrow, Zcol, &md->CPU->D);
 	}
 	if (md->SAM->RAS1) {
-		ram_d8(md->RAM, nWE, 1, Zrow, Zcol, &md->CPU->D);
+		ram_d8(md->RAM, 0, 1, Zrow, Zcol, &md->CPU->D);
 	}
 }
 
@@ -1439,9 +1439,7 @@ static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest
 	uint16_t attr = (PIA_VALUE_B(md->PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
 		int n = mc6883_vdg_bytes(md->SAM, nbytes);
-		unsigned Zrow = md->SAM->V;
-		unsigned Zcol = md->SAM->V >> 8;
-		uint8_t *Vp = ram_a8(md->RAM, 0, Zrow, Zcol);
+		uint8_t *Vp = ram_a8(md->RAM, 0, md->SAM->Vrow, md->SAM->Vcol);
 		if (dest && Vp) {
 			for (int i = n; i; i--) {
 				uint16_t D = *(Vp++) | attr;
@@ -1466,9 +1464,7 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 	uint16_t Aram7 = EnI ? 0x80 : 0;
 	while (nbytes > 0) {
 		int n = mc6883_vdg_bytes(md->SAM, nbytes);
-		unsigned Zrow = md->SAM->V;
-		unsigned Zcol = md->SAM->V >> 8;
-		uint8_t *Vp = ram_a8(md->RAM, 0, Zrow, Zcol);
+		uint8_t *Vp = ram_a8(md->RAM, 0, md->SAM->Vrow, md->SAM->Vcol);
 		if (dest && Vp) {
 			for (int i = n; i; i--) {
 				uint16_t Dram = *(Vp++);
