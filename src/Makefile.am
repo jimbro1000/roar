@@ -37,6 +37,7 @@ xroar_SOURCES = \
 	logging.c logging.h \
 	machine.c machine.h \
 	module.c module.h \
+	mos6551.c mos6551.h \
 	ntsc.c ntsc.h \
 	null/ui_null.c \
 	null/vo_null.c \

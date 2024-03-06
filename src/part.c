@@ -69,6 +69,7 @@ extern const struct partdb_entry mc6821_part;
 extern const struct partdb_entry mc6847_part;
 extern const struct partdb_entry mc6847t1_part;
 extern const struct partdb_entry mc6883_part;
+extern const struct partdb_entry mos6551_part;
 extern const struct partdb_entry sn76489_part;
 extern const struct partdb_entry spi65_part;
 extern const struct partdb_entry tcc1014_1986_part;
@@ -132,6 +133,8 @@ const struct partdb_entry *partdb[] = {
 	&mc6847_part,
 	&mc6847t1_part,
 #endif
+
+	&mos6551_part,
 
 #ifdef WANT_PART_TCC1014
 	&tcc1014_1986_part,
