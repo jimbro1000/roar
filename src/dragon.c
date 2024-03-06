@@ -82,6 +82,9 @@ struct machine_dragon {
 
 	int cycles;
 
+	// RAM read buffer.  Driven to data bus only when SAM S == 0.
+	uint8_t Dread;
+
 	// Debug
 	struct bp_session *bp_session;
 	_Bool single_step;
@@ -1279,28 +1282,9 @@ static void dragon_instruction_posthook(void *sptr) {
 }
 
 static void read_byte(struct machine_dragon *md, unsigned A) {
-	if (md->cart) {
-		md->CPU->D = md->cart->read(md->cart, A, 0, 0, md->CPU->D);
-	}
-
-	unsigned Zrow = md->SAM->Zrow;
-	unsigned Zcol = md->SAM->Zcol;
-	uint8_t ram_D = 0xff;
-
-	if (md->SAM->RAS0) {
-		ram_d8(md->RAM, 1, 0, Zrow, Zcol, &ram_D);
-	}
-	if (md->SAM->RAS1) {
-		ram_d8(md->RAM, 1, 1, Zrow, Zcol, &ram_D);
-	}
-
-	if (md->cart && md->cart->EXTMEM) {
-		return;
-	}
-
 	switch (md->SAM->S) {
 	case 0:
-		md->CPU->D = ram_D;
+		md->CPU->D = md->Dread;
 		break;
 	case 1:
 	case 2:
@@ -1351,11 +1335,7 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 }
 
 static void write_byte(struct machine_dragon *md, unsigned A) {
-	if (md->cart) {
-		md->CPU->D = md->cart->write(md->cart, A, 0, 0, md->CPU->D);
-	}
-
-	if ((!md->cart || !md->cart->EXTMEM) && ((md->SAM->S & 4) || md->unexpanded_dragon32)) {
+	if ((md->SAM->S & 4) || md->unexpanded_dragon32) {
 		switch (md->SAM->S) {
 		case 1:
 		case 2:
@@ -1387,50 +1367,78 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			break;
 		}
 	}
-
-	unsigned Zrow = md->SAM->Zrow;
-	unsigned Zcol = md->SAM->Zcol;
-
-	if (md->SAM->RAS0) {
-		ram_d8(md->RAM, 0, 0, Zrow, Zcol, &md->CPU->D);
-	}
-	if (md->SAM->RAS1) {
-		ram_d8(md->RAM, 0, 1, Zrow, Zcol, &md->CPU->D);
-	}
 }
+
+// Called by SAM to perform CPU cycle based on SAM decode of address bus.
+//
+// Set up to be called with ncycles = 0 by dragon_read_byte() and
+// dragon_write_byte().
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	struct machine_dragon *md = sptr;
-	md->cycles -= ncycles;
-	if (md->cycles <= 0) md->CPU->running = 0;
-	event_current_tick += ncycles;
-	event_run_queue(&MACHINE_EVENT_LIST);
-	MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq);
-	MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq);
+
+	if (ncycles) {
+		md->cycles -= ncycles;
+		if (md->cycles <= 0) md->CPU->running = 0;
+		event_current_tick += ncycles;
+		event_run_queue(&MACHINE_EVENT_LIST);
+		MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq);
+		MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq);
+	}
+
+	unsigned Zrow = md->SAM->Zrow;
+	unsigned Zcol = md->SAM->Zcol;
+	md->Dread = 0xff;
+	if (RnW) {
+		if (md->SAM->RAS0) {
+			ram_d8(md->RAM, 1, 0, Zrow, Zcol, &md->Dread);
+		}
+		if (md->SAM->RAS1) {
+			ram_d8(md->RAM, 1, 1, Zrow, Zcol, &md->Dread);
+		}
+	}
+
+	_Bool EXTMEM = 0;
+	if (md->cart) {
+		if (RnW) {
+			md->CPU->D = md->cart->read(md->cart, A, 0, 0, md->CPU->D);
+		} else {
+			md->CPU->D = md->cart->write(md->cart, A, 0, 0, md->CPU->D);
+		}
+		EXTMEM = md->cart->EXTMEM;
+	}
 
 	if (RnW) {
-		read_byte(md, A);
+		if (!EXTMEM) {
+			read_byte(md, A);
+		}
 #ifdef WANT_GDB_TARGET
 		if (md->bp_session->wp_read_list)
 			bp_wp_read_hook(md->bp_session, A);
 #endif
 	} else {
-		write_byte(md, A);
+		if (!EXTMEM) {
+			write_byte(md, A);
+		}
 #ifdef WANT_GDB_TARGET
 		if (md->bp_session->wp_write_list)
 			bp_wp_write_hook(md->bp_session, A);
 #endif
 	}
+
+	if (!RnW) {
+		if (md->SAM->RAS0) {
+			ram_d8(md->RAM, 0, 0, Zrow, Zcol, &md->CPU->D);
+		}
+		if (md->SAM->RAS1) {
+			ram_d8(md->RAM, 0, 1, Zrow, Zcol, &md->CPU->D);
+		}
+	}
 }
 
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
-	struct machine_dragon *md = sptr;
 	(void)ncycles;
-	if (RnW) {
-		read_byte(md, A);
-	} else {
-		write_byte(md, A);
-	}
+	cpu_cycle(sptr, 0, RnW, A);
 }
 
 static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest) {
