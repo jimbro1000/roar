@@ -116,7 +116,8 @@ struct machine_dragon {
 	_Bool is_dragon;
 	_Bool is_dragon32;
 	_Bool unexpanded_dragon32;
-	_Bool relaxed_pia_decode;
+	_Bool relaxed_pia0_decode;
+	_Bool relaxed_pia1_decode;
 };
 
 #define DRAGON_SER_RAM      (2)
@@ -749,17 +750,18 @@ static _Bool dragon_finish_common(struct machine_dragon *md) {
 
 	// Defaults: Dragon 64 with 64K
 	md->unexpanded_dragon32 = 0;
-	md->relaxed_pia_decode = 0;
+	md->relaxed_pia0_decode = 0;
+	md->relaxed_pia1_decode = 0;
 
 	if (!md->is_dragon) {
-		md->relaxed_pia_decode = 1;
+		md->relaxed_pia0_decode = 1;
+		md->relaxed_pia1_decode = 1;
 	}
 
-	if (md->is_dragon) {
-		if (md->is_dragon32 && mc->ram <= 32) {
-			md->unexpanded_dragon32 = 1;
-			md->relaxed_pia_decode = 1;
-		}
+	if (md->is_dragon32 && mc->ram <= 32) {
+		md->unexpanded_dragon32 = 1;
+		md->relaxed_pia0_decode = 1;
+		md->relaxed_pia1_decode = 1;
 	}
 
 	// Keyboard interface
@@ -1266,23 +1268,28 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 		md->CPU->D = md->rom0[A & 0x3fff];
 		break;
 	case 3:
-		if (md->cart)
+		if (md->cart) {
 			md->CPU->D = md->cart->read(md->cart, A & 0x3fff, 0, 1, md->CPU->D);
+			break;
+		}
 		break;
 	case 4:
-		if (md->relaxed_pia_decode || (A & 4) == 0) {
+		if (md->relaxed_pia0_decode || (A & 4) == 0) {
 			md->CPU->D = mc6821_read(md->PIA0, A);
 			break;
 		}
 		break;
 	case 5:
-		if (md->relaxed_pia_decode || (A & 4) == 0) {
+		if (md->relaxed_pia1_decode || (A & 4) == 0) {
 			md->CPU->D = mc6821_read(md->PIA1, A);
+			break;
 		}
 		break;
 	case 6:
-		if (md->cart)
+		if (md->cart) {
 			md->CPU->D = md->cart->read(md->cart, A, 1, 0, md->CPU->D);
+			break;
+		}
 		break;
 	default:
 		break;
@@ -1297,23 +1304,28 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			md->CPU->D = md->rom0[A & 0x3fff];
 			break;
 		case 3:
-			if (md->cart)
+			if (md->cart) {
 				md->CPU->D = md->cart->write(md->cart, A & 0x3fff, 0, 1, md->CPU->D);
+				break;
+			}
 			break;
 		case 4:
-			if (md->relaxed_pia_decode || (A & 4) == 0) {
+			if (md->relaxed_pia0_decode || (A & 4) == 0) {
 				mc6821_write(md->PIA0, A, md->CPU->D);
 				break;
 			}
 			break;
 		case 5:
-			if (md->relaxed_pia_decode || (A & 4) == 0) {
+			if (md->relaxed_pia1_decode || (A & 4) == 0) {
 				mc6821_write(md->PIA1, A, md->CPU->D);
+				break;
 			}
 			break;
 		case 6:
-			if (md->cart)
+			if (md->cart) {
 				md->CPU->D = md->cart->write(md->cart, A, 1, 0, md->CPU->D);
+				break;
+			}
 			break;
 		default:
 			break;
