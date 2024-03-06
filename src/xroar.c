@@ -2056,6 +2056,7 @@ static void set_machine(const char *name) {
 			private_cfg.machine.keymap = ANY_AUTO;
 		}
 		xroar.machine_config->cpu = private_cfg.machine.cpu;
+		private_cfg.machine.cpu = CPU_MC6809;
 		if (private_cfg.machine.description) {
 			xroar.machine_config->description = private_cfg.machine.description;
 			private_cfg.machine.description = NULL;
