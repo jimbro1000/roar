@@ -23,10 +23,19 @@
 #include <stdio.h>
 #include <sys/types.h>
 
+// Returns size of file.  errno set if appropriate.
+
 off_t fs_file_size(FILE *fd);
 
-// unlike ftruncate(), this leaves file position at new EOF
+// Truncate a file.  unlike ftruncate(), this leaves file position at new EOF.
+// errno set if appropriate.
+
 int fs_truncate(FILE *fd, off_t length);
+
+// Compute CRC32 of entire file from current position.  File position is
+// recorded and reset before return on success.  CRC32_RESET is returned on
+// error, which is of course a valid CRC, so if it's important, be sure to
+// check that.
 
 uint32_t fs_file_crc32(FILE *fd);
 

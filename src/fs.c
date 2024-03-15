@@ -34,7 +34,7 @@
 #include "crc32.h"
 #include "fs.h"
 
-// POSIX way to find file size.  errno set as appropriate.
+// POSIX way to find file size.  errno set if appropriate.
 
 off_t fs_file_size(FILE *fd) {
 	int rfd = fileno(fd);
@@ -46,9 +46,10 @@ off_t fs_file_size(FILE *fd) {
 	return stat_buf.st_size;
 }
 
-// POSIX says operations on the file descriptor associated with a stream are ok
-// if you fflush() first and fseek() afterwards.  Every call in this sets errno
-// if necessary, so caller can check errno on failure too.
+// Truncate a file.  POSIX says operations on the file descriptor associated
+// with a stream are ok if you fflush() first and fseek() afterwards.  Every
+// call in this sets errno if necessary, so caller can check errno on failure
+// too.
 
 int fs_truncate(FILE *fd, off_t length) {
 	int fno = fileno(fd);
@@ -61,10 +62,7 @@ int fs_truncate(FILE *fd, off_t length) {
 	return fseeko(fd, length, SEEK_SET);
 }
 
-// Compute CRC32 of entire file from current position.  File position is
-// recorded and reset before return on success.  CRC32_RESET is returned on
-// error, which is of course a valid CRC, so if it's important, be sure to
-// check that.
+// Compute CRC32 of entire file from current position.
 
 uint32_t fs_file_crc32(FILE *fd) {
 	off_t offset = ftello(fd);
