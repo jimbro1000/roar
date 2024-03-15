@@ -69,24 +69,38 @@ uint32_t fs_file_crc32(FILE *fd) {
 	if (offset < 0)
 		return CRC32_RESET;
 
-	uint8_t buf[8192];
 	uint32_t crc32 = CRC32_RESET;
 
-	for (;;) {
-		size_t nread = fread(buf, 1, sizeof(buf), fd);
-		if (nread > 0) {
-			crc32 = crc32_block(crc32, buf, nread);
-		}
-		if (nread < sizeof(buf))
-			break;
-	}
+	// Update CRC32 until there's a short read
+	while (fs_file_crc32_block(fd, &crc32, 8192) == 8192);
 
+	// If that short read was EOF, all good, reset file position and return
 	if (feof(fd)) {
 		fseeko(fd, offset, SEEK_SET);
 		return crc32;
 	}
 
+	// Else return CRC32_RESET
 	return CRC32_RESET;
+}
+
+// Update running CRC32 with data from file.
+
+size_t fs_file_crc32_block(FILE *fd, uint32_t *crc32, size_t length) {
+	uint8_t buf[8192];
+	size_t have_read = 0;
+	while (length > 0) {
+		size_t to_read = (length > sizeof(buf)) ? sizeof(buf) : length;
+		size_t nread = fread(buf, 1, to_read, fd);
+		have_read += nread;
+		if (nread > 0) {
+			*crc32 = crc32_block(*crc32, buf, nread);
+		}
+		if (nread < to_read)
+			break;
+		length -= nread;
+	}
+	return have_read;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

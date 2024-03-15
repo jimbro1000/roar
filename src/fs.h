@@ -39,6 +39,12 @@ int fs_truncate(FILE *fd, off_t length);
 
 uint32_t fs_file_crc32(FILE *fd);
 
+// Update running CRC32 with data of specified length read from current
+// position in file.  Returns number of bytes read.  Short read could mean EOF,
+// so check for that if important.
+
+size_t fs_file_crc32_block(FILE *fd, uint32_t *crc32, size_t length);
+
 // Writing basic integer types
 
 int fs_write_uint8(FILE *fd, int value);
