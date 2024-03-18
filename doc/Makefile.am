@@ -9,5 +9,16 @@ info_TEXINFOS = xroar.texi
 EXTRA_DIST += \
 	xroar.conf.example \
 	xroar.pdf \
-	xroar-screens.png \
-	xroar-timebandit-af.png
+	file-run.png \
+	floppy-control.png \
+	hardware-cartridge.png \
+	hardware-machine.png \
+	menubar.png \
+	printer-control.png \
+	tape-input.png \
+	tool-kbd-lang.png \
+	trouble-cross-colour.png \
+	trouble-no-basic.png \
+	tv-controls.png \
+	view-composite-rendering.png \
+	view-tv-input.png
