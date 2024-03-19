@@ -27,6 +27,7 @@
 #include "vo.h"
 #include "vo_render.h"
 #include "xconfig.h"
+#include "xroar.h"
 
 extern struct module vo_null_module;
 static struct module * const default_vo_module_list[] = {
@@ -277,9 +278,12 @@ extern inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _B
 
 // Select cross-colour renderer
 
-void vo_set_cmp_ccr(struct vo_interface *vo, int ccr) {
-	vo->cmp_ccr = ccr;
+void vo_set_cmp_ccr(struct vo_interface *vo, _Bool notify, int value) {
+	vo->cmp_ccr = value;
 	update_render_parameters(vo);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_ccr, value, NULL);
+	}
 }
 
 extern inline void vo_set_cmp_fs(struct vo_interface *vo, _Bool notify, int value);

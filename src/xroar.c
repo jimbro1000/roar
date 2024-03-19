@@ -1505,10 +1505,7 @@ void xroar_set_ccr(_Bool notify, int action) {
 		action = VO_CMP_CCR_PALETTE;
 	}
 	private_cfg.vo.ccr = action;
-	vo_set_cmp_ccr(xroar.vo_interface, private_cfg.vo.ccr);
-	if (notify) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_ccr, private_cfg.vo.ccr, NULL);
-	}
+	vo_set_cmp_ccr(xroar.vo_interface, notify, private_cfg.vo.ccr);
 }
 
 void xroar_set_tv_input(_Bool notify, int action) {

@@ -268,7 +268,7 @@ inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool val
 // Select cross-colour renderer
 //     int ccr;  // VO_CMP_CCR_*
 
-void vo_set_cmp_ccr(struct vo_interface *vo, int ccr);
+void vo_set_cmp_ccr(struct vo_interface *vo, _Bool notify, int value);
 
 // Configure composite video
 
