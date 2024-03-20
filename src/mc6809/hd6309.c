@@ -245,6 +245,24 @@ static struct part *hd6309_allocate(void) {
 	cpu->run = hd6309_run;
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
 
+	// Tested: on power on, all registers have random-ish values, although
+	// it definitely seems to err towards bits being set in my environment.
+	// I've seen all bits of CC set on power up *except* E, but no bits set
+	// is valid, so I'll leave CC clear.
+	//
+	// CC has F and I set as part of reset.  DP is explicitly cleared on
+	// reset, but other registers are left untouched.
+	//
+	// Not tested yet: extra 6309 register initialisation.
+
+	REG_D = 0xffff;
+	REG_X = 0xffff;
+	REG_Y = 0xffff;
+	REG_U = 0xffff;
+	REG_S = 0xffff;
+	REG_W = 0xffff;
+	REG_V = 0xffff;
+
 #ifdef TRACE
 	// Tracing
 	hcpu->tracer = hd6309_trace_new(hcpu);
