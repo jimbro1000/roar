@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6809 CPU.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -218,6 +218,11 @@ static struct part *mc6809_allocate(void) {
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
+
+	// Tested: (almost?) always, all registers are zeroed on power on.
+	//
+	// CC has F and I set as part of reset.  DP is explicitly cleared on
+	// reset, but other registers are left untouched.
 
 #ifdef TRACE
 	// Tracing
