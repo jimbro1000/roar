@@ -418,7 +418,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		xroar_set_fullscreen(1, XROAR_NEXT);
 		break;
 	case ui_tag_ccr:
-		xroar_set_ccr(1, tag_value);
+		vo_set_cmp_ccr(xroar.vo_interface, 1, tag_value);
 		break;
 	case ui_tag_tv_input:
 		xroar_set_tv_input(1, tag_value);
@@ -530,7 +530,8 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 	// Video
 
 	case ui_tag_ccr:
-		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 4), TAGV(tag, value), MF_BYCOMMAND);
+		windows32_vo_update_cmp_renderer(uisdl2, value);
 		break;
 
 	case ui_tag_tv_input:

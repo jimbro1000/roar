@@ -45,14 +45,18 @@ pad_top=5 xalign=right id=IDOK button &Close
 
 pad=5 id=TV_CONTROLS dialog XRoar TV Controls
 
-h1 General
+h1 Audio
 
 table
 tr td text Volume
    td width=47 id=VOLUME spinbox
-height=4 tr td td
+end table
+
+h1 Video
+
+table
 tr td text Brightness
-   td id=BRIGHTNESS spinbox
+   td width=47 id=BRIGHTNESS spinbox
 tr td text Contrast
    td id=CONTRAST spinbox
 tr td text Colour
@@ -68,8 +72,10 @@ end table
 h1 Composite Video
 
 table
-tr td width=40 text F(s)
-   td width=80 id=FS combobox
+tr td width=40 text Renderer
+   td width=80 id=RENDERER combobox
+tr td text F(s)
+   td id=FS combobox
 tr td text F(sc)
    td id=FSC combobox
 tr td text System

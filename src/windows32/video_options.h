@@ -34,6 +34,7 @@ void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_picture(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_ntsc_scaling(struct ui_sdl2_interface *uisdl2, int value);
 
+void windows32_vo_update_cmp_renderer(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_cmp_fs(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_cmp_fsc(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_cmp_system(struct ui_sdl2_interface *uisdl2, int value);

@@ -42,6 +42,7 @@ static HWND vo_saturation = NULL;
 static HWND vo_hue = NULL;
 static HWND cbt_picture = NULL;
 static HWND tb_ntsc_scaling = NULL;
+static HWND cbt_cmp_renderer = NULL;
 static HWND cbt_cmp_fs = NULL;
 static HWND cbt_cmp_fsc = NULL;
 static HWND cbt_cmp_system = NULL;
@@ -77,6 +78,11 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	}
 
 	tb_ntsc_scaling = GetDlgItem(vo_window, IDC_BN_NTSC_SCALING);
+
+	cbt_cmp_renderer = GetDlgItem(vo_window, IDC_CB_RENDERER);
+	for (unsigned i = 0; vo_cmp_ccr_list[i].name; i++) {
+		SendMessage(cbt_cmp_renderer, CB_ADDSTRING, 0, (LPARAM)vo_cmp_ccr_list[i].description);
+	}
 
 	cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
 	for (unsigned i = 0; i < NUM_VO_RENDER_FS; i++) {
@@ -138,6 +144,11 @@ void windows32_vo_update_picture(struct ui_sdl2_interface *uisdl2, int value) {
 void windows32_vo_update_ntsc_scaling(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
 	SendMessage(tb_ntsc_scaling, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
+}
+
+void windows32_vo_update_cmp_renderer(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
+	SendMessage(cbt_cmp_renderer, CB_SETCURSEL, value, 0);
 }
 
 void windows32_vo_update_cmp_fs(struct ui_sdl2_interface *uisdl2, int value) {
@@ -213,6 +224,12 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			switch (id) {
 			case IDC_CB_PICTURE:
 				xroar_set_picture(0, value);
+				break;
+
+			case IDC_CB_RENDERER:
+				if (xroar.vo_interface) {
+					vo_set_cmp_ccr(xroar.vo_interface, 1, value);
+				}
 				break;
 
 			case IDC_CB_FS:
