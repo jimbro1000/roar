@@ -76,6 +76,7 @@ uint32_t fs_file_crc32(FILE *fd) {
 
 	// If that short read was EOF, all good, reset file position and return
 	if (feof(fd)) {
+		clearerr(fd);
 		fseeko(fd, offset, SEEK_SET);
 		return crc32;
 	}
