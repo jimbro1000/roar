@@ -2,7 +2,7 @@
  *
  *  \brief CAS format tape images.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -706,6 +706,16 @@ static int cas_pulse_in(struct tape *t, int *pulse_width) {
 
 /* Writing */
 
+// CAS writing takes an incoming stream of samples and measures the time
+// between zero crossings as "pulses".  If no average pulse widths have yet
+// been calculated, a buffer of pulses is built up - this should be coming from
+// leader bytes, with alternating '0' and '1' bits.
+//
+// Once the pulse buffer is filled, it is processed to calculate nominal
+// average pulse widths for cycles forming '0' and '1' bits.  The buffer and
+// any subsequently pulses are then converted to bits and written until silence
+// or motor control desyncs the writer, and the process begins again.
+
 static void process_pulse_buffer(struct tape *t);
 
 static void rewind_tape(struct tape *t) {
@@ -886,6 +896,8 @@ static void buffer_pulse(struct tape *t, int ticks) {
 	cas->output.pulse_buffer[cas->output.num_buffered_pulses++] = ticks;
 	if (cas->output.num_buffered_pulses < PULSE_BUFFER_SIZE)
 		return;
+	// Pulse buffer full, process it to determine average pulse widths for
+	// '0' and '1' bits, and write the buffered pulses.
 	process_pulse_buffer(t);
 }
 
@@ -900,13 +912,13 @@ static void pulse_out(struct tape *t, int ticks) {
 		return;
 	}
 
-	// haven't determined cycle widths yet
 	if (cas->cue.builder->bit_av_pw == 0) {
+		// Haven't determined pulse widths yet, so buffer this pulse.
 		buffer_pulse(t, ticks);
 		return;
 	}
 
-	// otherwise add the pulse
+	// Otherwise add the pulse.
 	add_pulse(t, ticks);
 }
 
@@ -919,6 +931,8 @@ static int cas_sample_out(struct tape *t, uint8_t sample, int ticks) {
 		cas->output.sense = sense;
 	}
 	if (sense != cas->output.sense) {
+		// Sense changed; this is a zero crossing.  Emit as a "pulse"
+		// with pulse_out().
 		pulse_out(t, cas->output.pulse_ticks);
 		cas->output.pulse_ticks = ticks;
 		cas->output.sense = sense;
