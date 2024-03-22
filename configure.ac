@@ -228,8 +228,8 @@ AM_COND_IF([WASM], [
 		AC_DEFINE([HAVE_WASM], 1, [WebAssembly build])
 		WASM_CFLAGS=""
 		WASM_LIBS="[-s WASM=1 -s EXPORTED_FUNCTIONS='@wasm/exported_functions' -s EXPORTED_RUNTIME_METHODS=\"['FS','ccall','cwrap']\"]"
-		test -z "$SDL_CFLAGS" && SDL_CFLAGS="-s USE_SDL=2"
-		test -z "$SDL_LIBS" && SDL_LIBS="-s USE_SDL=2"
+		test -z "$SDL_CFLAGS" && SDL_CFLAGS="--use-port=sdl2"
+		test -z "$SDL_LIBS" && SDL_LIBS="--use-port=sdl2"
 		test -z "$enable_trace" && enable_trace=no
 		test -z "$enable_ao_null" && enable_ao_null=no
 		test -z "$enable_becker" && enable_becker=no
