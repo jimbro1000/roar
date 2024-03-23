@@ -22,13 +22,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <sndfile.h>
-
 #include "xalloc.h"
 
 #include "events.h"
 #include "fs.h"
 #include "logging.h"
+#include "sndfile_compat.h"
 #include "tape.h"
 
 #define BLOCK_LENGTH (512)

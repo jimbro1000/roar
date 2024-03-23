@@ -54,6 +54,7 @@ xroar_SOURCES = \
 	sound.c sound.h \
 	tape.c tape.h \
 	tape_cas.c \
+	tape_sndfile.c \
 	ui.c ui.h \
 	vdg_palette.c vdg_palette.h \
 	vdisk.c vdisk.h \
@@ -373,8 +374,6 @@ endif
 if SNDFILE
 xroar_CFLAGS += $(SNDFILE_CFLAGS)
 xroar_LDADD += $(SNDFILE_LIBS)
-xroar_SOURCES += \
-	tape_sndfile.c
 endif
 
 # libpng support

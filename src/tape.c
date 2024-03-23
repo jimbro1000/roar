@@ -541,16 +541,11 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 		}
 		break;
 	default:
-#ifdef HAVE_SNDFILE
 		if ((ti->tape_input = tape_sndfile_open(ti, filename, "rb", -1)) == NULL) {
 			LOG_WARN("Failed to open audio: '%s'\n", filename);
 			return -1;
 		}
 		break;
-#else
-		LOG_WARN("Failed to open unknown type: '%s'\n", filename);
-		return -1;
-#endif
 	}
 	if (ti->tape_input->module->set_panning)
 		ti->tape_input->module->set_panning(ti->tape_input, xroar.cfg.tape.pan);
@@ -587,15 +582,10 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 		}
 		break;
 	default:
-#ifdef HAVE_SNDFILE
 		if ((ti->tape_output = tape_sndfile_open(ti, filename, "wb", tip->ao_rate)) == NULL) {
 			LOG_WARN("Failed to open audio for writing: '%s'\n", filename);
 			return -1;
 		}
-#else
-		LOG_WARN("Failed to open unknown type for writing: '%s'\n", filename);
-		return -1;
-#endif
 		break;
 	}
 
