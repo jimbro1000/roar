@@ -63,6 +63,7 @@ struct vdisk {
 
 	enum xroar_filetype filetype;
 	char *filename;
+	_Bool new_disk;  // a new disk doesn't need backed up on rewrite
 	_Bool dirty;  // modified: needs saving, if write_back is enabled
 	_Bool write_back;
 	_Bool write_protect;

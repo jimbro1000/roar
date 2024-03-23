@@ -205,13 +205,15 @@ int vdisk_save(struct vdisk *disk) {
 		LOG_WARN("No writer for virtual disk file type.\n");
 		return -1;
 	}
-	sds backup_filename = sdsnew(disk->filename);
-	backup_filename = sdscat(backup_filename, ".bak");
-	struct stat statbuf;
-	if (stat(backup_filename, &statbuf) != 0) {
-		rename(disk->filename, backup_filename);
+	if (!disk->new_disk) {
+		sds backup_filename = sdsnew(disk->filename);
+		backup_filename = sdscat(backup_filename, ".bak");
+		struct stat statbuf;
+		if (stat(backup_filename, &statbuf) != 0) {
+			rename(disk->filename, backup_filename);
+		}
+		sdsfree(backup_filename);
 	}
-	sdsfree(backup_filename);
 	int r = dispatch[i].save_func(disk);
 	if (r == 0)
 		disk->dirty = 0;
@@ -1256,6 +1258,10 @@ _Bool vdisk_get_info(struct vdisk_ctx *ctx, struct vdisk_info *vinfo) {
 	unsigned first_sector = 256;
 	unsigned last_sector = 0;
 	int ssize_code = -2;
+
+	*vinfo = (struct vdisk_info){0};
+	if (disk->num_cylinders == 0 || disk->num_heads == 0)
+		return 1;
 
 	for (unsigned c = 0; c < disk->num_cylinders; c++) {
 		for (unsigned h = 0; h < disk->num_heads; h++) {
