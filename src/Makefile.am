@@ -50,6 +50,7 @@ xroar_SOURCES = \
 	screenshot.c screenshot.h \
 	serialise.c serialise.h \
 	snapshot.c snapshot.h \
+	sndfile_compat.c sndfile_compat.h \
 	sound.c sound.h \
 	tape.c tape.h \
 	tape_cas.c \
