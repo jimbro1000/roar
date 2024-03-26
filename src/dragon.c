@@ -86,6 +86,10 @@ struct machine_dragon {
 
 	int cycles;
 
+	// Clock inhibit - for when "speed up" code wants to access memory
+	// without advancing the clock.
+	_Bool clock_inhibit;
+
 	// RAM read buffer.  Driven to data bus only when SAM S == 0.
 	uint8_t Dread;
 
@@ -320,8 +324,10 @@ static void vdg_fs(void *sptr, _Bool level);
 static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void printer_ack(void *sptr, _Bool ack);
 
+static inline void advance_clock(struct machine_dragon *md, int ncycles);
+static void dragon_cpu_cycle(struct machine_dragon *md, _Bool RnW,
+			     uint16_t A, unsigned Zrow, unsigned Zcol);
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
-static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void dragon_instruction_posthook(void *sptr);
 static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
 static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
@@ -1258,6 +1264,110 @@ static void dragon_instruction_posthook(void *sptr) {
 	md->single_step = 0;
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// CPU cycles
+
+static inline void advance_clock(struct machine_dragon *md, int ncycles);
+static void read_byte(struct machine_dragon *md, unsigned A);
+static void write_byte(struct machine_dragon *md, unsigned A);
+
+// The SAM's mc6883_mem_cycle() is set up to call cpu_cycle(), which does the
+// following:
+
+// - calls advance_clock() to indicate time has passed
+// - collects together interrupt sources and presents them to the CPU
+// - calls dragon_cpu_cycle() to access RAM and devices common to the arch
+
+// Derived machines can override cpu_cycle() to implement local customisations.
+//
+// dragon_cpu_cycle() in turn calls read_byte() and write_byte() as
+// appropriate.  At the moment these have variations hard coded for derived
+// machines.  It would be nice to abstract those somehow, but the call graph is
+// already somewhat convoluted...
+
+// dragon_read_byte() and dragon_write_byte() assert clock_inhibit before
+// calling to do the same thing without advancing the clock.
+
+static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
+	struct machine_dragon *md = sptr;
+
+	if (ncycles && !md->clock_inhibit) {
+		advance_clock(md, ncycles);
+		MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq);
+		MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq);
+	}
+
+	unsigned Zrow = md->SAM->Zrow;
+	unsigned Zcol = md->SAM->Zcol;
+
+	dragon_cpu_cycle(md, RnW, A, Zrow, Zcol);
+}
+
+// Advance clock and run scheduled events
+
+static inline void advance_clock(struct machine_dragon *md, int ncycles) {
+	md->cycles -= ncycles;
+	if (md->cycles <= 0) md->CPU->running = 0;
+	event_current_tick += ncycles;
+	event_run_queue(&MACHINE_EVENT_LIST);
+}
+
+// Common routine called by cpu_cycle() (or override) to access RAM and devices
+// for a CPU cycle.
+
+static void dragon_cpu_cycle(struct machine_dragon *md, _Bool RnW,
+			     uint16_t A, unsigned Zrow, unsigned Zcol) {
+	md->Dread = 0xff;
+	if (RnW) {
+		if (md->SAM->RAS0) {
+			ram_d8(md->RAM, 1, 0, Zrow, Zcol, &md->Dread);
+		}
+		if (md->SAM->RAS1) {
+			ram_d8(md->RAM, 1, 1, Zrow, Zcol, &md->Dread);
+		}
+	}
+
+	_Bool EXTMEM = 0;
+	if (md->cart) {
+		if (RnW) {
+			md->CPU->D = md->cart->read(md->cart, A, 0, 0, md->CPU->D);
+		} else {
+			md->CPU->D = md->cart->write(md->cart, A, 0, 0, md->CPU->D);
+		}
+		EXTMEM = md->cart->EXTMEM;
+	}
+
+	if (RnW) {
+		if (!EXTMEM) {
+			if (!md->read_byte || !md->read_byte(md, A))
+				read_byte(md, A);
+		}
+#ifdef WANT_GDB_TARGET
+		if (md->bp_session->wp_read_list)
+			bp_wp_read_hook(md->bp_session, A);
+#endif
+	} else {
+		if (!EXTMEM) {
+			if (!md->write_byte || !md->write_byte(md, A))
+				write_byte(md, A);
+		}
+#ifdef WANT_GDB_TARGET
+		if (md->bp_session->wp_write_list)
+			bp_wp_write_hook(md->bp_session, A);
+#endif
+	}
+
+	if (!RnW) {
+		if (md->SAM->RAS0) {
+			ram_d8(md->RAM, 0, 0, Zrow, Zcol, &md->CPU->D);
+		}
+		if (md->SAM->RAS1) {
+			ram_d8(md->RAM, 0, 1, Zrow, Zcol, &md->CPU->D);
+		}
+	}
+}
+
 static void read_byte(struct machine_dragon *md, unsigned A) {
 	switch (md->SAM->S) {
 	case 0:
@@ -1333,79 +1443,9 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 	}
 }
 
-// Called by SAM to perform CPU cycle based on SAM decode of address bus.
-//
-// Set up to be called with ncycles = 0 by dragon_read_byte() and
-// dragon_write_byte().
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
-	struct machine_dragon *md = sptr;
-
-	if (ncycles) {
-		md->cycles -= ncycles;
-		if (md->cycles <= 0) md->CPU->running = 0;
-		event_current_tick += ncycles;
-		event_run_queue(&MACHINE_EVENT_LIST);
-		MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq);
-		MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq);
-	}
-
-	unsigned Zrow = md->SAM->Zrow;
-	unsigned Zcol = md->SAM->Zcol;
-	md->Dread = 0xff;
-	if (RnW) {
-		if (md->SAM->RAS0) {
-			ram_d8(md->RAM, 1, 0, Zrow, Zcol, &md->Dread);
-		}
-		if (md->SAM->RAS1) {
-			ram_d8(md->RAM, 1, 1, Zrow, Zcol, &md->Dread);
-		}
-	}
-
-	_Bool EXTMEM = 0;
-	if (md->cart) {
-		if (RnW) {
-			md->CPU->D = md->cart->read(md->cart, A, 0, 0, md->CPU->D);
-		} else {
-			md->CPU->D = md->cart->write(md->cart, A, 0, 0, md->CPU->D);
-		}
-		EXTMEM = md->cart->EXTMEM;
-	}
-
-	if (RnW) {
-		if (!EXTMEM) {
-			if (!md->read_byte || !md->read_byte(md, A))
-				read_byte(md, A);
-		}
-#ifdef WANT_GDB_TARGET
-		if (md->bp_session->wp_read_list)
-			bp_wp_read_hook(md->bp_session, A);
-#endif
-	} else {
-		if (!EXTMEM) {
-			if (!md->write_byte || !md->write_byte(md, A))
-				write_byte(md, A);
-		}
-#ifdef WANT_GDB_TARGET
-		if (md->bp_session->wp_write_list)
-			bp_wp_write_hook(md->bp_session, A);
-#endif
-	}
-
-	if (!RnW) {
-		if (md->SAM->RAS0) {
-			ram_d8(md->RAM, 0, 0, Zrow, Zcol, &md->CPU->D);
-		}
-		if (md->SAM->RAS1) {
-			ram_d8(md->RAM, 0, 1, Zrow, Zcol, &md->CPU->D);
-		}
-	}
-}
-
-static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
-	(void)ncycles;
-	cpu_cycle(sptr, 0, RnW, A);
-}
+// VDG cycles
 
 static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest) {
 	(void)A;
@@ -1459,14 +1499,16 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 	}
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 /* Read a byte without advancing clock.  Used for debugging & breakpoints. */
 
 static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
 	(void)D;
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
+	md->clock_inhibit = 1;
 	mc6883_mem_cycle(md->SAM, 1, A);
-	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
+	md->clock_inhibit = 0;
 	return md->CPU->D;
 }
 
@@ -1475,9 +1517,9 @@ static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
 static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	md->CPU->D = D;
-	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
+	md->clock_inhibit = 1;
 	mc6883_mem_cycle(md->SAM, 0, A);
-	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
+	md->clock_inhibit = 0;
 }
 
 /* simulate an RTS without otherwise affecting machine state */
