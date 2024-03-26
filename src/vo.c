@@ -44,12 +44,15 @@ const char *vo_picture_name[NUM_VO_PICTURE] = {
 	"Underscan (736x552)"
 };
 
+// It's important that the order here is correct, as UI modules index into the
+// list for descriptive text.
+
 struct xconfig_enum vo_cmp_ccr_list[] = {
-	{ XC_ENUM_INT("none", VO_CMP_CCR_PALETTE, "no cross-colour") },
-	{ XC_ENUM_INT("simple", VO_CMP_CCR_2BIT, "four colour palette") },
-	{ XC_ENUM_INT("5bit", VO_CMP_CCR_5BIT, "5-bit lookup table") },
-	{ XC_ENUM_INT("partial", VO_CMP_CCR_PARTIAL, "partial simulated NTSC-only") },
-	{ XC_ENUM_INT("simulated", VO_CMP_CCR_SIMULATED, "simulated filtered analogue") },
+	{ XC_ENUM_INT("none", VO_CMP_CCR_PALETTE, "None") },
+	{ XC_ENUM_INT("simple", VO_CMP_CCR_2BIT, "Simple (2-bit LUT)") },
+	{ XC_ENUM_INT("5bit", VO_CMP_CCR_5BIT, "5-bit LUT") },
+	{ XC_ENUM_INT("partial", VO_CMP_CCR_PARTIAL, "Partial NTSC") },
+	{ XC_ENUM_INT("simulated", VO_CMP_CCR_SIMULATED, "Simulated") },
 	{ XC_ENUM_END() }
 };
 

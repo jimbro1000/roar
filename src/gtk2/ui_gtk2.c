@@ -248,6 +248,7 @@ static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer us
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
 	xroar_set_ccr(0, val);
+	gtk2_vo_update_cmp_renderer(global_uigtk2, val);
 }
 
 static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
@@ -732,6 +733,7 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 	case ui_tag_ccr:
 		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-palette");
 		uigtk2_notify_radio_action_set(radio, value, set_ccr, NULL);
+		gtk2_vo_update_cmp_renderer(uigtk2, value);
 		break;
 
 	case ui_tag_tv_input:

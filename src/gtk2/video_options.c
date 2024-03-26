@@ -45,6 +45,7 @@ static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data)
 static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_picture(GtkComboBox *widget, gpointer user_data);
 static void vo_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data);
+static void vo_change_cmp_renderer(GtkComboBox *widget, gpointer user_data);
 static void vo_change_cmp_fs(GtkComboBox *widget, gpointer user_data);
 static void vo_change_cmp_fsc(GtkComboBox *widget, gpointer user_data);
 static void vo_change_cmp_system(GtkComboBox *widget, gpointer user_data);
@@ -59,6 +60,7 @@ static GtkSpinButton *vo_saturation = NULL;
 static GtkSpinButton *vo_hue = NULL;
 static GtkComboBoxText *cbt_picture = NULL;
 static GtkToggleButton *tb_ntsc_scaling = NULL;
+static GtkComboBoxText *cbt_cmp_renderer = NULL;
 static GtkComboBoxText *cbt_cmp_fs = NULL;
 static GtkComboBoxText *cbt_cmp_fsc = NULL;
 static GtkComboBoxText *cbt_cmp_system = NULL;
@@ -90,6 +92,7 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	vo_hue = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_hue"));
 	cbt_picture = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "cbt_picture"));
 	tb_ntsc_scaling = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "tb_ntsc_scaling"));
+	cbt_cmp_renderer = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "cbt_cmp_renderer"));
 	cbt_cmp_fs = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "cbt_cmp_fs"));
 	cbt_cmp_fsc = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "cbt_cmp_fsc"));
 	cbt_cmp_system = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "cbt_cmp_system"));
@@ -98,6 +101,9 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	// Build lists
 	for (unsigned i = 0; i < NUM_VO_PICTURE; i++) {
 		gtk_combo_box_text_append_text(cbt_picture, vo_picture_name[i]);
+	}
+	for (unsigned i = 0; vo_cmp_ccr_list[i].name; i++) {
+		gtk_combo_box_text_append_text(cbt_cmp_renderer, vo_cmp_ccr_list[i].description);
 	}
 	for (unsigned i = 0; i < NUM_VO_RENDER_FS; i++) {
 		gtk_combo_box_text_append_text(cbt_cmp_fs, vo_render_fs_name[i]);
@@ -119,6 +125,7 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	g_signal_connect(vo_hue, "value-changed", G_CALLBACK(vo_change_hue), uigtk2);
 	g_signal_connect(cbt_picture, "changed", G_CALLBACK(vo_change_picture), uigtk2);
 	g_signal_connect(tb_ntsc_scaling, "toggled", G_CALLBACK(vo_change_ntsc_scaling), uigtk2);
+	g_signal_connect(cbt_cmp_renderer, "changed", G_CALLBACK(vo_change_cmp_renderer), uigtk2);
 	g_signal_connect(cbt_cmp_fs, "changed", G_CALLBACK(vo_change_cmp_fs), uigtk2);
 	g_signal_connect(cbt_cmp_fsc, "changed", G_CALLBACK(vo_change_cmp_fsc), uigtk2);
 	g_signal_connect(cbt_cmp_system, "changed", G_CALLBACK(vo_change_cmp_system), uigtk2);
@@ -166,6 +173,11 @@ void gtk2_vo_update_picture(struct ui_gtk2_interface *uigtk2, int value) {
 void gtk2_vo_update_ntsc_scaling(struct ui_gtk2_interface *uigtk2, int value) {
 	(void)uigtk2;
 	uigtk2_notify_toggle_button_set(tb_ntsc_scaling, value, vo_change_ntsc_scaling, uigtk2);
+}
+
+void gtk2_vo_update_cmp_renderer(struct ui_gtk2_interface *uigtk2, int value) {
+	(void)uigtk2;
+	gtk_combo_box_set_active(GTK_COMBO_BOX(cbt_cmp_renderer), value);
 }
 
 void gtk2_vo_update_cmp_fs(struct ui_gtk2_interface *uigtk2, int value) {
@@ -273,6 +285,15 @@ static void vo_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data) 
 	(void)uigtk2;
 	int value = gtk_toggle_button_get_active(widget);
 	vo_set_ntsc_scaling(xroar.vo_interface, 0, value);
+}
+
+static void vo_change_cmp_renderer(GtkComboBox *widget, gpointer user_data) {
+        struct ui_gtk2_interface *uigtk2 = user_data;
+        (void)uigtk2;
+        int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
+        if (xroar.vo_interface) {
+                vo_set_cmp_ccr(xroar.vo_interface, 1, value);
+        }
 }
 
 static void vo_change_cmp_fs(GtkComboBox *widget, gpointer user_data) {
