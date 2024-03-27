@@ -66,11 +66,65 @@
 // Guesses, based on not much:
 static float rgb_intensity_map[4] = { 0.00, 0.47, 0.75, 0.92 };
 
-// Same:
-static float hue_intensity_map[4] = { 0.36, 0.52, 0.66, 0.83 };
+// The GIME appears to generate its composite output (used in NTSC machines
+// only) by switching between a set of 7 voltages at 3.58Mhz (presumably with
+// R/C net to smooth to almost-but-not-quite sine waves).  AFAICT there is no
+// black level separate to blank (which would be usual for an NTSC signal).
+//
+// The grey and colour luminances are different at each intensity because there
+// is no output voltage corresponding to the luminance of colour output: it is
+// simply the average of the high and low voltages used to form the colour
+// signal.
+//
+// The colour amplitude is similar for intensity levels 0-2, but reduced for
+// intensity 3, leading to less saturated colour.
+//
+// Monochrome output (bit 4 of VMODE register at $FF98) only affects composite,
+// and as well as removing the colourburst, will only emit the grey level for
+// each intensity; TVs don't immediately (or ever) switch to mono just because
+// the colourburst is missing.
+//
+// Observed on a scope, there is a larger jump in phase between hues 11 and 12
+// than between any other adjacent hues (including between 1 and 15). This
+// supports the theory that the colour phase is a simple offset counted in GIME
+// clock edges, with a gap as there are 16 edges in one colour cycle, and only
+// 15 hues.
 
-// These are the approximate values measured by John Kowalski:
-static float grey_intensity_map[4] = { 0.03, 0.23, 0.50, 1.00 };
+// Approximate measured voltages (at composite video port, relative to blank):
+
+#define CMP_V_SYNC (-0.350)
+#define CMP_V_BURST_LOW (-0.210)
+#define CMP_V_0 (0.000)
+#define CMP_V_1 (0.170)
+#define CMP_V_2 (0.380)
+#define CMP_V_3 (0.580)
+#define CMP_V_4 (0.750)
+
+// Aliases:
+#define CMP_V_BLANK (CMP_V_0)
+#define CMP_V_BURST_HIGH (CMP_V_1)
+#define CMP_V_GREY0 (CMP_V_0)
+#define CMP_V_GREY1 (CMP_V_1)
+#define CMP_V_GREY2 (CMP_V_2)
+#define CMP_V_GREY3 (CMP_V_4)
+#define CMP_V_PEAK (CMP_V_4)
+
+// Map selected intensity level to the grey and and colour peak voltages:
+
+static struct {
+	float grey;
+	float clr_low;
+	float clr_high;
+} const cmp_intensity[4] = {
+	{ CMP_V_GREY0, CMP_V_BURST_LOW, CMP_V_2 },
+	{ CMP_V_GREY1, CMP_V_0, CMP_V_3 },
+	{ CMP_V_GREY2, CMP_V_1, CMP_V_4 },
+	{ CMP_V_GREY3, CMP_V_2, CMP_V_4 },
+};
+
+// Note that the rest of XRoar's video system as been based on the idea that
+// measured voltages will be Y'PbPr, but these measurements are at the
+// composite port, so are already in Y'UV so will need some massaging.
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -469,22 +523,40 @@ static _Bool coco3_finish(struct part *p) {
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase_offset, 90);
 
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_lead_lag, 0., 100.);
-	for (int j = 0; j < 64; j++) {
-		int intensity = (j >> 4) & 3;
-		int phase = j & 15;
-		double y, b_y, r_y;
-		if (phase == 0 || j == 63) {
-			y = grey_intensity_map[intensity];
-			b_y = 0.0;
-			r_y = 0.0;
-		} else {
-			// Conversion gain of 0.6 for chroma through MC1372.
-			double hue = (2.0 * M_PI * (double)(phase+7.072)) / 14.0;
-			y = hue_intensity_map[intensity];
-			b_y = 0.5 * sin(hue) * 0.6;
-			r_y = 0.5 * cos(hue) * 0.6;
+	// Very slight tweak to the phase
+	double hue_offset = (2. * M_PI * 15.) / 1600.;
+	for (int intensity = 0; intensity < 4; intensity++) {
+		float grey = cmp_intensity[intensity].grey;
+		float clr_low = cmp_intensity[intensity].clr_low;
+		float clr_high = cmp_intensity[intensity].clr_high;
+
+		// Scale signal and add a little brightness.
+		grey     = grey     * (1.00 / CMP_V_PEAK) + 0.20;
+		clr_low  = clr_low  * (1.00 / CMP_V_PEAK) + 0.20;
+		clr_high = clr_high * (1.00 / CMP_V_PEAK) + 0.20;
+
+		for (int phase = 0; phase < 16; phase++) {
+			int c = (intensity * 16) + phase;
+
+			double y, b_y, r_y;
+			if (phase == 0 || c == 63) {
+				y = grey;
+				b_y = 0.0;
+				r_y = 0.0;
+			} else {
+				int ph = ((phase + (phase >= 12)) + 9) % 16;
+				double hue = ((2.0 * M_PI * (double)ph) / 16.0) + hue_offset;
+				b_y = ((clr_high - clr_low) / 2.0) * sin(hue) / 1.414;
+				r_y = ((clr_high - clr_low) / 2.0) * cos(hue) / 1.414;
+				y = (clr_high + clr_low) / 2.0;
+			}
+			// These values were measured at the composite port,
+			// already in U/V, so we need to scale to Pb/Pr before
+			// adding them to the palette.
+			b_y /= 0.504;
+			r_y /= 0.711;
+			DELEGATE_CALL(mcc3->vo->palette_set_ybr, c, y, b_y, r_y);
 		}
-		DELEGATE_CALL(mcc3->vo->palette_set_ybr, j, y, b_y, r_y);
 	}
 
 	for (int j = 0; j < 64; j++) {
