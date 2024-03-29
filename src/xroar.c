@@ -1534,20 +1534,28 @@ void xroar_set_tv_input(_Bool notify, int action) {
 	default:
 	case TV_INPUT_SVIDEO:
 		vo_set_signal(xroar.vo_interface, VO_SIGNAL_SVIDEO);
+		if (xroar.machine->set_composite)
+			xroar.machine->set_composite(xroar.machine, 1);
 		break;
 
 	case TV_INPUT_CMP_KBRW:
 		vo_set_signal(xroar.vo_interface, VO_SIGNAL_CMP);
 		DELEGATE_SAFE_CALL(xroar.vo_interface->set_cmp_phase, 180);
+		if (xroar.machine->set_composite)
+			xroar.machine->set_composite(xroar.machine, 1);
 		break;
 
 	case TV_INPUT_CMP_KRBW:
 		vo_set_signal(xroar.vo_interface, VO_SIGNAL_CMP);
 		DELEGATE_SAFE_CALL(xroar.vo_interface->set_cmp_phase, 0);
+		if (xroar.machine->set_composite)
+			xroar.machine->set_composite(xroar.machine, 1);
 		break;
 
 	case TV_INPUT_RGB:
 		vo_set_signal(xroar.vo_interface, VO_SIGNAL_RGB);
+		if (xroar.machine->set_composite)
+			xroar.machine->set_composite(xroar.machine, 0);
 		break;
 	}
 
