@@ -235,6 +235,7 @@ static int coco3_set_keyboard_type(struct machine *m, int action);
 static _Bool coco3_set_pause(struct machine *m, int state);
 static _Bool coco3_set_inverted_text(struct machine *m, int state);
 static void *coco3_get_interface(struct machine *m, const char *ifname);
+static void coco3_set_composite(struct machine *, _Bool);
 static void coco3_set_frameskip(struct machine *m, unsigned fskip);
 static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit);
 
@@ -327,6 +328,7 @@ static struct part *coco3_allocate(void) {
 	m->set_pause = coco3_set_pause;
 	m->set_inverted_text = coco3_set_inverted_text;
 	m->get_interface = coco3_get_interface;
+	m->set_composite = coco3_set_composite;
 	m->set_frameskip = coco3_set_frameskip;
 	m->set_ratelimit = coco3_set_ratelimit;
 
@@ -936,6 +938,11 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 		return update_audio_from_tape;
 	}
 	return NULL;
+}
+
+static void coco3_set_composite(struct machine *m, _Bool value) {
+	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	tcc1014_set_composite(mcc3->GIME, value);
 }
 
 static void coco3_set_frameskip(struct machine *m, unsigned fskip) {

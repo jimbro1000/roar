@@ -114,5 +114,6 @@ void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val);
 
 void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool);
 void tcc1014_notify_mode(struct TCC1014 *gimep);
+void tcc1014_set_composite(struct TCC1014 *, _Bool);
 
 #endif

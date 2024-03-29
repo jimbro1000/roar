@@ -106,6 +106,7 @@ struct TCC1014_private {
 
 	// Output
 	int frame;  // frameskip counter
+	_Bool composite;  // connected to composite output?
 
 	// $FF22: PIA1B video control lines
 	// XXX there may be a need for latch propagation as with the VDG, but
@@ -150,6 +151,7 @@ struct TCC1014_private {
 	// $FF98: Video mode register - VMODE
 	_Bool BP;  // 1=Graphics; 0=Text
 	unsigned burstn;  // 0=Monochrome, 1=Normal, 2=180°
+	_Bool MOCH;  // 1=Monochrome, 0=Colour
 	_Bool H50;  // 1=50Hz video; 0=60Hz video
 	unsigned LPR;  // Lines Per Row: 1, 2, 8, 9, 10, 11 or 65535 (=infinite)
 
@@ -779,7 +781,8 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 
 	case 8:
 		gime->BP = val & 0x80;
-		gime->burstn = (val & 0x10) ? 0 : ((val & 0x20) >> 5) + 1;
+		gime->MOCH = val & 0x10;
+		gime->burstn = (val & 0x10) ? 0 : ((val & 0x20) ? 2 : 1);
 		gime->H50 = val & 0x08;
 		gime->LPR = val & 7;
 		gime->field_duration = gime->H50 ? 312 : 262;
@@ -1131,30 +1134,34 @@ static void render_scanline(struct TCC1014_private *gime) {
 		} else {
 			// CoCo 3 modes
 			uint8_t vdata = gime->vram_g_data;
+			// In "mono" mode, what really seems to happen is that
+			// the grey at that intensity is emitted.  But only for
+			// composite!
+			uint8_t cmask = (gime->MOCH && gime->composite) ? 0x30 : 0x3f;
 			if (gime->BP) {
 				switch (gime->CRES) {
 				case 0: default:
-					c0 = gime->palette_reg[(vdata>>7)&1];
-					c1 = gime->palette_reg[(vdata>>6)&1];
-					c2 = gime->palette_reg[(vdata>>5)&1];
-					c3 = gime->palette_reg[(vdata>>4)&1];
+					c0 = gime->palette_reg[(vdata>>7)&1] & cmask;
+					c1 = gime->palette_reg[(vdata>>6)&1] & cmask;
+					c2 = gime->palette_reg[(vdata>>5)&1] & cmask;
+					c3 = gime->palette_reg[(vdata>>4)&1] & cmask;
 					break;
 
 				case 1:
-					c0 = c1 = gime->palette_reg[(vdata>>6)&3];
-					c2 = c3 = gime->palette_reg[(vdata>>4)&3];
+					c0 = c1 = gime->palette_reg[(vdata>>6)&3] & cmask;
+					c2 = c3 = gime->palette_reg[(vdata>>4)&3] & cmask;
 					break;
 
 				case 2: case 3:
-					c0 = c1 = c2 = c3 = gime->palette_reg[(vdata>>4)&15];
+					c0 = c1 = c2 = c3 = gime->palette_reg[(vdata>>4)&15] & cmask;
 					break;
 				}
 
 			} else {
-				c0 = gime->palette_reg[(vdata&0x80)?gime->attr_fgnd:gime->attr_bgnd];
-				c1 = gime->palette_reg[(vdata&0x40)?gime->attr_fgnd:gime->attr_bgnd];
-				c2 = gime->palette_reg[(vdata&0x20)?gime->attr_fgnd:gime->attr_bgnd];
-				c3 = gime->palette_reg[(vdata&0x10)?gime->attr_fgnd:gime->attr_bgnd];
+				c0 = gime->palette_reg[(vdata&0x80)?gime->attr_fgnd:gime->attr_bgnd] & cmask;
+				c1 = gime->palette_reg[(vdata&0x40)?gime->attr_fgnd:gime->attr_bgnd] & cmask;
+				c2 = gime->palette_reg[(vdata&0x20)?gime->attr_fgnd:gime->attr_bgnd] & cmask;
+				c3 = gime->palette_reg[(vdata&0x10)?gime->attr_fgnd:gime->attr_bgnd] & cmask;
 			}
 			gime->vram_bit -= 4;
 			gime->vram_g_data <<= 4;
@@ -1244,6 +1251,11 @@ void tcc1014_notify_mode(struct TCC1014 *gimep) {
 	} else {
 		DELEGATE_SAFE_CALL(gime->public.set_active_area, TCC1014_tWHS + TCC1014_tBP + gime->pLB, TCC1014_TOP_BORDER_START + gime->nTB, (gime->HRES & 1) ? 640 : 512, gime->nAA);
 	}
+}
+
+void tcc1014_set_composite(struct TCC1014 *gimep, _Bool value) {
+	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
+	gime->composite = value;
 }
 
 static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
