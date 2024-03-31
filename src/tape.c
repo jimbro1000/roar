@@ -1459,7 +1459,8 @@ static struct machine_bp bp_list_rewrite[] = {
 static void set_breakpoints(struct tape_interface_private *tip) {
 	if (!tip->debug_cpu)
 		return;
-	/* clear any old breakpoints */
+	// clear any old breakpoints
+	machine_bp_remove_list(tip->machine, bp_list_pad);
 	machine_bp_remove_list(tip->machine, bp_list_fast);
 	machine_bp_remove_list(tip->machine, bp_list_rewrite);
 	if (!tip->motor || !tip->playing) {
