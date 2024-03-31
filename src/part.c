@@ -45,6 +45,7 @@ extern const struct partdb_entry dragon32_part;
 extern const struct partdb_entry dragon64_part;
 extern const struct partdb_entry dragonpro_part;
 extern const struct partdb_entry coco_part;
+extern const struct partdb_entry deluxecoco_part;
 extern const struct partdb_entry coco3_part;
 extern const struct partdb_entry mc10_part;
 
@@ -89,6 +90,7 @@ const struct partdb_entry *partdb[] = {
 	&dragon64_part,
 	&dragonpro_part,
 	&coco_part,
+	&deluxecoco_part,
 #endif
 
 #ifdef WANT_MACHINE_ARCH_COCO3

@@ -974,6 +974,9 @@ static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 // Dragon Professional (Alpha)
 #include "dragonpro.c"
 
+// Tandy Deluxe CoCo
+#include "deluxecoco.c"
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragon_create_ram(struct machine_dragon *md) {

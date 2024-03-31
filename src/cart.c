@@ -582,7 +582,9 @@ struct cart_config *cart_find_working_dos(struct machine_config *mc) {
 	if (mc && strcmp(mc->architecture, "dragonpro") == 0) {
 		return NULL;
 	}
-	if (!mc || (strcmp(mc->architecture, "coco") != 0 && strcmp(mc->architecture, "coco3") != 0)) {
+	if (!mc || (strcmp(mc->architecture, "coco") != 0
+		    && strcmp(mc->architecture, "deluxecoco") != 0
+		    && strcmp(mc->architecture, "coco3") != 0)) {
 		if ((tmp = romlist_find("@dragondos_compat"))) {
 			cc = cart_config_by_name("dragondos");
 		} else if ((tmp = romlist_find("@delta"))) {

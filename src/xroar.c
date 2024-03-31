@@ -377,6 +377,13 @@ static char const * const default_config[] = {
 	"tv-type ntsc",
 	"vdg-type 6847t1",
 	"ram 64",
+	// Deluxe CoCo
+	"machine deluxecoco",
+	"machine-desc 'Tandy Deluxe CoCo'",
+	"machine-arch deluxecoco",
+	"tv-type ntsc",
+	"vdg-type 6847t1",
+	"ram 64",
 #endif
 
 #ifdef WANT_MACHINE_ARCH_COCO3
@@ -591,6 +598,7 @@ static char const * const default_config[] = {
 	"crclist mx1600ext=0x322a3d58",
 	"crclist cocoext=@extbas11,@extbas10,@mx1600ext",
 	"crclist coco_combined=@mx1600",
+	"crclist deluxecoco=0x1cce231e",
 #endif
 
 #ifdef WANT_MACHINE_ARCH_COCO3
