@@ -1433,6 +1433,7 @@ void xroar_new_disk(int drive) {
 	new_disk->new_disk = 1;  // no need to back up disk file
 	new_disk->dirty = 1;  // always write empty disk
 	vdrive_insert_disk(xroar.vdrive_interface, drive, new_disk);
+	vdisk_unref(new_disk);
 	if (xroar.ui_interface) {
 		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_disk_data, drive, new_disk);
 	}
@@ -1443,6 +1444,9 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 	if (!filename) return;
 	struct vdisk *disk = vdisk_load(filename);
 	vdrive_insert_disk(xroar.vdrive_interface, drive, disk);
+	if (disk) {
+		vdisk_unref(disk);
+	}
 	if (xroar.ui_interface) {
 		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_disk_data, drive, disk);
 	}
