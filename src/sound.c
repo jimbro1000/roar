@@ -257,6 +257,7 @@ void sound_interface_free(struct sound_interface *sndp) {
 	if (snd->output_fmt != SOUND_FMT_FLOAT) {
 		free(snd->mix_buffer);
 	}
+	free(snd->non_muxed_output);
 	for (unsigned i = 0; i < 5; i++) {
 		free(snd->mux_input[i]);
 	}
