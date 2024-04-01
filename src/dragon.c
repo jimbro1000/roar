@@ -71,7 +71,11 @@ struct machine_dragon {
 	int frame;  // track frameskip
 	struct sound_interface *snd;
 
-	uint8_t *rom;
+	// Derived machines can use these to redirect address decoding.  If
+	// they return true, the address was handled, no need to continue.
+	_Bool (*read_byte)(struct machine_dragon *, unsigned A);
+	_Bool (*write_byte)(struct machine_dragon *, unsigned A);
+
 	uint8_t rom0[0x4000];
 	uint8_t rom1[0x4000];
 	uint8_t ext_charset[0x1000];
@@ -111,10 +115,8 @@ struct machine_dragon {
 	uint32_t crc_ext_charset;
 	_Bool is_dragon;
 	_Bool is_dragon32;
-	_Bool is_dragon64;
 	_Bool unexpanded_dragon32;
 	_Bool relaxed_pia_decode;
-	_Bool have_acia;
 };
 
 #define DRAGON_SER_RAM      (2)
@@ -141,8 +143,7 @@ static const struct ser_struct_data dragon_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-
-
+static void dragon_verify_ram_size(struct machine_config *, _Bool is_dragon32);
 
 // Set a ROM configuration to a default value if not "defined"
 static void set_default_rom(_Bool dfn, char **romp, const char *dfl) {
@@ -151,7 +152,7 @@ static void set_default_rom(_Bool dfn, char **romp, const char *dfl) {
 	}
 }
 
-static void dragon_config_complete(struct machine_config *mc) {
+static void dragon_config_complete_common(struct machine_config *mc) {
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
 	if (mc->tv_input == ANY_AUTO) {
@@ -171,57 +172,12 @@ static void dragon_config_complete(struct machine_config *mc) {
 	if (mc->vdg_type != VDG_6847 && mc->vdg_type != VDG_6847T1)
 		mc->vdg_type = VDG_6847;
 
-	/* Various heuristics to find a working architecture */
-	if (!mc->architecture) {
-		/* TODO: checksum ROMs to help determine arch */
-		if (mc->bas_rom) {
-			mc->architecture = xstrdup("coco");
-		} else if (mc->altbas_rom) {
-			mc->architecture = xstrdup("dragon64");
-		} else if (mc->extbas_rom) {
-			struct stat statbuf;
-			mc->architecture = xstrdup("dragon64");
-			if (stat(mc->extbas_rom, &statbuf) == 0) {
-				if (statbuf.st_size <= 0x2000) {
-					mc->architecture = xstrdup("coco");
-				}
-			}
-		} else {
-			mc->architecture = xstrdup("dragon64");
-		}
-	}
-
-	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
-	_Bool is_dragon64 = strcmp(mc->architecture, "dragon64") == 0;
-	_Bool is_dragon = is_dragon32 || is_dragon64;
-	_Bool is_coco = strcmp(mc->architecture, "coco") == 0;
-
-	assert(is_dragon || is_coco);
-
-	// Default ROMs
-
-	if (is_dragon32) {
-		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon32");
-	}
-	if (is_dragon64) {
-		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon64");
-		set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragon64_alt");
-	}
-	if (is_coco) {
-		set_default_rom(mc->bas_dfn, &mc->bas_rom, "@coco");
-		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@coco_ext");
-	}
-
 	if (mc->ram_init == ANY_AUTO) {
 		mc->ram_init = ram_init_pattern;
 	}
 
 	if (mc->keymap == ANY_AUTO) {
-		if (is_dragon) {
-			mc->keymap = dkbd_layout_dragon;
-		} else {
-			mc->keymap = dkbd_layout_coco;
-		}
+		mc->keymap = dkbd_layout_dragon;
 	}
 
 	// Determine a default DOS cartridge if necessary
@@ -230,6 +186,35 @@ static void dragon_config_complete(struct machine_config *mc) {
 		if (cc)
 			mc->default_cart = xstrdup(cc->name);
 	}
+}
+
+static void dragon_config_complete(struct machine_config *mc) {
+	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
+	_Bool is_coco = strcmp(mc->architecture, "coco") == 0;
+
+	assert(is_dragon32 || is_coco);
+
+	// Default ROMs
+
+	if (is_dragon32) {
+		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon32");
+	}
+	if (is_coco) {
+		set_default_rom(mc->bas_dfn, &mc->bas_rom, "@coco");
+		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@coco_ext");
+	}
+
+	// RAM
+
+	dragon_verify_ram_size(mc, is_dragon32);
+
+	// Keyboard map
+
+	if (mc->keymap == ANY_AUTO && is_coco) {
+		mc->keymap = dkbd_layout_coco;
+	}
+
+	dragon_config_complete_common(mc);
 }
 
 static _Bool dragon_is_working_config(struct machine_config *mc) {
@@ -257,12 +242,10 @@ static _Bool dragon_is_working_config(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void verify_ram_size(struct machine_dragon *md) {
-	struct machine_config *mc = md->public.config;
-
+static void dragon_verify_ram_size(struct machine_config *mc, _Bool is_dragon32) {
 	// Validate requested total RAM
 	if (mc->ram < 4 || mc->ram > 64) {
-		mc->ram = md->is_dragon32 ? 32 : 64;
+		mc->ram = is_dragon32 ? 32 : 64;
 	} else if (mc->ram < 8) {
 		mc->ram = 4;
 	} else if (mc->ram < 16) {
@@ -290,6 +273,8 @@ static void verify_ram_size(struct machine_dragon *md) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void dragon_create_ram(struct machine_dragon *);
 
 static _Bool dragon_has_interface(struct part *p, const char *ifname);
 static void dragon_attach_interface(struct part *p, const char *ifname, void *intf);
@@ -384,7 +369,6 @@ const struct machine_partdb_extra dragon_machine_extra = {
 };
 
 const struct partdb_entry dragon32_part = { .name = "dragon32", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
-const struct partdb_entry dragon64_part = { .name = "dragon64", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
 const struct partdb_entry coco_part = { .name = "coco", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
 
 static void dragon_allocate_common(struct machine_dragon *md) {
@@ -428,47 +412,10 @@ static struct part *dragon_allocate(void) {
 	return p;
 }
 
-static void create_ram(struct machine_dragon *md) {
-	struct machine *m = &md->public;
-	struct part *p = &m->part;
-	struct machine_config *mc = m->config;
-
-	verify_ram_size(md);
-
-	struct ram_config ram_config = {
-		.d_width = 8,
-		.organisation = mc->ram_org,
-	};
-	struct ram *ram = (struct ram *)part_create("ram", &ram_config);
-
-	unsigned bank_size = ram->bank_nelems / 1024;
-	if (bank_size == 0)
-		bank_size = 1;
-	unsigned nbanks = mc->ram / bank_size;
-	if (nbanks < 1)
-		nbanks = 1;
-	if (nbanks > 2)
-		nbanks = 2;
-
-	for (unsigned i = 0; i < nbanks; i++)
-		ram_add_bank(ram, i);
-
-	part_add_component(p, (struct part *)ram, "RAM");
-}
-
-static void dragon_initialise(struct part *p, void *options) {
-	struct machine_config *mc = options;
-	assert(mc != NULL);
-
-	struct machine_dragon *md = (struct machine_dragon *)p;
+static void dragon_initialise_common(struct machine_dragon *md, struct machine_config *mc) {
 	struct machine *m = &md->public;
 
-	dragon_config_complete(mc);
 	m->config = mc;
-
-	md->is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
-	md->is_dragon64 = (strcmp(mc->architecture, "dragon64") == 0);
-	md->is_dragon = md->is_dragon32 || md->is_dragon64;
 
 	// SAM
 	part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM");
@@ -484,15 +431,31 @@ static void dragon_initialise(struct part *p, void *options) {
 	part_add_component(&m->part, part_create("MC6847", (mc->vdg_type == VDG_6847T1 ? "6847T1" : "6847")), "VDG");
 
 	// RAM
-	create_ram(md);
+	dragon_create_ram(md);
 
 	// Keyboard
 	m->keyboard.type = mc->keymap;
 }
 
-static _Bool dragon_finish(struct part *p) {
+static void dragon_initialise(struct part *p, void *options) {
+	assert(p != NULL);
+	assert(options != NULL);
 	struct machine_dragon *md = (struct machine_dragon *)p;
+	struct machine_config *mc = options;
+
+	dragon_config_complete(mc);
+
+	md->is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
+	md->is_dragon = md->is_dragon32;
+
+	dragon_verify_ram_size(mc, md->is_dragon32);
+
+	dragon_initialise_common(md, mc);
+}
+
+static _Bool dragon_finish_common(struct machine_dragon *md) {
 	struct machine *m = &md->public;
+	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
 
 	// Interfaces
@@ -556,7 +519,6 @@ static _Bool dragon_finish(struct part *p) {
 
 	// VDG
 	// XXX kludges that should be handled by machine-specific code
-	md->VDG->is_dragon64 = md->is_dragon64;
 	md->VDG->is_dragon32 = md->is_dragon32;
 	md->VDG->is_coco = !md->is_dragon;
 	_Bool is_pal = (mc->tv_standard == TV_PAL);
@@ -726,9 +688,6 @@ static _Bool dragon_finish(struct part *p) {
 		}
 	}
 
-	/* This will be under PIA control on a Dragon 64 */
-	md->rom = md->rom0;
-
 	if (mc->ext_charset_rom) {
 		sds tmp = romlist_find(mc->ext_charset_rom);
 		if (tmp) {
@@ -737,117 +696,6 @@ static _Bool dragon_finish(struct part *p) {
 				md->has_ext_charset = 1;
 			sdsfree(tmp);
 		}
-	}
-
-	/* CRCs */
-
-	if (md->has_combined) {
-		_Bool forced = 0, valid_crc = 0;
-
-		md->crc_combined = crc32_block(CRC32_RESET, md->rom0, 0x4000);
-
-		if (md->is_dragon64)
-			valid_crc = crclist_match("@d64_1", md->crc_combined);
-		else if (md->is_dragon32)
-			valid_crc = crclist_match("@d32", md->crc_combined);
-
-		if (xroar.cfg.force_crc_match) {
-			if (md->is_dragon64) {
-				md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
-				forced = 1;
-			} else if (md->is_dragon32) {
-				md->crc_combined = 0xe3879310;  // Dragon 32 32K mode BASIC
-				forced = 1;
-			}
-		}
-
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\t32K mode BASIC CRC = 0x%08x%s\n", md->crc_combined, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for combined BASIC ROM\n");
-		}
-	}
-
-	if (md->has_altbas) {
-		_Bool forced = 0, valid_crc = 0;
-
-		md->crc_altbas = crc32_block(CRC32_RESET, md->rom1, 0x4000);
-
-		if (md->is_dragon64)
-			valid_crc = crclist_match("@d64_2", md->crc_altbas);
-
-		if (xroar.cfg.force_crc_match) {
-			if (md->is_dragon64) {
-				md->crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
-				forced = 1;
-			}
-		}
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\t64K mode BASIC CRC = 0x%08x%s\n", md->crc_altbas, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for alternate BASIC ROM\n");
-		}
-	}
-
-	if (md->has_bas) {
-		_Bool forced = 0, valid_crc = 0, coco4k = 0;
-
-		md->crc_bas = crc32_block(CRC32_RESET, md->rom0 + 0x2000, 0x2000);
-
-		if (!md->is_dragon) {
-			if (mc->ram > 4) {
-				valid_crc = crclist_match("@coco", md->crc_bas);
-			} else {
-				valid_crc = crclist_match("@bas10", md->crc_bas);
-				coco4k = 1;
-			}
-		}
-
-		if (xroar.cfg.force_crc_match) {
-			if (!md->is_dragon) {
-				if (mc->ram > 4) {
-					md->crc_bas = 0xd8f4d15e;  // CoCo BASIC 1.3
-				} else {
-					md->crc_bas = 0x00b50aaa;  // CoCo BASIC 1.0
-				}
-				forced = 1;
-			}
-		}
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tBASIC CRC = 0x%08x%s\n", md->crc_bas, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			if (coco4k) {
-				LOG_WARN("Invalid CRC for Colour BASIC 1.0 ROM\n");
-			} else {
-				LOG_WARN("Invalid CRC for Colour BASIC ROM\n");
-			}
-		}
-	}
-
-	if (md->has_extbas) {
-		_Bool forced = 0, valid_crc = 0;
-
-		md->crc_extbas = crc32_block(CRC32_RESET, md->rom0, 0x2000);
-
-		if (!md->is_dragon) {
-			valid_crc = crclist_match("@cocoext", md->crc_extbas);
-		}
-
-		if (xroar.cfg.force_crc_match) {
-			if (!md->is_dragon) {
-				md->crc_extbas = 0xa82a6254;  // CoCo Extended BASIC 1.1
-				forced = 1;
-			}
-		}
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tExtended BASIC CRC = 0x%08x%s\n", md->crc_extbas, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for Extended Colour BASIC ROM\n");
-		}
-	}
-	if (md->has_ext_charset) {
-		md->crc_ext_charset = crc32_block(CRC32_RESET, md->ext_charset, 0x1000);
-		LOG_DEBUG(1, "\tExternal charset CRC = 0x%08x\n", md->crc_ext_charset);
 	}
 
 	/* VDG external charset */
@@ -876,11 +724,6 @@ static _Bool dragon_finish(struct part *p) {
 		default:
 			md->PIA1->b.in_sink &= ~(1<<2);
 		}
-	}
-	if (md->is_dragon64) {
-		md->have_acia = 1;
-		// Pull-up resistor on ROMSEL (PIA1 PB2)
-		md->PIA1->b.in_source |= (1<<2);
 	}
 
 	if (!md->is_dragon) {
@@ -946,6 +789,102 @@ static _Bool dragon_finish(struct part *p) {
 	return 1;
 }
 
+static _Bool dragon_finish(struct part *p) {
+	struct machine_dragon *md = (struct machine_dragon *)p;
+	struct machine *m = &md->public;
+	struct machine_config *mc = m->config;
+
+	if (!dragon_finish_common(md))
+		return 0;
+
+	/* CRCs */
+
+	if (md->has_combined) {
+		_Bool forced = 0, valid_crc = 0;
+
+		md->crc_combined = crc32_block(CRC32_RESET, md->rom0, 0x4000);
+
+		if (md->is_dragon32)
+			valid_crc = crclist_match("@d32", md->crc_combined);
+
+		if (xroar.cfg.force_crc_match) {
+			if (md->is_dragon32) {
+				md->crc_combined = 0xe3879310;  // Dragon 32 32K mode BASIC
+				forced = 1;
+			}
+		}
+
+		(void)forced;  // avoid warning if no logging
+		LOG_DEBUG(1, "\t32K mode BASIC CRC = 0x%08x%s\n", md->crc_combined, forced ? " (forced)" : "");
+		if (!valid_crc) {
+			LOG_WARN("Invalid CRC for combined BASIC ROM\n");
+		}
+	}
+
+	if (md->has_bas) {
+		_Bool forced = 0, valid_crc = 0, coco4k = 0;
+
+		md->crc_bas = crc32_block(CRC32_RESET, md->rom0 + 0x2000, 0x2000);
+
+		if (!md->is_dragon) {
+			if (mc->ram > 4) {
+				valid_crc = crclist_match("@coco", md->crc_bas);
+			} else {
+				valid_crc = crclist_match("@bas10", md->crc_bas);
+				coco4k = 1;
+			}
+		}
+
+		if (xroar.cfg.force_crc_match) {
+			if (!md->is_dragon) {
+				if (mc->ram > 4) {
+					md->crc_bas = 0xd8f4d15e;  // CoCo BASIC 1.3
+				} else {
+					md->crc_bas = 0x00b50aaa;  // CoCo BASIC 1.0
+				}
+				forced = 1;
+			}
+		}
+		(void)forced;  // avoid warning if no logging
+		LOG_DEBUG(1, "\tBASIC CRC = 0x%08x%s\n", md->crc_bas, forced ? " (forced)" : "");
+		if (!valid_crc) {
+			if (coco4k) {
+				LOG_WARN("Invalid CRC for Colour BASIC 1.0 ROM\n");
+			} else {
+				LOG_WARN("Invalid CRC for Colour BASIC ROM\n");
+			}
+		}
+	}
+
+	if (md->has_extbas) {
+		_Bool forced = 0, valid_crc = 0;
+
+		md->crc_extbas = crc32_block(CRC32_RESET, md->rom0, 0x2000);
+
+		if (!md->is_dragon) {
+			valid_crc = crclist_match("@cocoext", md->crc_extbas);
+		}
+
+		if (xroar.cfg.force_crc_match) {
+			if (!md->is_dragon) {
+				md->crc_extbas = 0xa82a6254;  // CoCo Extended BASIC 1.1
+				forced = 1;
+			}
+		}
+		(void)forced;  // avoid warning if no logging
+		LOG_DEBUG(1, "\tExtended BASIC CRC = 0x%08x%s\n", md->crc_extbas, forced ? " (forced)" : "");
+		if (!valid_crc) {
+			LOG_WARN("Invalid CRC for Extended Colour BASIC ROM\n");
+		}
+	}
+	if (md->has_ext_charset) {
+		md->crc_ext_charset = crc32_block(CRC32_RESET, md->ext_charset, 0x1000);
+		LOG_DEBUG(1, "\tExternal charset CRC = 0x%08x\n", md->crc_ext_charset);
+	}
+
+	return 1;
+}
+
 // Called from part_free(), which handles freeing the struct itself
 static void dragon_free(struct part *p) {
 	struct machine_dragon *md = (struct machine_dragon *)p;
@@ -976,12 +915,13 @@ static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 			if (!md->public.config) {
 				return 0;
 			}
+			dragon_verify_ram_size(md->public.config, md->is_dragon32);
 			if (length != ((unsigned)md->public.config->ram * 1024)) {
 				LOG_WARN("DRAGON/DESERIALISE: RAM size mismatch\n");
 				return 0;
 			}
 			part_free(part_component_by_id_is_a(p, "RAM", "ram"));
-			create_ram(md);
+			dragon_create_ram(md);
 			struct ram *ram = (struct ram *)part_component_by_id_is_a(p, "RAM", "ram");
 			assert(ram != NULL);
 			ram_ser_read(ram, sh);
@@ -1014,6 +954,41 @@ static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 		return 0;
 	}
 	return 1;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Arch-specific code
+
+// Dragon 64
+#include "dragon64.c"
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void dragon_create_ram(struct machine_dragon *md) {
+	struct machine *m = &md->public;
+	struct part *p = &m->part;
+	struct machine_config *mc = m->config;
+
+	struct ram_config ram_config = {
+		.d_width = 8,
+		.organisation = mc->ram_org,
+	};
+	struct ram *ram = (struct ram *)part_create("ram", &ram_config);
+
+	unsigned bank_size = ram->bank_nelems / 1024;
+	if (bank_size == 0)
+		bank_size = 1;
+	unsigned nbanks = mc->ram / bank_size;
+	if (nbanks < 1)
+		nbanks = 1;
+	if (nbanks > 2)
+		nbanks = 2;
+
+	for (unsigned i = 0; i < nbanks; i++)
+		ram_add_bank(ram, i);
+
+	part_add_component(p, (struct part *)ram, "RAM");
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1288,36 +1263,16 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 		break;
 	case 1:
 	case 2:
-		md->CPU->D = md->rom[A & 0x3fff];
+		md->CPU->D = md->rom0[A & 0x3fff];
 		break;
 	case 3:
 		if (md->cart)
 			md->CPU->D = md->cart->read(md->cart, A & 0x3fff, 0, 1, md->CPU->D);
 		break;
 	case 4:
-		if (md->relaxed_pia_decode) {
+		if (md->relaxed_pia_decode || (A & 4) == 0) {
 			md->CPU->D = mc6821_read(md->PIA0, A);
-		} else {
-			if ((A & 4) == 0) {
-				md->CPU->D = mc6821_read(md->PIA0, A);
-			} else {
-				if (md->have_acia) {
-					/* XXX Dummy ACIA reads */
-					switch (A & 3) {
-					default:
-					case 0:  /* Receive Data */
-					case 3:  /* Control */
-						md->CPU->D = 0x00;
-						break;
-					case 2:  /* Command */
-						md->CPU->D = 0x02;
-						break;
-					case 1:  /* Status */
-						md->CPU->D = 0x10;
-						break;
-					}
-				}
-			}
+			break;
 		}
 		break;
 	case 5:
@@ -1339,19 +1294,16 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 		switch (md->SAM->S) {
 		case 1:
 		case 2:
-			md->CPU->D = md->rom[A & 0x3fff];
+			md->CPU->D = md->rom0[A & 0x3fff];
 			break;
 		case 3:
 			if (md->cart)
 				md->CPU->D = md->cart->write(md->cart, A & 0x3fff, 0, 1, md->CPU->D);
 			break;
 		case 4:
-			if (!md->is_dragon || md->unexpanded_dragon32) {
+			if (md->relaxed_pia_decode || (A & 4) == 0) {
 				mc6821_write(md->PIA0, A, md->CPU->D);
-			} else {
-				if ((A & 4) == 0) {
-					mc6821_write(md->PIA0, A, md->CPU->D);
-				}
+				break;
 			}
 			break;
 		case 5:
@@ -1410,7 +1362,8 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 
 	if (RnW) {
 		if (!EXTMEM) {
-			read_byte(md, A);
+			if (!md->read_byte || !md->read_byte(md, A))
+				read_byte(md, A);
 		}
 #ifdef WANT_GDB_TARGET
 		if (md->bp_session->wp_read_list)
@@ -1418,7 +1371,8 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 #endif
 	} else {
 		if (!EXTMEM) {
-			write_byte(md, A);
+			if (!md->write_byte || !md->write_byte(md, A))
+				write_byte(md, A);
 		}
 #ifdef WANT_GDB_TARGET
 		if (md->bp_session->wp_write_list)
@@ -1634,16 +1588,6 @@ static void pia1b_data_preread_coco64k(void *sptr) {
 
 static void pia1b_data_postwrite(void *sptr) {
 	struct machine_dragon *md = sptr;
-	if (md->is_dragon64) {
-		_Bool is_32k = PIA_VALUE_B(md->PIA1) & 0x04;
-		if (is_32k) {
-			md->rom = md->rom0;
-			keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_32k_basic);
-		} else {
-			md->rom = md->rom1;
-			keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_64k_basic);
-		}
-	}
 	// Single-bit sound
 	_Bool sbs_enabled = !((md->PIA1->b.out_source ^ md->PIA1->b.out_sink) & (1<<1));
 	_Bool sbs_level = md->PIA1->b.out_source & md->PIA1->b.out_sink & (1<<1);

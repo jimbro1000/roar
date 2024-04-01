@@ -137,6 +137,7 @@ xroar_SOURCES += \
 	main_unix.c
 
 EXTRA_DIST += \
+	dragon64.c \
 	mc6847/font-6847.c mc6847/font-6847.h \
 	mc6847/font-6847t1.c mc6847/font-6847t1.h \
 	mc6809/mc6809_common.c \
