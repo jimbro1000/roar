@@ -233,6 +233,8 @@ static void *new(void *cfg) {
 	aosdl->callback_buffer = NULL;
 
 	aosdl->fragment_buffer = xmalloc(aosdl->fragment_nbytes);
+	uint8_t zero = (aosdl->audiospec.format == AUDIO_U8) ? 0x80 : 0x00;
+	memset(aosdl->fragment_buffer, zero, aosdl->fragment_nbytes);
 
 	ao->sound_interface = sound_interface_new(NULL, sample_fmt, rate, nchannels, fragment_nframes);
 	if (!ao->sound_interface) {
