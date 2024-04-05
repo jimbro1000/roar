@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 user-interface module.
  *
- *  \copyright Copyright 2010-2023 Ciaran Anscomb
+ *  \copyright Copyright 2010-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -98,8 +98,7 @@ static gboolean run_cpu(gpointer data);
 /* Helpers */
 static char *escape_underscores(const char *str);
 
-/* This is just stupid... */
-static void insert_disk(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk2_interface *uigtk2 = user_data; gtk2_insert_disk(uigtk2, -1); }
+/* This feels stupid... */
 static void insert_disk1(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk2_interface *uigtk2 = user_data; gtk2_insert_disk(uigtk2, 0); }
 static void insert_disk2(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk2_interface *uigtk2 = user_data; gtk2_insert_disk(uigtk2, 1); }
 static void insert_disk3(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk2_interface *uigtk2 = user_data; gtk2_insert_disk(uigtk2, 2); }
@@ -361,26 +360,26 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "ToolMenuAction", .label = "_Tool" },
 	{ .name = "HelpMenuAction", .label = "_Help" },
 	/* File */
-	{ .name = "RunAction", .stock_id = GTK_STOCK_EXECUTE, .label = "_Run",
+	{ .name = "RunAction", .stock_id = GTK_STOCK_EXECUTE, .label = "_Run…",
 	  .accelerator = "<shift><control>L",
 	  .tooltip = "Load and attempt to autorun a file",
 	  .callback = G_CALLBACK(do_run_file) },
-	{ .name = "LoadAction", .stock_id = GTK_STOCK_OPEN, .label = "_Load",
+	{ .name = "LoadAction", .stock_id = GTK_STOCK_OPEN, .label = "_Load…",
 	  .accelerator = "<control>L",
 	  .tooltip = "Load a file",
 	  .callback = G_CALLBACK(do_load_file) },
-	{ .name = "InsertDiskAction",
-	  .label = "Insert _Disk",
+	/* XXX { .name = "InsertDiskAction",
+	  .label = "Insert _disk…",
 	  .tooltip = "Load a virtual disk image",
-	  .callback = G_CALLBACK(insert_disk) },
+	  .callback = G_CALLBACK(insert_disk) }, */
 	{ .name = "InsertDisk1Action", .accelerator = "<control>1", .callback = G_CALLBACK(insert_disk1) },
 	{ .name = "InsertDisk2Action", .accelerator = "<control>2", .callback = G_CALLBACK(insert_disk2) },
 	{ .name = "InsertDisk3Action", .accelerator = "<control>3", .callback = G_CALLBACK(insert_disk3) },
 	{ .name = "InsertDisk4Action", .accelerator = "<control>4", .callback = G_CALLBACK(insert_disk4) },
-	{ .name = "SaveSnapshotAction", .stock_id = GTK_STOCK_SAVE_AS, .label = "_Save Snapshot",
+	{ .name = "SaveSnapshotAction", .stock_id = GTK_STOCK_SAVE_AS, .label = "_Save Snapshot…",
 	  .accelerator = "<control>S",
 	  .callback = G_CALLBACK(save_snapshot) },
-	{ .name = "ScreenshotAction", .label = "Screenshot to PNG",
+	{ .name = "ScreenshotAction", .label = "Screenshot to PNG…",
 	  .accelerator = "<control><shift>S",
 	  .callback = G_CALLBACK(save_screenshot) },
 	{ .name = "QuitAction", .stock_id = GTK_STOCK_QUIT, .label = "_Quit",
@@ -388,8 +387,8 @@ static GtkActionEntry const ui_entries[] = {
 	  .tooltip = "Quit",
 	  .callback = G_CALLBACK(do_quit) },
 	/* View */
-	{ .name = "TVInputMenuAction", .label = "_TV Input" },
-	{ .name = "CCRMenuAction", .label = "Composite _Rendering" },
+	{ .name = "TVInputMenuAction", .label = "_TV input" },
+	{ .name = "CCRMenuAction", .label = "Composite _rendering" },
 	{ .name = "ZoomMenuAction", .label = "_Zoom" },
 	{ .name = "zoom_in", .label = "Zoom In",
 	  .accelerator = "<control>plus",
@@ -407,20 +406,20 @@ static GtkActionEntry const ui_entries[] = {
 	/* Hardware */
 	{ .name = "MachineMenuAction", .label = "_Machine" },
 	{ .name = "CartridgeMenuAction", .label = "_Cartridge" },
-	{ .name = "KeymapMenuAction", .label = "_Keyboard Map" },
-	{ .name = "JoyRightMenuAction", .label = "_Right Joystick" },
-	{ .name = "JoyLeftMenuAction", .label = "_Left Joystick" },
-	{ .name = "JoySwapAction", .label = "Swap _Joysticks",
+	{ .name = "KeymapMenuAction", .label = "_Keyboard type" },
+	{ .name = "JoyRightMenuAction", .label = "_Right joystick" },
+	{ .name = "JoyLeftMenuAction", .label = "_Left joystick" },
+	{ .name = "JoySwapAction", .label = "Swap _joysticks",
 	  .accelerator = "<control><shift>J",
 	  .callback = G_CALLBACK(swap_joysticks) },
-	{ .name = "SoftResetAction", .label = "_Soft Reset",
+	{ .name = "SoftResetAction", .label = "_Soft reset",
 	  .accelerator = "<control>R",
-	  .tooltip = "Soft Reset",
+	  .tooltip = "Soft reset machine",
 	  .callback = G_CALLBACK(do_soft_reset) },
 	{ .name = "HardResetAction",
-	  .label = "_Hard Reset",
+	  .label = "_Hard reset",
 	  .accelerator = "<shift><control>R",
-	  .tooltip = "Hard Reset",
+	  .tooltip = "Hard reset machine (power cycle)",
 	  .callback = G_CALLBACK(do_hard_reset) },
 	/* Help */
 	{ .name = "AboutAction", .stock_id = GTK_STOCK_ABOUT,
@@ -429,27 +428,28 @@ static GtkActionEntry const ui_entries[] = {
 };
 
 static GtkToggleActionEntry const ui_toggles[] = {
-	/* View */
-	{ .name = "VideoOptionsAction", .label = "TV _Controls",
-	  .accelerator = "<control><shift>V",
-	  .callback = G_CALLBACK(gtk2_vo_toggle_window) },
-	{ .name = "InverseTextAction", .label = "_Inverse Text",
-	  .accelerator = "<shift><control>I",
-	  .callback = G_CALLBACK(toggle_inverse_text) },
-	{ .name = "FullScreenAction", .label = "_Full Screen",
-	  .stock_id = GTK_STOCK_FULLSCREEN,
-	  .accelerator = "F11", .callback = G_CALLBACK(set_fullscreen) },
-	/* Tool */
-	{ .name = "TranslateKeyboardAction", .label = "_Keyboard Translation",
-	  .accelerator = "<control>Z",
-	  .callback = G_CALLBACK(toggle_keyboard_translation) },
-	{ .name = "DriveControlAction", .label = "_Drive Control",
-	  .accelerator = "<control>D",
-	  .callback = G_CALLBACK(gtk2_toggle_dc_window) },
-	{ .name = "TapeControlAction", .label = "_Tape Control",
+	// File
+	{ .name = "TapeControlAction", .label = "Cassette _tapes",
 	  .accelerator = "<control>T",
 	  .callback = G_CALLBACK(gtk2_toggle_tc_window) },
-	{ .name = "RateLimitAction", .label = "_Rate Limit",
+	{ .name = "DriveControlAction", .label = "Floppy _disks",
+	  .accelerator = "<control>D",
+	  .callback = G_CALLBACK(gtk2_toggle_dc_window) },
+	// View
+	{ .name = "VideoOptionsAction", .label = "TV _controls",
+	  .accelerator = "<control><shift>V",
+	  .callback = G_CALLBACK(gtk2_vo_toggle_window) },
+	{ .name = "InverseTextAction", .label = "_Inverse text",
+	  .accelerator = "<shift><control>I",
+	  .callback = G_CALLBACK(toggle_inverse_text) },
+	{ .name = "FullScreenAction", .label = "_Full screen",
+	  .stock_id = GTK_STOCK_FULLSCREEN,
+	  .accelerator = "F11", .callback = G_CALLBACK(set_fullscreen) },
+	// Tool
+	{ .name = "TranslateKeyboardAction", .label = "_Keyboard translation",
+	  .accelerator = "<control>Z",
+	  .callback = G_CALLBACK(toggle_keyboard_translation) },
+	{ .name = "RateLimitAction", .label = "_Rate limit",
 	  .accelerator = "<shift>F12",
 	  .callback = G_CALLBACK(toggle_ratelimit) },
 };

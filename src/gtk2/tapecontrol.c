@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 tape control window.
  *
- *  \copyright Copyright 2011-2023 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -38,11 +38,15 @@
 #include "gtk2/common.h"
 #include "gtk2/tapecontrol.h"
 
-/* UI events */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Tape dialog
+
+// UI updates
 static void update_tape_counters(void *);
 static struct event update_tape_counters_event;
 
-/* Tape control widgets */
+// Widgets
 static GtkWidget *tc_window = NULL;
 static GtkWidget *tc_input_filename = NULL;
 static GtkWidget *tc_output_filename = NULL;
@@ -62,6 +66,7 @@ static GtkToggleButton *tc_fast = NULL;
 static GtkToggleButton *tc_pad_auto = NULL;
 static GtkToggleButton *tc_rewrite = NULL;
 
+// Callbacks
 static gboolean hide_tc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data);
 static void tc_play(GtkButton *button, gpointer user_data);
 static void tc_pause(GtkButton *button, gpointer user_data);
@@ -71,10 +76,15 @@ static void tc_input_insert(GtkButton *button, gpointer user_data);
 static void tc_output_insert(GtkButton *button, gpointer user_data);
 static void tc_input_eject(GtkButton *button, gpointer user_data);
 static void tc_output_eject(GtkButton *button, gpointer user_data);
+static void tc_toggled_fast(GtkToggleButton *togglebutton, gpointer user_data);
+static void tc_toggled_pad_auto(GtkToggleButton *togglebutton, gpointer user_data);
+static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data);
+static gboolean tc_input_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data);
+static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data);
 
-/* Tape control window */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static gchar *ms_to_string(int ms);
+// Helpers
 
 enum {
 	TC_FILENAME = 0,
@@ -83,26 +93,14 @@ enum {
 	TC_MAX
 };
 
-static int have_input_list_store = 0;
+static _Bool have_input_list_store = 0;
 
-static void input_file_selected(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data) {
-	GtkTreeIter iter;
-	struct tape_file *file;
-	(void)tree_view;
-	(void)column;
-	(void)user_data;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(tc_input_list_store), &iter, path);
-	gtk_tree_model_get(GTK_TREE_MODEL(tc_input_list_store), &iter, TC_FILE_POINTER, &file, -1);
-	tape_seek_to_file(xroar.tape_interface->tape_input, file);
-}
+static gchar *ms_to_string(int ms);
+static void input_file_selected(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data);
 
-static void tc_toggled_fast(GtkToggleButton *togglebutton, gpointer user_data);
-static void tc_toggled_pad_auto(GtkToggleButton *togglebutton, gpointer user_data);
-static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data);
-static gboolean tc_input_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data);
-static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Tape control */
+// Tape dialog - create window
 
 void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 	GtkBuilder *builder;
@@ -118,7 +116,7 @@ void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 	}
 	g_bytes_unref(res_tapecontrol);
 
-	/* Extract UI elements modified elsewhere */
+	// Extract UI elements modified elsewhere
 	tc_window = GTK_WIDGET(gtk_builder_get_object(builder, "tc_window"));
 	tc_input_filename = GTK_WIDGET(gtk_builder_get_object(builder, "input_filename"));
 	tc_output_filename = GTK_WIDGET(gtk_builder_get_object(builder, "output_filename"));
@@ -138,7 +136,7 @@ void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 	tc_pad_auto = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "pad_auto"));
 	tc_rewrite = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "rewrite"));
 
-	/* Connect signals */
+	// Connect signals
 	g_signal_connect(tc_window, "delete-event", G_CALLBACK(hide_tc_window), uigtk2);
 	g_signal_connect(tc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), uigtk2);
 	g_signal_connect(tc_input_list, "row-activated", G_CALLBACK(input_file_selected), NULL);
@@ -165,7 +163,7 @@ void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "output_eject"));
 	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_eject), NULL);
 
-	/* In case any signals remain... */
+	// In case any signals remain...
 	gtk_builder_connect_signals(builder, NULL);
 	g_object_unref(builder);
 
@@ -174,7 +172,9 @@ void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 	event_queue(&UI_EVENT_LIST, &update_tape_counters_event);
 }
 
-/* Tape Control - helper functions */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Tape dialog - helper functions
 
 static void update_input_list_store(void) {
 	if (have_input_list_store) return;
@@ -208,6 +208,17 @@ static gchar *ms_to_string(int ms) {
 	return timestr;
 }
 
+static void input_file_selected(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data) {
+	GtkTreeIter iter;
+	struct tape_file *file;
+	(void)tree_view;
+	(void)column;
+	(void)user_data;
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(tc_input_list_store), &iter, path);
+	gtk_tree_model_get(GTK_TREE_MODEL(tc_input_list_store), &iter, TC_FILE_POINTER, &file, -1);
+	tape_seek_to_file(xroar.tape_interface->tape_input, file);
+}
+
 static void tc_seek(struct tape *tape, GtkScrollType scroll, gdouble value) {
 	if (tape) {
 		int seekms = 0;
@@ -237,7 +248,9 @@ static void tc_seek(struct tape *tape, GtkScrollType scroll, gdouble value) {
 	}
 }
 
-/* Tape Control - scheduled event handlers */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Tape dialog - scheduled event handlers
 
 static void update_tape_counters(void *data) {
 	(void)data;
@@ -275,7 +288,9 @@ static void update_tape_counters(void *data) {
 	event_queue(&UI_EVENT_LIST, &update_tape_counters_event);
 }
 
-/* Tape Control - UI callbacks */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Tape dialog - UI callbacks
 
 void gtk2_update_tape_state(int flags) {
 	uigtk2_notify_toggle_button_set(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE, tc_toggled_fast, NULL);
@@ -284,7 +299,7 @@ void gtk2_update_tape_state(int flags) {
 }
 
 void gtk2_input_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename) {
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
+	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/FileMenu/TapeControl");
 	gtk_label_set_text(GTK_LABEL(tc_input_filename), filename);
 	GtkTreeIter iter;
 	if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(tc_input_list_store), &iter)) {
@@ -334,7 +349,9 @@ void gtk2_update_tape_playing(int playing) {
 	gtk_widget_set_sensitive(tc_output_pause, playing);
 }
 
-/* Tape Control - Signal Handlers */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Tape dialog - signal handlers
 
 void gtk2_toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
 	gboolean val = gtk_toggle_action_get_active(current);
@@ -351,13 +368,13 @@ static gboolean hide_tc_window(GtkWidget *widget, GdkEvent *event, gpointer user
 	(void)widget;
 	(void)event;
 	struct ui_gtk2_interface *uigtk2 = user_data;
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
+	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/FileMenu/TapeControl");
 	gtk_toggle_action_set_active(toggle, 0);
 	gtk_widget_hide(tc_window);
 	return TRUE;
 }
 
-/* Tape Control - Signal Handlers - Input Tab */
+// Tape dialog - signal handlers - input tab
 
 static gboolean tc_input_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data) {
 	(void)range;
@@ -397,6 +414,8 @@ static void tc_input_eject(GtkButton *button, gpointer user_data) {
 	(void)user_data;
 	xroar_eject_input_tape();
 }
+
+// Tape dialog - signal handlers - output tab
 
 static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data) {
 	(void)range;

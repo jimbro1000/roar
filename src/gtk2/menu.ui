@@ -8,7 +8,9 @@
       <menuitem name='Run' action='RunAction'/>
       <menuitem name='Load' action='LoadAction'/>
       <separator/>
-      <menuitem name='InsertDisk' action='InsertDiskAction'/>
+      <menuitem name='TapeControl' action='TapeControlAction'/>
+      <separator/>
+      <menuitem name='DriveControl' action='DriveControlAction'/>
       <separator/>
       <menuitem name='SaveSnapshot' action='SaveSnapshotAction'/>
       <separator/>
@@ -83,8 +85,6 @@
     </menu>
     <menu name='ToolMenu' action='ToolMenuAction'>
       <menuitem name='TranslateKeyboard' action='TranslateKeyboardAction'/>
-      <menuitem name='DriveControl' action='DriveControlAction'/>
-      <menuitem name='TapeControl' action='TapeControlAction'/>
       <menuitem name='RateLimit' action='RateLimitAction'/>
     </menu>
     <menu name='HelpMenu' action='HelpMenuAction'>
