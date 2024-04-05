@@ -78,56 +78,27 @@ static void input_file_selected(GtkTreeView *tree_view, GtkTreePath *path, GtkTr
 // Tape dialog - create window
 
 void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
-	GtkWidget *widget;
-	GError *error = NULL;
-
-	GBytes *res_tapecontrol = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/tapecontrol.ui", 0, NULL);
-	if (!gtk_builder_add_from_string(uigtk2->builder, g_bytes_get_data(res_tapecontrol, NULL), -1, &error)) {
-		g_warning("Couldn't create UI: %s", error->message);
-		g_error_free(error);
-		return;
-	}
-	g_bytes_unref(res_tapecontrol);
-
-	// Extract UI elements
-	GtkWidget *tc_window = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "tc_window"));
-	GtkTreeView *tc_input_list = GTK_TREE_VIEW(gtk_builder_get_object(uigtk2->builder, "input_file_list_view"));
-	GtkScrollbar *tc_input_progress = GTK_SCROLLBAR(gtk_builder_get_object(uigtk2->builder, "input_file_progress"));
-	GtkScrollbar *tc_output_progress = GTK_SCROLLBAR(gtk_builder_get_object(uigtk2->builder, "output_file_progress"));
-	GtkWidget *tc_input_play = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_play"));
-	GtkWidget *tc_input_pause = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_pause"));
-	GtkWidget *tc_output_record = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_record"));
-	GtkWidget *tc_output_pause = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_pause"));
-	GtkToggleButton *tc_fast = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk2->builder, "fast"));
-	GtkToggleButton *tc_pad_auto = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk2->builder, "pad_auto"));
-	GtkToggleButton *tc_rewrite = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk2->builder, "rewrite"));
+	uigtk2_add_from_resource(uigtk2, "/uk/org/6809/xroar/gtk2/tapecontrol.ui");
 
 	// Connect signals
-	g_signal_connect(tc_window, "delete-event", G_CALLBACK(hide_tc_window), uigtk2);
-	g_signal_connect(tc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), uigtk2);
-	g_signal_connect(tc_input_list, "row-activated", G_CALLBACK(input_file_selected), uigtk2);
-	g_signal_connect(tc_input_progress, "change-value", G_CALLBACK(tc_input_progress_change), NULL);
-	g_signal_connect(tc_output_progress, "change-value", G_CALLBACK(tc_output_progress_change), NULL);
-	g_signal_connect(tc_input_play, "clicked", G_CALLBACK(tc_play), NULL);
-	g_signal_connect(tc_input_pause, "clicked", G_CALLBACK(tc_pause), NULL);
-	g_signal_connect(tc_output_record, "clicked", G_CALLBACK(tc_play), NULL);
-	g_signal_connect(tc_output_pause, "clicked", G_CALLBACK(tc_pause), NULL);
-	g_signal_connect(tc_fast, "toggled", G_CALLBACK(tc_toggled_fast), NULL);
-	g_signal_connect(tc_pad_auto, "toggled", G_CALLBACK(tc_toggled_pad_auto), NULL);
-	g_signal_connect(tc_rewrite, "toggled", G_CALLBACK(tc_toggled_rewrite), NULL);
-
-	widget = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_rewind"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_rewind), NULL);
-	widget = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_insert"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_insert), NULL);
-	widget = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_eject"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_eject), NULL);
-	widget = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_rewind"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_rewind), NULL);
-	widget = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_insert"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_insert), NULL);
-	widget = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_eject"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_eject), NULL);
+	uigtk2_signal_connect(uigtk2, "tc_window", "delete-event", hide_tc_window, uigtk2);
+	uigtk2_signal_connect(uigtk2, "tc_window", "key-press-event", gtk2_dummy_keypress, uigtk2);
+	uigtk2_signal_connect(uigtk2, "input_file_list_view", "row-activated", input_file_selected, uigtk2);
+	uigtk2_signal_connect(uigtk2, "input_file_progress", "change-value", tc_input_progress_change, uigtk2);
+	uigtk2_signal_connect(uigtk2, "output_file_progress", "change-value", tc_output_progress_change, uigtk2);
+	uigtk2_signal_connect(uigtk2, "input_play", "clicked", tc_play, uigtk2);
+	uigtk2_signal_connect(uigtk2, "input_pause", "clicked", tc_pause, uigtk2);
+	uigtk2_signal_connect(uigtk2, "output_record", "clicked", tc_play, uigtk2);
+	uigtk2_signal_connect(uigtk2, "output_pause", "clicked", tc_pause, uigtk2);
+	uigtk2_signal_connect(uigtk2, "fast", "toggled", tc_toggled_fast, uigtk2);
+	uigtk2_signal_connect(uigtk2, "pad_auto", "toggled", tc_toggled_pad_auto, uigtk2);
+	uigtk2_signal_connect(uigtk2, "rewrite", "toggled", tc_toggled_rewrite, uigtk2);
+	uigtk2_signal_connect(uigtk2, "input_rewind", "clicked", tc_input_rewind, uigtk2);
+	uigtk2_signal_connect(uigtk2, "input_insert", "clicked", tc_input_insert, uigtk2);
+	uigtk2_signal_connect(uigtk2, "input_eject", "clicked", tc_input_eject, uigtk2);
+	uigtk2_signal_connect(uigtk2, "output_rewind", "clicked", tc_output_rewind, uigtk2);
+	uigtk2_signal_connect(uigtk2, "output_insert", "clicked", tc_output_insert, uigtk2);
+	uigtk2_signal_connect(uigtk2, "output_eject", "clicked", tc_output_eject, uigtk2);
 
 	// Events
 	event_init(&update_tape_counters_event, DELEGATE_AS0(void, update_tape_counters, uigtk2));
@@ -229,11 +200,6 @@ static void tc_seek(struct tape *tape, GtkScrollType scroll, gdouble value) {
 static void update_tape_counters(void *sptr) {
 	struct ui_gtk2_interface *uigtk2 = sptr;
 
-	GtkWidget *tc_input_time = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_file_time"));
-	GtkAdjustment *tc_input_adjustment = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk2->builder, "input_file_adjustment"));
-	GtkWidget *tc_output_time = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_file_time"));
-	GtkAdjustment *tc_output_adjustment = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk2->builder, "output_file_adjustment"));
-
 	static long omax = -1, opos = -1;
 	static long imax = -1, ipos = -1;
 	long new_omax = 0, new_opos = 0;
@@ -249,21 +215,21 @@ static void update_tape_counters(void *sptr) {
 	}
 	if (imax != new_imax) {
 		imax = new_imax;
-		gtk_adjustment_set_upper(GTK_ADJUSTMENT(tc_input_adjustment), (gdouble)imax);
+		uigtk2_adjustment_set_upper(uigtk2, "input_file_adjustment", (gdouble)imax);
 	}
 	if (ipos != new_ipos) {
 		ipos = new_ipos;
-		gtk_adjustment_set_value(GTK_ADJUSTMENT(tc_input_adjustment), (gdouble)ipos);
-		gtk_label_set_text(GTK_LABEL(tc_input_time), ms_to_string(new_ipos));
+		uigtk2_adjustment_set_value(uigtk2, "input_file_adjustment", (gdouble)ipos);
+		uigtk2_label_set_text(uigtk2, "input_file_time", ms_to_string(new_ipos));
 	}
 	if (omax != new_omax) {
 		omax = new_omax;
-		gtk_adjustment_set_upper(GTK_ADJUSTMENT(tc_output_adjustment), (gdouble)omax);
+		uigtk2_adjustment_set_upper(uigtk2, "output_file_adjustment", (gdouble)omax);
 	}
 	if (opos != new_opos) {
 		opos = new_opos;
-		gtk_adjustment_set_value(GTK_ADJUSTMENT(tc_output_adjustment), (gdouble)opos);
-		gtk_label_set_text(GTK_LABEL(tc_output_time), ms_to_string(new_opos));
+		uigtk2_adjustment_set_value(uigtk2, "output_file_adjustment", (gdouble)opos);
+		uigtk2_label_set_text(uigtk2, "output_file_time", ms_to_string(new_opos));
 	}
 	update_tape_counters_event.at_tick += EVENT_MS(500);
 	event_queue(&UI_EVENT_LIST, &update_tape_counters_event);
@@ -274,20 +240,15 @@ static void update_tape_counters(void *sptr) {
 // Tape dialog - UI callbacks
 
 void gtk2_update_tape_state(struct ui_gtk2_interface *uigtk2, int flags) {
-	GtkToggleButton *tc_fast = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk2->builder, "fast"));
-	GtkToggleButton *tc_pad_auto = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk2->builder, "pad_auto"));
-	GtkToggleButton *tc_rewrite = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk2->builder, "rewrite"));
-
-	uigtk2_notify_toggle_button_set(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE, tc_toggled_fast, NULL);
-	uigtk2_notify_toggle_button_set(tc_pad_auto, (flags & TAPE_PAD_AUTO) ? TRUE : FALSE, tc_toggled_pad_auto, NULL);
-	uigtk2_notify_toggle_button_set(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE, tc_toggled_rewrite, NULL);
+	uigtk2_notify_toggle_button_set_active(uigtk2, "fast", (flags & TAPE_FAST) ? TRUE : FALSE, tc_toggled_fast);
+	uigtk2_notify_toggle_button_set_active(uigtk2, "pad_auto", (flags & TAPE_PAD_AUTO) ? TRUE : FALSE, tc_toggled_pad_auto);
+	uigtk2_notify_toggle_button_set_active(uigtk2, "rewrite", (flags & TAPE_REWRITE) ? TRUE : FALSE, tc_toggled_rewrite);
 }
 
 void gtk2_input_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename) {
-	GtkWidget *tc_input_filename = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_filename"));
 	GtkListStore *tc_input_list_store = GTK_LIST_STORE(gtk_builder_get_object(uigtk2->builder, "input_file_list_store"));
 
-	gtk_label_set_text(GTK_LABEL(tc_input_filename), filename);
+	uigtk2_label_set_text(uigtk2, "input_filename", filename);
 	GtkTreeIter iter;
 	if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(tc_input_list_store), &iter)) {
 		do {
@@ -297,15 +258,13 @@ void gtk2_input_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *f
 		} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(tc_input_list_store), &iter));
 	}
 	gtk_list_store_clear(tc_input_list_store);
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/FileMenu/TapeControl");
-	if (gtk_toggle_action_get_active(toggle)) {
+	if (uigtk2_toggle_action_get_active(uigtk2, "/MainMenu/FileMenu/TapeControl")) {
 		update_input_list_store(uigtk2);
 	}
 }
 
 void gtk2_output_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename) {
-	GtkWidget *tc_output_filename = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_filename"));
-	gtk_label_set_text(GTK_LABEL(tc_output_filename), filename);
+	uigtk2_label_set_text(uigtk2, "output_filename", filename);
 }
 
 static void tc_toggled_fast(GtkToggleButton *togglebutton, gpointer user_data) {
@@ -330,15 +289,10 @@ static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data
 }
 
 void gtk2_update_tape_playing(struct ui_gtk2_interface *uigtk2, int playing) {
-	GtkWidget *tc_input_play = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_play"));
-	GtkWidget *tc_input_pause = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "input_pause"));
-	GtkWidget *tc_output_record = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_record"));
-	GtkWidget *tc_output_pause = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "output_pause"));
-
-	gtk_widget_set_sensitive(tc_input_play, !playing);
-	gtk_widget_set_sensitive(tc_input_pause, playing);
-	gtk_widget_set_sensitive(tc_output_record, !playing);
-	gtk_widget_set_sensitive(tc_output_pause, playing);
+	uigtk2_widget_set_sensitive(uigtk2, "input_play", !playing);
+	uigtk2_widget_set_sensitive(uigtk2, "input_pause", playing);
+	uigtk2_widget_set_sensitive(uigtk2, "output_record", !playing);
+	uigtk2_widget_set_sensitive(uigtk2, "output_pause", playing);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -347,13 +301,11 @@ void gtk2_update_tape_playing(struct ui_gtk2_interface *uigtk2, int playing) {
 
 void gtk2_toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
-	GtkWidget *tc_window = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "tc_window"));
-	gboolean val = gtk_toggle_action_get_active(current);
-	if (val) {
-		gtk_widget_show(tc_window);
+	if (gtk_toggle_action_get_active(current)) {
+		uigtk2_widget_show(uigtk2, "tc_window");
 		update_input_list_store(uigtk2);
 	} else {
-		gtk_widget_hide(tc_window);
+		uigtk2_widget_hide(uigtk2, "tc_window");
 	}
 }
 
@@ -361,10 +313,8 @@ static gboolean hide_tc_window(GtkWidget *widget, GdkEvent *event, gpointer user
 	(void)widget;
 	(void)event;
 	struct ui_gtk2_interface *uigtk2 = user_data;
-	GtkWidget *tc_window = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "tc_window"));
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/FileMenu/TapeControl");
-	gtk_toggle_action_set_active(toggle, 0);
-	gtk_widget_hide(tc_window);
+	uigtk2_toggle_action_set_active(uigtk2, "/MainMenu/FileMenu/TapeControl", 0);
+	uigtk2_widget_hide(uigtk2, "tc_window");
 	return TRUE;
 }
 

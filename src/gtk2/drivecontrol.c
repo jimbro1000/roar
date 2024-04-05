@@ -38,17 +38,20 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Floppy dialog
+const char *label_filename_drive[4] = {
+	"filename_drive1", "filename_drive2", "filename_drive3", "filename_drive4"
+};
+
+const char *tb_we_drive[4] = {
+	"we_drive1", "we_drive2", "we_drive3", "we_drive4"
+};
+
+const char *tb_wb_drive[4] = {
+	"wb_drive1", "wb_drive2", "wb_drive3", "wb_drive4"
+};
 
 // UI updates
 static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head);
-
-// Widgets
-static GtkWidget *dc_window = NULL;
-static GtkWidget *dc_filename_drive[4] = { NULL, NULL, NULL, NULL };
-static GtkToggleButton *dc_we_drive[4] = { NULL, NULL, NULL, NULL };
-static GtkToggleButton *dc_wb_drive[4] = { NULL, NULL, NULL, NULL };
-static GtkWidget *dc_drive_cyl_head = NULL;
 
 // Callbacks
 static gboolean hide_dc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data);
@@ -62,60 +65,25 @@ static void dc_toggled_wb(GtkToggleButton *togglebutton, gpointer user_data);
 // Floppy dialog - create window
 
 void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2) {
-	GtkBuilder *builder = uigtk2->builder;
-	GtkWidget *widget;
-	GError *error = NULL;
-	int i;
+	uigtk2_add_from_resource(uigtk2, "/uk/org/6809/xroar/gtk2/drivecontrol.ui");
 
-	GBytes *res_drivecontrol = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/drivecontrol.ui", 0, NULL);
-	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_drivecontrol, NULL), -1, &error)) {
-		g_warning("Couldn't create UI: %s", error->message);
-		g_error_free(error);
-		return;
+	// Connect signals
+	uigtk2_signal_connect(uigtk2, "dc_window", "delete-event", hide_dc_window, uigtk2);
+	uigtk2_signal_connect(uigtk2, "dc_window", "key-press-event", gtk2_dummy_keypress, uigtk2);
+	for (int i = 0; i < 4; i++) {
+		uigtk2_signal_connect(uigtk2, tb_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), (gpointer)(intptr_t)i);
+		uigtk2_signal_connect(uigtk2, tb_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), (gpointer)(intptr_t)i);
 	}
-	g_bytes_unref(res_drivecontrol);
+	uigtk2_signal_connect(uigtk2, "eject_drive1", "clicked", dc_eject, (gpointer)(intptr_t)0);
+	uigtk2_signal_connect(uigtk2, "eject_drive2", "clicked", dc_eject, (gpointer)(intptr_t)1);
+	uigtk2_signal_connect(uigtk2, "eject_drive3", "clicked", dc_eject, (gpointer)(intptr_t)2);
+	uigtk2_signal_connect(uigtk2, "eject_drive4", "clicked", dc_eject, (gpointer)(intptr_t)3);
+	uigtk2_signal_connect(uigtk2, "insert_drive1", "clicked", dc_insert, (gpointer)(intptr_t)0);
+	uigtk2_signal_connect(uigtk2, "insert_drive2", "clicked", dc_insert, (gpointer)(intptr_t)1);
+	uigtk2_signal_connect(uigtk2, "insert_drive3", "clicked", dc_insert, (gpointer)(intptr_t)2);
+	uigtk2_signal_connect(uigtk2, "insert_drive4", "clicked", dc_insert, (gpointer)(intptr_t)3);
 
-	/* Extract UI elements modified elsewhere */
-	dc_window = GTK_WIDGET(gtk_builder_get_object(builder, "dc_window"));
-	dc_filename_drive[0] = GTK_WIDGET(gtk_builder_get_object(builder, "filename_drive1"));
-	dc_filename_drive[1] = GTK_WIDGET(gtk_builder_get_object(builder, "filename_drive2"));
-	dc_filename_drive[2] = GTK_WIDGET(gtk_builder_get_object(builder, "filename_drive3"));
-	dc_filename_drive[3] = GTK_WIDGET(gtk_builder_get_object(builder, "filename_drive4"));
-	dc_we_drive[0] = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "we_drive1"));
-	dc_we_drive[1] = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "we_drive2"));
-	dc_we_drive[2] = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "we_drive3"));
-	dc_we_drive[3] = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "we_drive4"));
-	dc_wb_drive[0] = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "wb_drive1"));
-	dc_wb_drive[1] = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "wb_drive2"));
-	dc_wb_drive[2] = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "wb_drive3"));
-	dc_wb_drive[3] = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "wb_drive4"));
-	dc_drive_cyl_head = GTK_WIDGET(gtk_builder_get_object(builder, "drive_cyl_head"));
-
-	/* Connect signals */
-	g_signal_connect(dc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), uigtk2);
-	for (i = 0; i < 4; i++) {
-		g_signal_connect(dc_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), (gpointer)(intptr_t)i);
-		g_signal_connect(dc_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), (gpointer)(intptr_t)i);
-	}
-	g_signal_connect(dc_window, "delete-event", G_CALLBACK(hide_dc_window), uigtk2);
-	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive1"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)0);
-	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive2"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)1);
-	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive3"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)2);
-	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive4"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)3);
-	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive1"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)0);
-	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive2"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)1);
-	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive3"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)2);
-	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive4"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)3);
-
-	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, NULL);
+	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uigtk2);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -162,19 +130,19 @@ void gtk2_insert_disk(struct ui_gtk2_interface *uigtk2, int drive) {
 
 // Floppy dialog - UI callbacks
 
-void gtk2_update_drive_write_enable(int drive, _Bool write_enable) {
+void gtk2_update_drive_write_enable(struct ui_gtk2_interface *uigtk2, int drive, _Bool write_enable) {
 	if (drive >= 0 && drive <= 3) {
-		gtk_toggle_button_set_active(dc_we_drive[drive], write_enable ? TRUE : FALSE);
+		uigtk2_toggle_button_set_active(uigtk2, tb_we_drive[drive], write_enable ? TRUE : FALSE);
 	}
 }
 
-void gtk2_update_drive_write_back(int drive, _Bool write_back) {
+void gtk2_update_drive_write_back(struct ui_gtk2_interface *uigtk2, int drive, _Bool write_back) {
 	if (drive >= 0 && drive <= 3) {
-		gtk_toggle_button_set_active(dc_wb_drive[drive], write_back ? TRUE : FALSE);
+		uigtk2_toggle_button_set_active(uigtk2, tb_wb_drive[drive], write_back ? TRUE : FALSE);
 	}
 }
 
-void gtk2_update_drive_disk(int drive, const struct vdisk *disk) {
+void gtk2_update_drive_disk(struct ui_gtk2_interface *uigtk2, int drive, const struct vdisk *disk) {
 	if (drive < 0 || drive > 3)
 		return;
 	char *filename = NULL;
@@ -184,16 +152,17 @@ void gtk2_update_drive_disk(int drive, const struct vdisk *disk) {
 		we = !disk->write_protect;
 		wb = disk->write_back;
 	}
-	gtk_label_set_text(GTK_LABEL(dc_filename_drive[drive]), filename);
-	gtk2_update_drive_write_enable(drive, we);
-	gtk2_update_drive_write_back(drive, wb);
+
+	uigtk2_label_set_text(uigtk2, label_filename_drive[drive], filename);
+	gtk2_update_drive_write_enable(uigtk2, drive, we);
+	gtk2_update_drive_write_back(uigtk2, drive, wb);
 }
 
 static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head) {
-	(void)sptr;
+	struct ui_gtk2_interface *uigtk2 = sptr;
 	char string[16];
 	snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", drive + 1, cyl, head);
-	gtk_label_set_text(GTK_LABEL(dc_drive_cyl_head), string);
+	uigtk2_label_set_text(uigtk2, "drive_cyl_head", string);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -201,12 +170,11 @@ static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsi
 // Floppy dialog - signal handlers
 
 void gtk2_toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
-	gboolean val = gtk_toggle_action_get_active(current);
-	(void)user_data;
-	if (val) {
-		gtk_widget_show(dc_window);
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	if (gtk_toggle_action_get_active(current)) {
+		uigtk2_widget_show(uigtk2, "dc_window");
 	} else {
-		gtk_widget_hide(dc_window);
+		uigtk2_widget_hide(uigtk2, "dc_window");
 	}
 }
 
@@ -214,9 +182,8 @@ static gboolean hide_dc_window(GtkWidget *widget, GdkEvent *event, gpointer user
 	(void)widget;
 	(void)event;
 	struct ui_gtk2_interface *uigtk2 = user_data;
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/FileMenu/DriveControl");
-	gtk_toggle_action_set_active(toggle, 0);
-	gtk_widget_hide(dc_window);
+	uigtk2_toggle_action_set_active(uigtk2, "/MainMenu/FileMenu/DriveControl", 0);
+	uigtk2_widget_hide(uigtk2, "dc_window");
 	return TRUE;
 }
 

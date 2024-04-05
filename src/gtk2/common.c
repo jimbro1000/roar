@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 user-interface common functions.
  *
- *  \copyright Copyright 2014-2023 Ciaran Anscomb
+ *  \copyright Copyright 2014-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -164,46 +164,20 @@ gboolean gtk2_handle_button_release(GtkWidget *widget, GdkEventButton *event, gp
 	return FALSE;
 }
 
-// Wrappers for notify-only updating of UI elements.  Blocks callback so that
-// no further action is taken.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void uigtk2_notify_toggle_button_set(GtkToggleButton *o, gboolean v,
-				     gpointer func, gpointer data) {
-	g_signal_handlers_block_by_func(o, G_CALLBACK(func), data);
-	gtk_toggle_button_set_active(o, v);
-	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
-}
-
-void uigtk2_notify_toggle_action_set(GtkToggleAction *o, gboolean v,
-				     gpointer func, gpointer data) {
-	g_signal_handlers_block_by_func(o, G_CALLBACK(func), data);
-	gtk_toggle_action_set_active(o, v);
-	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
-}
-
-void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gpointer data) {
-	g_signal_handlers_block_by_func(o, G_CALLBACK(func), data);
-	gtk_radio_action_set_current_value(o, v);
-	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
-}
-
-void uigtk2_notify_spin_button_set(GtkSpinButton *o, gdouble value,
-				   gpointer func, gpointer data) {
-	g_signal_handlers_block_by_func(o, G_CALLBACK(func), data);
-	gtk_spin_button_set_value(o, value);
-	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
-}
+// UI builder helpers
 
 FUNC_ATTR_NORETURN static void do_g_abort(const gchar *format, GError *error) {
 	(void)format;
 	if (error) {
-		g_message("gtk_builder_new_from_resource() failed: %s", error->message);
+		g_message("gtk_builder_add_from_resource() failed: %s", error->message);
 		g_error_free(error);
 	}
 	g_abort();
 }
 
-GtkBuilder *gtk_builder_new_from_resource(const gchar *path) {
+void uigtk2_add_from_resource(struct ui_gtk2_interface *uigtk2, const gchar *path) {
 	GError *error = NULL;
 	GBytes *resource = g_resources_lookup_data(path, 0, &error);
 	if (!resource) {
@@ -213,11 +187,125 @@ GtkBuilder *gtk_builder_new_from_resource(const gchar *path) {
 	gsize xml_size;
 	const gchar *xml = g_bytes_get_data(resource, &xml_size);
 
-	GtkBuilder *builder = gtk_builder_new();
-	if (gtk_builder_add_from_string(builder, xml, xml_size, &error) == 0) {
+	if (gtk_builder_add_from_string(uigtk2->builder, xml, xml_size, &error) == 0) {
 		do_g_abort("gtk_builder_add_from_string() failed: %s", error);
 	}
 
 	g_bytes_unref(resource);
-	return builder;
+}
+
+void do_uigtk2_signal_connect(struct ui_gtk2_interface *uigtk2, const gchar *o_name,
+			      const gchar *detailed_signal,
+			      GCallback c_handler,
+			      gpointer data) {
+	GObject *o = gtk_builder_get_object(uigtk2->builder, o_name);
+	g_signal_connect(o, detailed_signal, c_handler, data);
+}
+
+// Notify-only menu manager update helpers.
+//
+// Blocks callback so that no further action is taken.
+
+void uigtk2_notify_radio_action_set_current_value(struct ui_gtk2_interface *uigtk2,
+						  const gchar *path, gint v, gpointer func) {
+	GtkRadioAction *ra = GTK_RADIO_ACTION(gtk_ui_manager_get_action(uigtk2->menu_manager, path));
+	g_signal_handlers_block_by_func(ra, G_CALLBACK(func), uigtk2);
+	gtk_radio_action_set_current_value(ra, v);
+	g_signal_handlers_unblock_by_func(ra, G_CALLBACK(func), uigtk2);
+}
+
+void uigtk2_notify_toggle_action_set_active(struct ui_gtk2_interface *uigtk2,
+					    const gchar *path, gboolean v, gpointer func) {
+	GtkToggleAction *ta = GTK_TOGGLE_ACTION(gtk_ui_manager_get_action(uigtk2->menu_manager, path));
+	g_signal_handlers_block_by_func(ta, G_CALLBACK(func), uigtk2);
+	gtk_toggle_action_set_active(ta, v);
+	g_signal_handlers_unblock_by_func(ta, G_CALLBACK(func), uigtk2);
+}
+
+// Notify-only UI update helpers.
+//
+// Blocks callback so that no further action is taken.
+
+void uigtk2_notify_spin_button_set_value(struct ui_gtk2_interface *uigtk2,
+					 const gchar *sb_name, gdouble value, gpointer func) {
+	GtkSpinButton *sb = GTK_SPIN_BUTTON(gtk_builder_get_object(uigtk2->builder, sb_name));
+	g_signal_handlers_block_by_func(sb, G_CALLBACK(func), uigtk2);
+	gtk_spin_button_set_value(sb, value);
+	g_signal_handlers_unblock_by_func(sb, G_CALLBACK(func), uigtk2);
+}
+
+void uigtk2_notify_toggle_button_set_active(struct ui_gtk2_interface *uigtk2,
+					    const gchar *tb_name,
+					    gboolean v, gpointer func) {
+	GtkToggleButton *tb = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk2->builder, tb_name));
+	g_signal_handlers_block_by_func(tb, G_CALLBACK(func), uigtk2);
+	gtk_toggle_button_set_active(tb, v);
+	g_signal_handlers_unblock_by_func(tb, G_CALLBACK(func), uigtk2);
+}
+
+// Menu manager helpers
+
+gboolean uigtk2_toggle_action_get_active(struct ui_gtk2_interface *uigtk2, const gchar *path) {
+	GtkToggleAction *ta = GTK_TOGGLE_ACTION(gtk_ui_manager_get_action(uigtk2->menu_manager, path));
+	return gtk_toggle_action_get_active(ta);
+}
+
+void uigtk2_toggle_action_set_active(struct ui_gtk2_interface *uigtk2, const gchar *path,
+				     gboolean v) {
+	GtkToggleAction *ta = GTK_TOGGLE_ACTION(gtk_ui_manager_get_action(uigtk2->menu_manager, path));
+	gtk_toggle_action_set_active(ta, v);
+}
+
+// UI helpers
+
+void uigtk2_adjustment_set_lower(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
+				 gdouble lower) {
+	GtkAdjustment *a = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk2->builder, a_name));
+	gtk_adjustment_set_lower(a, lower);
+}
+
+void uigtk2_adjustment_set_upper(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
+				 gdouble upper) {
+	GtkAdjustment *a = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk2->builder, a_name));
+	gtk_adjustment_set_upper(a, upper);
+}
+
+void uigtk2_adjustment_set_value(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
+				 gdouble value) {
+	GtkAdjustment *a = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk2->builder, a_name));
+	gtk_adjustment_set_value(a, value);
+}
+
+void uigtk2_combo_box_set_active(struct ui_gtk2_interface *uigtk2, const gchar *cbt_name,
+				 gint index_) {
+	GtkComboBoxText *cbt = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(uigtk2->builder, cbt_name));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(cbt), index_);
+}
+
+void uigtk2_label_set_text(struct ui_gtk2_interface *uigtk2, const gchar *l_name,
+			   const gchar *str) {
+	GtkLabel *l = GTK_LABEL(gtk_builder_get_object(uigtk2->builder, l_name));
+	gtk_label_set_text(l, str);
+}
+
+void uigtk2_toggle_button_set_active(struct ui_gtk2_interface *uigtk2, const gchar *tb_name,
+				     gboolean v) {
+	GtkToggleButton *tb = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk2->builder, tb_name));
+	gtk_toggle_button_set_active(tb, v);
+}
+
+void uigtk2_widget_hide(struct ui_gtk2_interface *uigtk2, const gchar *w_name) {
+	GtkWidget *w = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, w_name));
+	gtk_widget_hide(w);
+}
+
+void uigtk2_widget_set_sensitive(struct ui_gtk2_interface *uigtk2, const gchar *w_name,
+				 gboolean sensitive) {
+	GtkWidget *w = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, w_name));
+	gtk_widget_set_sensitive(w, sensitive);
+}
+
+void uigtk2_widget_show(struct ui_gtk2_interface *uigtk2, const gchar *w_name) {
+	GtkWidget *w = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, w_name));
+	gtk_widget_show(w);
 }

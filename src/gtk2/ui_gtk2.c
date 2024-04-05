@@ -53,7 +53,7 @@
 static void *ui_gtk2_new(void *cfg);
 static void ui_gtk2_free(void *sptr);
 static void ui_gtk2_run(void *sptr);
-static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data);
+static void ui_gtk2_update_state(void *, int tag, int value, const void *data);
 
 extern struct module vo_gtkgl_module;
 extern struct module vo_null_module;
@@ -243,11 +243,11 @@ static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
 }
 
 static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)user_data;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
 	xroar_set_ccr(0, val);
-	gtk2_vo_update_cmp_renderer(global_uigtk2, val);
+	gtk2_vo_update_cmp_renderer(uigtk2, val);
 }
 
 static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
@@ -319,14 +319,15 @@ static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
 
 static void close_about(GtkDialog *dialog, gint response_id, gpointer user_data) {
 	(void)response_id;
-	(void)user_data;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	gtk_widget_hide(GTK_WIDGET(dialog));
 	gtk_widget_destroy(GTK_WIDGET(dialog));
 }
 
 static void about(GtkMenuItem *item, gpointer user_data) {
 	(void)item;
-	(void)user_data;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 	GtkAboutDialog *dialog = (GtkAboutDialog *)gtk_about_dialog_new();
 	gtk_about_dialog_set_version(dialog, VERSION);
 	gtk_about_dialog_set_copyright(dialog, "Copyright © " PACKAGE_YEAR " Ciaran Anscomb <xroar@6809.org.uk>");
@@ -345,7 +346,7 @@ static void about(GtkMenuItem *item, gpointer user_data) {
 "with XRoar.  If not, see <https://www.gnu.org/licenses/>."
 	);
 	gtk_about_dialog_set_website(dialog, "https://www.6809.org.uk/xroar/");
-	g_signal_connect(dialog, "response", G_CALLBACK(close_about), NULL);
+	g_signal_connect(dialog, "response", G_CALLBACK(close_about), uigtk2);
 	gtk_widget_show(GTK_WIDGET(dialog));
 }
 
@@ -510,17 +511,14 @@ static void *ui_gtk2_new(void *cfg) {
 
 	g_set_application_name("XRoar");
 
-	GtkBuilder *builder = gtk_builder_new_from_resource("/uk/org/6809/xroar/gtk2/application.ui");
 	GError *error = NULL;
 
 	struct ui_gtk2_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
 	*uigtk2 = (struct ui_gtk2_interface){0};
 	struct ui_interface *ui = &uigtk2->public;
 
-	// Keep the builder around.  The various dialog boxes add to it, and we
-	// can use it to find UI elements by name when required rather than
-	// having to record every useful widget.
-	uigtk2->builder = builder;
+	uigtk2->builder = gtk_builder_new();
+	uigtk2_add_from_resource(uigtk2, "/uk/org/6809/xroar/gtk2/application.ui");
 
 	// Make available globally for other GTK+ 2 code
 	global_uigtk2 = uigtk2;
@@ -528,17 +526,17 @@ static void *ui_gtk2_new(void *cfg) {
 
 	ui->free = DELEGATE_AS0(void, ui_gtk2_free, uigtk2);
 	ui->run = DELEGATE_AS0(void, ui_gtk2_run, uigtk2);
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_set_state, uigtk2);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_update_state, uigtk2);
 
 	// Flag which file requester belongs to this UI
 	ui->filereq_module = &filereq_gtk2_module;
 
 	/* Fetch top level window */
-	uigtk2->top_window = GTK_WIDGET(gtk_builder_get_object(builder, "top_window"));
-	g_signal_connect(uigtk2->top_window, "destroy", G_CALLBACK(ui_gtk2_destroy), NULL);
+	uigtk2->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "top_window"));
+	g_signal_connect(uigtk2->top_window, "destroy", G_CALLBACK(ui_gtk2_destroy), (gpointer)(intptr_t)0);
 
 	/* Fetch vbox */
-	GtkWidget *vbox = GTK_WIDGET(gtk_builder_get_object(builder, "vbox1"));
+	GtkWidget *vbox = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "vbox1"));
 
 	/* Create a UI from XML */
 	uigtk2->menu_manager = gtk_ui_manager_new();
@@ -572,11 +570,11 @@ static void *ui_gtk2_new(void *cfg) {
 	/* Set up main action group */
 	gtk_action_group_add_actions(main_action_group, ui_entries, G_N_ELEMENTS(ui_entries), uigtk2);
 	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, G_N_ELEMENTS(ui_toggles), uigtk2);
-	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, G_N_ELEMENTS(keymap_radio_entries), 0, (GCallback)set_keymap, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, G_N_ELEMENTS(joy_right_radio_entries), 0, (GCallback)set_joy_right, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, G_N_ELEMENTS(joy_left_radio_entries), 0, (GCallback)set_joy_left, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, tv_input_radio_entries, G_N_ELEMENTS(tv_input_radio_entries), 0, (GCallback)set_tv_input, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, G_N_ELEMENTS(ccr_radio_entries), 0, (GCallback)set_ccr, NULL);
+	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, G_N_ELEMENTS(keymap_radio_entries), 0, (GCallback)set_keymap, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, G_N_ELEMENTS(joy_right_radio_entries), 0, (GCallback)set_joy_right, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, G_N_ELEMENTS(joy_left_radio_entries), 0, (GCallback)set_joy_left, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, tv_input_radio_entries, G_N_ELEMENTS(tv_input_radio_entries), 0, (GCallback)set_tv_input, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, G_N_ELEMENTS(ccr_radio_entries), 0, (GCallback)set_ccr, uigtk2);
 
 	/* Menu merge points */
 	uigtk2->merge_machines = gtk_ui_manager_new_merge_id(uigtk2->menu_manager);
@@ -595,7 +593,7 @@ static void *ui_gtk2_new(void *cfg) {
 	gtk_box_reorder_child(GTK_BOX(vbox), uigtk2->menubar, 0);
 
 	/* Create drawing_area widget, add to vbox */
-	uigtk2->drawing_area = GTK_WIDGET(gtk_builder_get_object(builder, "drawing_area"));
+	uigtk2->drawing_area = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "drawing_area"));
 	GdkGeometry hints = {
 		.min_width = 160, .min_height = 120,
 		.base_width = 0, .base_height = 0,
@@ -641,7 +639,7 @@ static void *ui_gtk2_new(void *cfg) {
 	g_signal_connect(G_OBJECT(uigtk2->drawing_area), "button-release-event", G_CALLBACK(gtk2_handle_button_release), uigtk2);
 
 	// Any remaining signals
-	gtk_builder_connect_signals(builder, NULL);
+	gtk_builder_connect_signals(uigtk2->builder, uigtk2);
 
 	// Ensure we get those events
 	gtk_widget_add_events(uigtk2->top_window, GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK);
@@ -674,23 +672,19 @@ static void ui_gtk2_run(void *sptr) {
 	gtk_main();
 }
 
-static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) {
+static void ui_gtk2_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_gtk2_interface *uigtk2 = sptr;
-	GtkToggleAction *toggle;
-	GtkRadioAction *radio;
 
 	switch (tag) {
 
 	/* Hardware */
 
 	case ui_tag_machine:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine1");
-		uigtk2_notify_radio_action_set(radio, value, set_machine, NULL);
+		uigtk2_notify_radio_action_set_current_value(uigtk2, "/MainMenu/HardwareMenu/MachineMenu/machine1", value, set_machine);
 		break;
 
 	case ui_tag_cartridge:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart0");
-		uigtk2_notify_radio_action_set(radio, value, set_cart, NULL);
+		uigtk2_notify_radio_action_set_current_value(uigtk2, "/MainMenu/HardwareMenu/CartridgeMenu/cart0", value, set_cart);
 		break;
 
 	/* Tape */
@@ -714,38 +708,34 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 	/* Disk */
 
 	case ui_tag_disk_write_enable:
-		gtk2_update_drive_write_enable(value, (intptr_t)data);
+		gtk2_update_drive_write_enable(uigtk2, value, (intptr_t)data);
 		break;
 
 	case ui_tag_disk_write_back:
-		gtk2_update_drive_write_back(value, (intptr_t)data);
+		gtk2_update_drive_write_back(uigtk2, value, (intptr_t)data);
 		break;
 
 	case ui_tag_disk_data:
-		gtk2_update_drive_disk(value, (const struct vdisk *)data);
+		gtk2_update_drive_disk(uigtk2, value, (const struct vdisk *)data);
 		break;
 
 	/* Video */
 
 	case ui_tag_fullscreen:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/FullScreen");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, set_fullscreen, NULL);
+		uigtk2_notify_toggle_action_set_active(uigtk2, "/MainMenu/ViewMenu/FullScreen", value ? TRUE : FALSE, set_fullscreen);
 		break;
 
 	case ui_tag_vdg_inverse:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/InverseText");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_inverse_text, NULL);
+		uigtk2_notify_toggle_action_set_active(uigtk2, "/MainMenu/ViewMenu/InverseText", value ? TRUE : FALSE, toggle_inverse_text);
 		break;
 
 	case ui_tag_ccr:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-palette");
-		uigtk2_notify_radio_action_set(radio, value, set_ccr, NULL);
+		uigtk2_notify_radio_action_set_current_value(uigtk2, "/MainMenu/ViewMenu/CCRMenu/ccr-palette", value, set_ccr);
 		gtk2_vo_update_cmp_renderer(uigtk2, value);
 		break;
 
 	case ui_tag_tv_input:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/TVInputMenu/tv-input-svideo");
-		uigtk2_notify_radio_action_set(radio, value, set_tv_input, NULL);
+		uigtk2_notify_radio_action_set_current_value(uigtk2, "/MainMenu/ViewMenu/TVInputMenu/tv-input-svideo", value, set_tv_input);
 		break;
 
 	case ui_tag_brightness:
@@ -791,20 +781,17 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 	/* Audio */
 
 	case ui_tag_ratelimit:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/RateLimit");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_ratelimit, NULL);
+		uigtk2_notify_toggle_action_set_active(uigtk2, "/MainMenu/ToolMenu/RateLimit", value ? TRUE : FALSE, toggle_ratelimit);
 		break;
 
 	/* Keyboard */
 
 	case ui_tag_keymap:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon");
-		uigtk2_notify_radio_action_set(radio, value, set_keymap, NULL);
+		uigtk2_notify_radio_action_set_current_value(uigtk2, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon", value, set_keymap);
 		break;
 
 	case ui_tag_kbd_translate:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TranslateKeyboard");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_keyboard_translation, NULL);
+		uigtk2_notify_toggle_action_set_active(uigtk2, "/MainMenu/ToolMenu/TranslateKeyboard", value ? TRUE : FALSE, toggle_keyboard_translation);
 		break;
 
 	/* Joysticks */
@@ -812,12 +799,13 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 	case ui_tag_joy_right:
 	case ui_tag_joy_left:
 		{
+			const gchar *path;
 			gpointer func;
 			if (tag == ui_tag_joy_right) {
-				radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none");
+				path = "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none";
 				func = set_joy_right;
 			} else {
-				radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none");
+				path = "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none";
 				func = set_joy_left;
 			}
 			int joy = 0;
@@ -829,7 +817,7 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 					}
 				}
 			}
-			uigtk2_notify_radio_action_set(radio, joy, func, NULL);
+			uigtk2_notify_radio_action_set_current_value(uigtk2, path, joy, func);
 		}
 		break;
 
@@ -882,7 +870,7 @@ static void gtk2_update_machine_menu(void *sptr) {
 		radio_entries[i].value = mc->id;
 		gtk_ui_manager_add_ui(uigtk2->menu_manager, uigtk2->merge_machines, "/MainMenu/HardwareMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
-	gtk_action_group_add_radio_actions(uigtk2->machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, NULL);
+	gtk_action_group_add_radio_actions(uigtk2->machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, uigtk2);
 
 	// Back through the hoops
 	for (i = 0; i < num_machines; i++) {
@@ -941,7 +929,7 @@ static void gtk2_update_cartridge_menu(void *sptr) {
 	radio_entries[num_carts].label = "None";
 	radio_entries[num_carts].value = -1;
 	gtk_ui_manager_add_ui(uigtk2->menu_manager, uigtk2->merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
-	gtk_action_group_add_radio_actions(uigtk2->cart_action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, NULL);
+	gtk_action_group_add_radio_actions(uigtk2->cart_action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, uigtk2);
 
 	// Back through the hoops
 	for (i = 0; i < num_carts; i++) {

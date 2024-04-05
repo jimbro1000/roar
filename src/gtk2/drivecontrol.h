@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 drive control window.
  *
- *  \copyright Copyright 2011-2023 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -27,8 +27,8 @@ void gtk2_insert_disk(struct ui_gtk2_interface *uigtk2, int drive);
 void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2);
 void gtk2_toggle_dc_window(GtkToggleAction *current, gpointer user_data);
 
-void gtk2_update_drive_disk(int drive, const struct vdisk *disk);
-void gtk2_update_drive_write_enable(int drive, _Bool write_enable);
-void gtk2_update_drive_write_back(int drive, _Bool write_back);
+void gtk2_update_drive_disk(struct ui_gtk2_interface *uigtk2, int drive, const struct vdisk *disk);
+void gtk2_update_drive_write_enable(struct ui_gtk2_interface *uigtk2, int drive, _Bool write_enable);
+void gtk2_update_drive_write_back(struct ui_gtk2_interface *uigtk2, int drive, _Bool write_back);
 
 #endif

@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 user-interface common functions.
  *
- *  \copyright Copyright 2014-2023 Ciaran Anscomb
+ *  \copyright Copyright 2014-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -91,25 +91,78 @@ extern struct joystick_module *gtk2_js_modlist[];
 
 void gtk2_joystick_init(struct ui_gtk2_interface *uigtk2);
 
-// Wrappers for notify-only updating of UI elements.  Blocks callback so that
-// no further action is taken.
-
-void uigtk2_notify_toggle_button_set(GtkToggleButton *o, gboolean v,
-				     gpointer func, gpointer data);
-
-void uigtk2_notify_toggle_action_set(GtkToggleAction *o, gboolean v,
-				     gpointer func, gpointer data);
-
-void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gpointer data);
-
-void uigtk2_notify_spin_button_set(GtkSpinButton *spin_button, gdouble value,
-                                   gpointer func, gpointer data);
-
-// This function doesn't exist in GTK+ 2, but does in later versions:
-GtkBuilder *gtk_builder_new_from_resource(const gchar *path);
-
 #ifndef GLIB_VERSION_2_50
 #define g_abort() abort()
 #endif
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// UI builder helpers
+
+void uigtk2_add_from_resource(struct ui_gtk2_interface *uigtk2, const gchar *path);
+
+void do_uigtk2_signal_connect(struct ui_gtk2_interface *uigtk2, const gchar *o_name,
+			      const gchar *detailed_signal,
+			      GCallback c_handler,
+			      gpointer data);
+
+#define uigtk2_signal_connect(uigtk2, o_name, detailed_signal, c_handler, data) \
+	do_uigtk2_signal_connect((uigtk2), (o_name), \
+				 (detailed_signal), G_CALLBACK(c_handler), (data))
+
+// Notify-only menu manager update helpers.
+//
+// Blocks callback so that no further action is taken.
+
+void uigtk2_notify_radio_action_set_current_value(struct ui_gtk2_interface *uigtk2,
+						  const gchar *path, gint v, gpointer func);
+
+void uigtk2_notify_toggle_action_set_active(struct ui_gtk2_interface *uigtk2,
+					    const gchar *path, gboolean v, gpointer func);
+
+// Notify-only UI update helpers.
+//
+// Blocks callback so that no further action is taken.
+
+void uigtk2_notify_spin_button_set_value(struct ui_gtk2_interface *uigtk2,
+					 const gchar *sb_name, gdouble value, gpointer func);
+
+void uigtk2_notify_toggle_button_set_active(struct ui_gtk2_interface *uigtk2,
+					    const gchar *tb_name,
+					    gboolean v, gpointer func);
+
+// Menu manager update helpers
+
+gboolean uigtk2_toggle_action_get_active(struct ui_gtk2_interface *uigtk2, const gchar *path);
+
+void uigtk2_toggle_action_set_active(struct ui_gtk2_interface *uigtk2, const gchar *path,
+				     gboolean v);
+
+// UI update helpers
+
+void uigtk2_adjustment_set_lower(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
+				 gdouble lower);
+
+void uigtk2_adjustment_set_upper(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
+				 gdouble upper);
+
+void uigtk2_adjustment_set_value(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
+				 gdouble value);
+
+void uigtk2_combo_box_set_active(struct ui_gtk2_interface *uigtk2, const gchar *cbt_name,
+				 gint index_);
+
+void uigtk2_label_set_text(struct ui_gtk2_interface *uigtk2, const gchar *l_name,
+			   const gchar *str);
+
+void uigtk2_toggle_button_set_active(struct ui_gtk2_interface *uigtk2, const gchar *tb_name,
+                                     gboolean v);
+
+void uigtk2_widget_hide(struct ui_gtk2_interface *uigtk2, const gchar *w_name);
+
+void uigtk2_widget_set_sensitive(struct ui_gtk2_interface *uigtk2, const gchar *w_name,
+				 gboolean sensitive);
+
+void uigtk2_widget_show(struct ui_gtk2_interface *uigtk2, const gchar *w_name);
 
 #endif
