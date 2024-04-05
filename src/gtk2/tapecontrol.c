@@ -40,7 +40,14 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Tape dialog
+// Column indices within the input ListStore
+
+enum {
+	TC_FILENAME = 0,
+	TC_POSITION,
+	TC_FILE_POINTER,
+	TC_MAX
+};
 
 // UI updates
 static void update_tape_counters(void *);
@@ -62,19 +69,7 @@ static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data
 static gboolean tc_input_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data);
 static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data);
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// Helpers
-
-enum {
-	TC_FILENAME = 0,
-	TC_POSITION,
-	TC_FILE_POINTER,
-	TC_MAX
-};
-
-static _Bool have_input_list_store = 0;
-
+// Helper functions
 static gchar *ms_to_string(int ms);
 static void input_file_selected(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data);
 
@@ -147,14 +142,20 @@ void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 static void update_input_list_store(struct ui_gtk2_interface *uigtk2) {
 	GtkListStore *tc_input_list_store = GTK_LIST_STORE(gtk_builder_get_object(uigtk2->builder, "input_file_list_store"));
 
-	if (have_input_list_store) return;
-	if (!xroar.tape_interface || !xroar.tape_interface->tape_input) return;
-	have_input_list_store = 1;
+	// If there's anything in the tree already, don't scan it again
+	GtkTreeIter iter;
+	if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(tc_input_list_store), &iter)) {
+		return;
+	}
+
+	if (!xroar.tape_interface || !xroar.tape_interface->tape_input) {
+		return;
+	}
+
 	struct tape_file *file;
 	long old_offset = tape_tell(xroar.tape_interface->tape_input);
 	tape_rewind(xroar.tape_interface->tape_input);
 	while ((file = tape_file_next(xroar.tape_interface->tape_input, 1))) {
-		GtkTreeIter iter;
 		int ms = tape_to_ms(xroar.tape_interface->tape_input, file->offset);
 		gchar *timestr = ms_to_string(ms);
 		gtk_list_store_append(tc_input_list_store, &iter);
@@ -296,7 +297,6 @@ void gtk2_input_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *f
 		} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(tc_input_list_store), &iter));
 	}
 	gtk_list_store_clear(tc_input_list_store);
-	have_input_list_store = 0;
 	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/FileMenu/TapeControl");
 	if (gtk_toggle_action_get_active(toggle)) {
 		update_input_list_store(uigtk2);
