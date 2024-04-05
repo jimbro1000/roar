@@ -571,7 +571,7 @@ static void *ui_gtk2_new(void *cfg) {
 
 	/* Set up main action group */
 	gtk_action_group_add_actions(main_action_group, ui_entries, G_N_ELEMENTS(ui_entries), uigtk2);
-	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, G_N_ELEMENTS(ui_toggles), NULL);
+	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, G_N_ELEMENTS(ui_toggles), uigtk2);
 	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, G_N_ELEMENTS(keymap_radio_entries), 0, (GCallback)set_keymap, NULL);
 	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, G_N_ELEMENTS(joy_right_radio_entries), 0, (GCallback)set_joy_right, NULL);
 	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, G_N_ELEMENTS(joy_left_radio_entries), 0, (GCallback)set_joy_left, NULL);
@@ -696,7 +696,7 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 	/* Tape */
 
 	case ui_tag_tape_flags:
-		gtk2_update_tape_state(value);
+		gtk2_update_tape_state(uigtk2, value);
 		break;
 
 	case ui_tag_tape_input_filename:
@@ -708,7 +708,7 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 		break;
 
 	case ui_tag_tape_playing:
-		gtk2_update_tape_playing(value);
+		gtk2_update_tape_playing(uigtk2, value);
 		break;
 
 	/* Disk */

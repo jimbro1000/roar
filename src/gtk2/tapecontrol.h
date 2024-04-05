@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 tape control window.
  *
- *  \copyright Copyright 2011-2023 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -24,9 +24,9 @@ struct ui_gtk2_interface;
 void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2);
 void gtk2_toggle_tc_window(GtkToggleAction *current, gpointer user_data);
 
-void gtk2_update_tape_state(int flags);
+void gtk2_update_tape_state(struct ui_gtk2_interface *uigtk2, int flags);
 void gtk2_input_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename);
 void gtk2_output_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename);
-void gtk2_update_tape_playing(int playing);
+void gtk2_update_tape_playing(struct ui_gtk2_interface *uigtk2, int playing);
 
 #endif
