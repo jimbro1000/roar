@@ -103,10 +103,9 @@ static void input_file_selected(GtkTreeView *tree_view, GtkTreePath *path, GtkTr
 // Tape dialog - create window
 
 void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
-	GtkBuilder *builder;
+	GtkBuilder *builder = uigtk2->builder;
 	GtkWidget *widget;
 	GError *error = NULL;
-	builder = gtk_builder_new();
 
 	GBytes *res_tapecontrol = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/tapecontrol.ui", 0, NULL);
 	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_tapecontrol, NULL), -1, &error)) {
@@ -163,10 +162,7 @@ void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "output_eject"));
 	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_eject), NULL);
 
-	// In case any signals remain...
-	gtk_builder_connect_signals(builder, NULL);
-	g_object_unref(builder);
-
+	// Events
 	event_init(&update_tape_counters_event, DELEGATE_AS0(void, update_tape_counters, NULL));
 	update_tape_counters_event.at_tick = event_current_tick + EVENT_MS(500);
 	event_queue(&UI_EVENT_LIST, &update_tape_counters_event);

@@ -516,6 +516,12 @@ static void *ui_gtk2_new(void *cfg) {
 	struct ui_gtk2_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
 	*uigtk2 = (struct ui_gtk2_interface){0};
 	struct ui_interface *ui = &uigtk2->public;
+
+	// Keep the builder around.  The various dialog boxes add to it, and we
+	// can use it to find UI elements by name when required rather than
+	// having to record every useful widget.
+	uigtk2->builder = builder;
+
 	// Make available globally for other GTK+ 2 code
 	global_uigtk2 = uigtk2;
 	uigtk2->cfg = cfg;
@@ -603,9 +609,6 @@ static void *ui_gtk2_new(void *cfg) {
 		uigtk2->user_specified_geometry = 1;
 	}
 
-	gtk_builder_connect_signals(builder, NULL);
-	g_object_unref(builder);
-
 	// Cursor hiding
 	uigtk2->blank_cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
 
@@ -637,6 +640,9 @@ static void *ui_gtk2_new(void *cfg) {
 	g_signal_connect(G_OBJECT(uigtk2->drawing_area), "button-press-event", G_CALLBACK(gtk2_handle_button_press), uigtk2);
 	g_signal_connect(G_OBJECT(uigtk2->drawing_area), "button-release-event", G_CALLBACK(gtk2_handle_button_release), uigtk2);
 
+	// Any remaining signals
+	gtk_builder_connect_signals(builder, NULL);
+
 	// Ensure we get those events
 	gtk_widget_add_events(uigtk2->top_window, GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK);
 	gtk_widget_add_events(uigtk2->drawing_area, GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
@@ -646,6 +652,7 @@ static void *ui_gtk2_new(void *cfg) {
 
 static void ui_gtk2_free(void *sptr) {
 	struct ui_gtk2_interface *uigtk2 = sptr;
+	g_object_unref(uigtk2->builder);
 	gtk_widget_destroy(uigtk2->drawing_area);
 	gtk_widget_destroy(uigtk2->top_window);
 	// we can't actually have more than one, but i also can't stop myself

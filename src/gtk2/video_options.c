@@ -72,8 +72,8 @@ static gboolean hide_vo_window(GtkWidget *widget, GdkEvent *event, gpointer user
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
+	GtkBuilder *builder = uigtk2->builder;
 	GError *error = NULL;
-	GtkBuilder *builder = gtk_builder_new();
 
 	GBytes *res_video_options = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/video_options.ui", 0, NULL);
 	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_video_options, NULL), -1, &error)) {
@@ -130,10 +130,6 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	g_signal_connect(cbt_cmp_fsc, "changed", G_CALLBACK(vo_change_cmp_fsc), uigtk2);
 	g_signal_connect(cbt_cmp_system, "changed", G_CALLBACK(vo_change_cmp_system), uigtk2);
 	g_signal_connect(tb_cmp_colour_killer, "toggled", G_CALLBACK(vo_change_cmp_colour_killer), uigtk2);
-
-	// In case any signals remain...
-	gtk_builder_connect_signals(builder, uigtk2);
-	g_object_unref(builder);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

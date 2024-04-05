@@ -62,11 +62,10 @@ static void dc_toggled_wb(GtkToggleButton *togglebutton, gpointer user_data);
 // Floppy dialog - create window
 
 void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2) {
-	GtkBuilder *builder;
+	GtkBuilder *builder = uigtk2->builder;
 	GtkWidget *widget;
 	GError *error = NULL;
 	int i;
-	builder = gtk_builder_new();
 
 	GBytes *res_drivecontrol = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/drivecontrol.ui", 0, NULL);
 	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_drivecontrol, NULL), -1, &error)) {
@@ -115,10 +114,6 @@ void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2) {
 	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive4"));
 	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)3);
-
-	/* In case any signals remain... */
-	gtk_builder_connect_signals(builder, uigtk2);
-	g_object_unref(builder);
 
 	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, NULL);
 }

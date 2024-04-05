@@ -33,6 +33,8 @@ struct ui_gtk2_interface {
 
 	struct ui_cfg *cfg;
 
+	GtkBuilder *builder;
+
 	// Shared GTK+ objects
 	GtkWidget *top_window;
 	GtkUIManager *menu_manager;
