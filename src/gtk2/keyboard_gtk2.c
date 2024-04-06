@@ -129,18 +129,18 @@ static struct sym_dkey_mapping keyval_dkey_default[] = {
 	{ GDK_KEY_Shift_R, DSCAN_SHIFT, 1 },
 	{ GDK_KEY_space, DSCAN_SPACE, 0 },
 
-        // Not so common
-        { GDK_KEY_Break, DSCAN_BREAK, 1 },
-        { GDK_KEY_Clear, DSCAN_CLEAR, 1 },
+	// Not so common
+	{ GDK_KEY_Break, DSCAN_BREAK, 1 },
+	{ GDK_KEY_Clear, DSCAN_CLEAR, 1 },
 
-        // Cursor keys
-        { GDK_KEY_Up, DSCAN_UP, 1 },
-        { GDK_KEY_Down, DSCAN_DOWN, 1 },
-        { GDK_KEY_Left, DSCAN_LEFT, 1 },
-        { GDK_KEY_Right, DSCAN_RIGHT, 1 },
-        { GDK_KEY_BackSpace, DSCAN_BACKSPACE, 1 },
-        { GDK_KEY_KP_Delete, DSCAN_BACKSPACE, 1 },
-        { GDK_KEY_Tab, DSCAN_RIGHT, 1 },
+	// Cursor keys
+	{ GDK_KEY_Up, DSCAN_UP, 1 },
+	{ GDK_KEY_Down, DSCAN_DOWN, 1 },
+	{ GDK_KEY_Left, DSCAN_LEFT, 1 },
+	{ GDK_KEY_Right, DSCAN_RIGHT, 1 },
+	{ GDK_KEY_BackSpace, DSCAN_BACKSPACE, 1 },
+	{ GDK_KEY_KP_Delete, DSCAN_BACKSPACE, 1 },
+	{ GDK_KEY_Tab, DSCAN_RIGHT, 1 },
 
 	// CoCo 3
 	{ GDK_KEY_ISO_Level3_Shift, DSCAN_ALT, 1 },
@@ -151,17 +151,17 @@ static struct sym_dkey_mapping keyval_dkey_default[] = {
 	{ GDK_KEY_F1, DSCAN_F1, 1 },
 	{ GDK_KEY_F2, DSCAN_F2, 1 },
 
-        // Keypad
+	// Keypad
 	{ GDK_KEY_KP_Up, DSCAN_UP, 1 },
 	{ GDK_KEY_KP_Down, DSCAN_DOWN, 1 },
 	{ GDK_KEY_KP_Left, DSCAN_LEFT, 1 },
 	{ GDK_KEY_KP_Right, DSCAN_RIGHT, 1 },
-        { GDK_KEY_KP_Multiply, DSCAN_COLON, 1 },
-        { GDK_KEY_KP_Subtract, DSCAN_MINUS, 1 },
-        { GDK_KEY_KP_Add, DSCAN_SEMICOLON, 1 },
-        { GDK_KEY_KP_Decimal, DSCAN_FULL_STOP, 1 },
-        { GDK_KEY_KP_Divide, DSCAN_SLASH, 1 },
-        { GDK_KEY_KP_Enter, DSCAN_ENTER, 0 },
+	{ GDK_KEY_KP_Multiply, DSCAN_COLON, 1 },
+	{ GDK_KEY_KP_Subtract, DSCAN_MINUS, 1 },
+	{ GDK_KEY_KP_Add, DSCAN_SEMICOLON, 1 },
+	{ GDK_KEY_KP_Decimal, DSCAN_FULL_STOP, 1 },
+	{ GDK_KEY_KP_Divide, DSCAN_SLASH, 1 },
+	{ GDK_KEY_KP_Enter, DSCAN_ENTER, 0 },
 };
 
 static int keyval_index(guint keyval) {

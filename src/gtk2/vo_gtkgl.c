@@ -398,39 +398,39 @@ static void draw(void *sptr) {
 // Test glX extensions string for presence of a particular extension.
 
 static _Bool opengl_has_extension(Display *display, const char *extension) {
-        const char *(*glXQueryExtensionsStringFunc)(Display *, int) = (const char *(*)(Display *, int))glXGetProcAddress((const GLubyte *)"glXQueryExtensionsString");
-        if (!glXQueryExtensionsStringFunc)
-                return 0;
+	const char *(*glXQueryExtensionsStringFunc)(Display *, int) = (const char *(*)(Display *, int))glXGetProcAddress((const GLubyte *)"glXQueryExtensionsString");
+	if (!glXQueryExtensionsStringFunc)
+		return 0;
 
-        int screen = DefaultScreen(display);
+	int screen = DefaultScreen(display);
 
-        const char *extensions = glXQueryExtensionsStringFunc(display, screen);
-        if (!extensions)
-                return 0;
+	const char *extensions = glXQueryExtensionsStringFunc(display, screen);
+	if (!extensions)
+		return 0;
 
-        LOG_DEBUG(3, "gtkgl: extensions: %s\n", extensions);
+	LOG_DEBUG(3, "gtkgl: extensions: %s\n", extensions);
 
-        const char *start;
-        const char *where, *terminator;
+	const char *start;
+	const char *where, *terminator;
 
-        // It takes a bit of care to be fool-proof about parsing the OpenGL
-        // extensions string. Don't be fooled by sub-strings, etc.
+	// It takes a bit of care to be fool-proof about parsing the OpenGL
+	// extensions string. Don't be fooled by sub-strings, etc.
 
-        start = extensions;
+	start = extensions;
 
-        for (;;) {
-                where = strstr(start, extension);
-                if (!where)
-                        break;
+	for (;;) {
+		where = strstr(start, extension);
+		if (!where)
+			break;
 
-                terminator = where + strlen(extension);
-                if (where == start || *(where - 1) == ' ')
-                        if (*terminator == ' ' || *terminator == '\0')
-                                return 1;
+		terminator = where + strlen(extension);
+		if (where == start || *(where - 1) == ' ')
+			if (*terminator == ' ' || *terminator == '\0')
+				return 1;
 
-                start = terminator;
-        }
-        return 0;
+		start = terminator;
+	}
+	return 0;
 }
 
 #endif

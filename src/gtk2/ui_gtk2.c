@@ -82,7 +82,7 @@ static struct module * const gtk2_filereq_module_list[] = {
 
 struct ui_module ui_gtk2_module = {
 	.common = { .name = "gtk2", .description = "GTK+ 2 UI",
-                    .new = ui_gtk2_new,
+		.new = ui_gtk2_new,
 	},
 	.filereq_module_list = gtk2_filereq_module_list,
 	.vo_module_list = gtk2_vo_module_list,
