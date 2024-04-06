@@ -1578,6 +1578,9 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 }
 
 void xroar_set_picture(_Bool notify, int action) {
+	if (!xroar.vo_interface)
+		return;
+
 	int picture = xroar.vo_interface->picture;
 	switch (action) {
 	case XROAR_PREV:
