@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 video options window.
  *
- *  \copyright Copyright 2023 Ciaran Anscomb
+ *  \copyright Copyright 2023-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -232,12 +232,10 @@ static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data) {
 }
 
 static void vo_change_picture(GtkComboBox *widget, gpointer user_data) {
-        struct ui_gtk2_interface *uigtk2 = user_data;
-        (void)uigtk2;
-        int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar.vo_interface) {
-                xroar_set_picture(0, value);
-        }
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
+	xroar_set_picture(0, value);
 }
 
 static void vo_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data) {
@@ -248,39 +246,31 @@ static void vo_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data) 
 }
 
 static void vo_change_cmp_renderer(GtkComboBox *widget, gpointer user_data) {
-        struct ui_gtk2_interface *uigtk2 = user_data;
-        (void)uigtk2;
-        int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar.vo_interface) {
-                vo_set_cmp_ccr(xroar.vo_interface, 1, value);
-        }
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
+	vo_set_cmp_ccr(xroar.vo_interface, 1, value);
 }
 
 static void vo_change_cmp_fs(GtkComboBox *widget, gpointer user_data) {
-        struct ui_gtk2_interface *uigtk2 = user_data;
-        (void)uigtk2;
-        int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar.vo_interface) {
-                vo_set_cmp_fs(xroar.vo_interface, 0, value);
-        }
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
+	vo_set_cmp_fs(xroar.vo_interface, 0, value);
 }
 
 static void vo_change_cmp_fsc(GtkComboBox *widget, gpointer user_data) {
-        struct ui_gtk2_interface *uigtk2 = user_data;
-        (void)uigtk2;
-        int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar.vo_interface) {
-                vo_set_cmp_fsc(xroar.vo_interface, 0, value);
-        }
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
+	vo_set_cmp_fsc(xroar.vo_interface, 0, value);
 }
 
 static void vo_change_cmp_system(GtkComboBox *widget, gpointer user_data) {
-        struct ui_gtk2_interface *uigtk2 = user_data;
-        (void)uigtk2;
-        int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
-        if (xroar.vo_interface) {
-                vo_set_cmp_system(xroar.vo_interface, 0, value);
-        }
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	int value = gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
+	vo_set_cmp_system(xroar.vo_interface, 0, value);
 }
 
 static void vo_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data) {
