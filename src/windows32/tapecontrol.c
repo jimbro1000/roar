@@ -2,7 +2,7 @@
  *
  *  \brief Windows tape control window.
  *
- *  \copyright Copyright 2023 Ciaran Anscomb
+ *  \copyright Copyright 2023-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -38,20 +38,6 @@
 static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static HWND tc_window = NULL;
-static HWND tc_stm_input_filename = NULL;
-static HWND tc_lvs_input_programlist = NULL;
-static HWND tc_sbm_input_position = NULL;
-static HWND tc_stm_input_position = NULL;
-static HWND tc_bn_tape_fast = NULL;
-static HWND tc_bn_tape_pad_auto = NULL;
-static HWND tc_bn_tape_rewrite = NULL;
-static HWND tc_bn_input_play = NULL;
-static HWND tc_bn_input_pause = NULL;
-static HWND tc_stm_output_filename = NULL;
-static HWND tc_sbm_output_position = NULL;
-static HWND tc_stm_output_position = NULL;
-static HWND tc_bn_output_record = NULL;
-static HWND tc_bn_output_pause = NULL;
 
 struct tc_program {
 	struct tape_file *file;
@@ -73,23 +59,8 @@ void windows32_tc_create_window(struct ui_sdl2_interface *uisdl2) {
 	// Main dialog window handle
 	tc_window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_TAPE_CONTROLS), windows32_main_hwnd, (DLGPROC)tc_proc);
 
-	// Control handles
-	tc_stm_input_filename = GetDlgItem(tc_window, IDC_STM_INPUT_FILENAME);
-	tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
-	tc_sbm_input_position = GetDlgItem(tc_window, IDC_SBM_INPUT_POSITION);
-	tc_stm_input_position = GetDlgItem(tc_window, IDC_STM_INPUT_POSITION);
-	tc_bn_tape_fast = GetDlgItem(tc_window, IDC_BN_TAPE_FAST);
-	tc_bn_tape_pad_auto = GetDlgItem(tc_window, IDC_BN_TAPE_PAD_AUTO);
-	tc_bn_tape_rewrite = GetDlgItem(tc_window, IDC_BN_TAPE_REWRITE);
-	tc_bn_input_play = GetDlgItem(tc_window, IDC_BN_INPUT_PLAY);
-	tc_bn_input_pause = GetDlgItem(tc_window, IDC_BN_INPUT_PAUSE);
-	tc_stm_output_filename = GetDlgItem(tc_window, IDC_STM_OUTPUT_FILENAME);
-	tc_sbm_output_position = GetDlgItem(tc_window, IDC_SBM_OUTPUT_POSITION);
-	tc_stm_output_position = GetDlgItem(tc_window, IDC_STM_OUTPUT_POSITION);
-	tc_bn_output_record = GetDlgItem(tc_window, IDC_BN_OUTPUT_RECORD);
-	tc_bn_output_pause = GetDlgItem(tc_window, IDC_BN_OUTPUT_PAUSE);
-
 	// Initialise program list dialog
+	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
 	LVCOLUMNA col = {
 		.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT,
 		.fmt = LVCFMT_LEFT,
@@ -116,12 +87,17 @@ void windows32_tc_show_window(struct ui_sdl2_interface *uisdl2) {
 
 void windows32_tc_update_tape_state(struct ui_sdl2_interface *uisdl2, int flags) {
 	(void)uisdl2;
+	HWND tc_bn_tape_fast = GetDlgItem(tc_window, IDC_BN_TAPE_FAST);
+	HWND tc_bn_tape_pad_auto = GetDlgItem(tc_window, IDC_BN_TAPE_PAD_AUTO);
+	HWND tc_bn_tape_rewrite = GetDlgItem(tc_window, IDC_BN_TAPE_REWRITE);
 	SendMessage(tc_bn_tape_fast, BM_SETCHECK, (flags & TAPE_FAST) ? BST_CHECKED : BST_UNCHECKED, 0);
 	SendMessage(tc_bn_tape_pad_auto, BM_SETCHECK, (flags & TAPE_PAD_AUTO) ? BST_CHECKED : BST_UNCHECKED, 0);
 	SendMessage(tc_bn_tape_rewrite, BM_SETCHECK, (flags & TAPE_REWRITE) ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 void windows32_tc_update_input_filename(struct ui_sdl2_interface *uisdl2, const char *filename) {
+	HWND tc_stm_input_filename = GetDlgItem(tc_window, IDC_STM_INPUT_FILENAME);
+	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
 	SendMessage(tc_stm_input_filename, WM_SETTEXT, 0, (LPARAM)filename);
 	SendMessage(tc_lvs_input_programlist, LVM_DELETEALLITEMS, 0, 0);
 	for (int i = 0; i < num_programs; i++) {
@@ -138,11 +114,16 @@ void windows32_tc_update_input_filename(struct ui_sdl2_interface *uisdl2, const 
 
 void windows32_tc_update_output_filename(struct ui_sdl2_interface *uisdl2, const char *filename) {
 	(void)uisdl2;
+	HWND tc_stm_output_filename = GetDlgItem(tc_window, IDC_STM_OUTPUT_FILENAME);
 	SendMessage(tc_stm_output_filename, WM_SETTEXT, 0, (LPARAM)filename);
 }
 
 void windows32_tc_update_tape_playing(struct ui_sdl2_interface *uisdl2, int playing) {
 	(void)uisdl2;
+	HWND tc_bn_input_play = GetDlgItem(tc_window, IDC_BN_INPUT_PLAY);
+	HWND tc_bn_input_pause = GetDlgItem(tc_window, IDC_BN_INPUT_PAUSE);
+	HWND tc_bn_output_record = GetDlgItem(tc_window, IDC_BN_OUTPUT_RECORD);
+	HWND tc_bn_output_pause = GetDlgItem(tc_window, IDC_BN_OUTPUT_PAUSE);
 	EnableWindow(tc_bn_input_play, !playing ? TRUE : FALSE);
 	EnableWindow(tc_bn_input_pause, playing ? TRUE : FALSE);
 	EnableWindow(tc_bn_output_record, !playing ? TRUE : FALSE);
@@ -154,7 +135,8 @@ void windows32_tc_update_tape_playing(struct ui_sdl2_interface *uisdl2, int play
 // Tape control - signal handlers
 
 static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	(void)hwnd;
+	// hwnd is the handle for the dialog window, i.e. tc_window
+
 	switch (msg) {
 
 	case WM_INITDIALOG:
@@ -163,10 +145,14 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		return TRUE;
 
 	case WM_HSCROLL:
-		if ((HWND)lParam == tc_sbm_input_position) {
-			tc_seek(xroar.tape_interface->tape_input, LOWORD(wParam), HIWORD(wParam));
-		} else if ((HWND)lParam == tc_sbm_output_position) {
-			tc_seek(xroar.tape_interface->tape_output, LOWORD(wParam), HIWORD(wParam));
+		{
+			HWND tc_sbm_input_position = GetDlgItem(hwnd, IDC_SBM_INPUT_POSITION);
+			HWND tc_sbm_output_position = GetDlgItem(hwnd, IDC_SBM_OUTPUT_POSITION);
+			if ((HWND)lParam == tc_sbm_input_position) {
+				tc_seek(xroar.tape_interface->tape_input, LOWORD(wParam), HIWORD(wParam));
+			} else if ((HWND)lParam == tc_sbm_output_position) {
+				tc_seek(xroar.tape_interface->tape_output, LOWORD(wParam), HIWORD(wParam));
+			}
 		}
 		break;
 
@@ -206,21 +192,25 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		return TRUE;
 
 	case WM_DRAWITEM:
-		{
-			LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
-			int id = LOWORD(wParam);
-			switch (id) {
-			case IDC_STM_INPUT_FILENAME:
+		switch (LOWORD(wParam)) {
+		case IDC_STM_INPUT_FILENAME:
+			{
+				HWND tc_stm_input_filename = GetDlgItem(hwnd, IDC_STM_INPUT_FILENAME);
+				LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
 				windows32_drawtext_path(tc_stm_input_filename, pDIS);
-				return TRUE;
-
-			case IDC_STM_OUTPUT_FILENAME:
-				windows32_drawtext_path(tc_stm_output_filename, pDIS);
-				return TRUE;
-
-			default:
-				break;
 			}
+			return TRUE;
+
+		case IDC_STM_OUTPUT_FILENAME:
+			{
+				HWND tc_stm_output_filename = GetDlgItem(hwnd, IDC_STM_OUTPUT_FILENAME);
+				LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
+				windows32_drawtext_path(tc_stm_output_filename, pDIS);
+			}
+			return TRUE;
+
+		default:
+			break;
 		}
 		return FALSE;
 
@@ -232,6 +222,7 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 			case IDC_BN_TAPE_FAST:
 				{
+					HWND tc_bn_tape_fast = GetDlgItem(hwnd, IDC_BN_TAPE_FAST);
 					int set = (SendMessage(tc_bn_tape_fast, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : TAPE_FAST;
 					int flags = (tape_get_state(xroar.tape_interface) & ~TAPE_FAST) | set;
 					tape_select_state(xroar.tape_interface, flags);
@@ -240,6 +231,7 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 			case IDC_BN_TAPE_PAD_AUTO:
 				{
+					HWND tc_bn_tape_pad_auto = GetDlgItem(hwnd, IDC_BN_TAPE_PAD_AUTO);
 					int set = (SendMessage(tc_bn_tape_pad_auto, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : TAPE_PAD_AUTO;
 					int flags = (tape_get_state(xroar.tape_interface) & ~TAPE_PAD_AUTO) | set;
 					tape_select_state(xroar.tape_interface, flags);
@@ -248,6 +240,7 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 			case IDC_BN_TAPE_REWRITE:
 				{
+					HWND tc_bn_tape_rewrite = GetDlgItem(hwnd, IDC_BN_TAPE_REWRITE);
 					int set = (SendMessage(tc_bn_tape_rewrite, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : TAPE_REWRITE;
 					int flags = (tape_get_state(xroar.tape_interface) & ~TAPE_REWRITE) | set;
 					tape_select_state(xroar.tape_interface, flags);
@@ -306,7 +299,7 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 			case IDOK:
 			case IDCANCEL:
-				ShowWindow(tc_window, SW_HIDE);
+				ShowWindow(hwnd, SW_HIDE);
 				event_dequeue(&ev_update_tape_counters);
 				return TRUE;
 
@@ -343,6 +336,7 @@ static void update_programlist(struct ui_sdl2_interface *uisdl2) {
 		return;
 	if (!xroar.tape_interface || !xroar.tape_interface->tape_input)
 		return;
+	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
 	struct tape_file *file;
 	long old_offset = tape_tell(xroar.tape_interface->tape_input);
 	tape_rewind(xroar.tape_interface->tape_input);
@@ -369,6 +363,10 @@ static void update_programlist(struct ui_sdl2_interface *uisdl2) {
 static void update_tape_counters(void *sptr) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 	(void)uisdl2;
+	HWND tc_stm_input_position = GetDlgItem(tc_window, IDC_STM_INPUT_POSITION);
+	HWND tc_sbm_input_position = GetDlgItem(tc_window, IDC_SBM_INPUT_POSITION);
+	HWND tc_stm_output_position = GetDlgItem(tc_window, IDC_STM_OUTPUT_POSITION);
+	HWND tc_sbm_output_position = GetDlgItem(tc_window, IDC_SBM_OUTPUT_POSITION);
 
 	static long imax = -1, ipos = -1;
 	long new_imax = 0, new_ipos = 0;
