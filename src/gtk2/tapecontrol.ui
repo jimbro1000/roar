@@ -16,7 +16,7 @@
   <object class="GtkAdjustment" id="output_file_adjustment"/>
   <object class="GtkWindow" id="tc_window">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">XRoar Tape Control</property>
+    <property name="title" translatable="yes">XRoar · Cassette tapes</property>
     <child>
       <object class="GtkNotebook" id="notebook1">
         <property name="visible">True</property>

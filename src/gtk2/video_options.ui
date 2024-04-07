@@ -34,7 +34,7 @@
   </object>
   <object class="GtkWindow" id="vo_window">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Video Options</property>
+    <property name="title" translatable="yes">XRoar · TV controls</property>
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>

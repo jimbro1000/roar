@@ -3,7 +3,7 @@
   <requires lib="gtk+" version="2.16"/>
   <!-- interface-naming-policy project-wide -->
   <object class="GtkWindow" id="dc_window">
-    <property name="title" translatable="yes">XRoar Drive Control</property>
+    <property name="title" translatable="yes">XRoar · Floppy disks</property>
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
