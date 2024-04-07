@@ -717,34 +717,26 @@ void sdl_windows32_set_events_window(SDL_Window *sw) {
 
 void sdl_windows32_add_menu(SDL_Window *sw) {
 	HWND hwnd = get_hwnd(sw);
-	fprintf(stderr, "sdl_windows32_add_menu()\n");
 	if (GetMenu(hwnd) != NULL) {
-		fprintf(stderr, "\tmenu already present - skipping\n");
 		return;
 	}
 	int w, h;
 	SDL_GetWindowSize(sw, &w, &h);
-	fprintf(stderr, "\tbefore: %dx%d\n", w, h);
 	SetMenu(hwnd, top_menu);
 	SDL_GetWindowSize(sw, &w, &h);
-	fprintf(stderr, "\tafter: %dx%d\n", w, h);
 }
 
 /* Remove menubar from window. */
 
 void sdl_windows32_remove_menu(SDL_Window *sw) {
 	HWND hwnd = get_hwnd(sw);
-	fprintf(stderr, "sdl_windows32_remove_menu()\n");
 	if (GetMenu(hwnd) == NULL) {
-		fprintf(stderr, "\tmenu not present - skipping\n");
 		return;
 	}
 	int w, h;
 	SDL_GetWindowSize(sw, &w, &h);
-	fprintf(stderr, "\tbefore: %dx%d\n", w, h);
 	SetMenu(hwnd, NULL);
 	SDL_GetWindowSize(sw, &w, &h);
-	fprintf(stderr, "\tafter: %dx%d\n", w, h);
 }
 
 static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
