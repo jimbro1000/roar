@@ -45,7 +45,6 @@ struct tc_program {
 	char *position;
 };
 
-static _Bool have_programlist = 0;
 static int num_programs = 0;
 static struct tc_program *programs = NULL;
 static void update_programlist(struct ui_sdl2_interface *uisdl2);
@@ -106,7 +105,6 @@ void windows32_tc_update_input_filename(struct ui_sdl2_interface *uisdl2, const 
 		free(programs[i].file);
 	}
 	num_programs = 0;
-	have_programlist = 0;
 	if (IsWindowVisible(tc_window)) {
 		update_programlist(uisdl2);
 	}
@@ -162,7 +160,7 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				NMLVDISPINFO *plvdi = (NMLVDISPINFO *)lParam;
 				int item = plvdi->item.iItem;
-				if (!have_programlist || item >= num_programs) {
+				if (item >= num_programs) {
 					return TRUE;
 				}
 				switch (plvdi->item.iSubItem) {
@@ -332,11 +330,12 @@ static char *ms_to_string(int ms) {
 
 static void update_programlist(struct ui_sdl2_interface *uisdl2) {
 	(void)uisdl2;
-	if (have_programlist)
+	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
+	if (ListView_GetItemCount(tc_lvs_input_programlist) > 0) {
 		return;
+	}
 	if (!xroar.tape_interface || !xroar.tape_interface->tape_input)
 		return;
-	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
 	struct tape_file *file;
 	long old_offset = tape_tell(xroar.tape_interface->tape_input);
 	tape_rewind(xroar.tape_interface->tape_input);
@@ -357,7 +356,6 @@ static void update_programlist(struct ui_sdl2_interface *uisdl2) {
 		num_programs++;
 	}
 	tape_seek(xroar.tape_interface->tape_input, old_offset, SEEK_SET);
-	have_programlist = 1;
 }
 
 static void update_tape_counters(void *sptr) {
