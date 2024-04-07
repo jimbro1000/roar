@@ -186,8 +186,14 @@ void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2) {
 
 }
 
+// Called when a key is pressed with Control held.  Functions that should
+// trigger parts of the UI are called via the update_state delegate.  This
+// allows derived modules to provide those features, even if the basic SDL UI
+// module does not.
+
 static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool shift) {
-	(void)uisdl2;
+	struct ui_interface *ui = &uisdl2->ui_interface;
+
 	switch (cmdkey) {
 #ifndef HAVE_WASM
 	case '1': case '2': case '3': case '4':
@@ -212,7 +218,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		if (shift) {
 			vdrive_flush(xroar.vdrive_interface);
 		} else {
-			DELEGATE_CALL(uisdl2->public.update_state, ui_tag_drive_control, 0, NULL);
+			DELEGATE_CALL(ui->update_state, ui_tag_drive_control, 0, NULL);
 		}
 		return;
 	case 'e':
@@ -288,11 +294,11 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 #endif
 
 	case 't':
-		DELEGATE_CALL(uisdl2->public.update_state, ui_tag_tape_control, 0, NULL);
+		DELEGATE_CALL(ui->update_state, ui_tag_tape_control, 0, NULL);
 		return;
 	case 'v':
 		if (shift) {
-			DELEGATE_CALL(uisdl2->public.update_state, ui_tag_tv_controls, 0, NULL);
+			DELEGATE_CALL(ui->update_state, ui_tag_tv_controls, 0, NULL);
 		} else {
 #ifdef TRACE
 			xroar_set_trace(XROAR_NEXT);
@@ -326,7 +332,6 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 }
 
 static void control_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
-	(void)uisdl2;
 	SDL_Scancode scancode = keysym->scancode;
 	SDL_Keycode sym = keysym->sym;
 	Uint16 mod = keysym->mod;

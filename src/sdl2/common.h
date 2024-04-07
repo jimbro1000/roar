@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface common functions.
  *
- *  \copyright Copyright 2015-2023 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 
+#include <SDL.h>
 #include <SDL_syswm.h>
 
 #include "ui.h"
@@ -30,7 +31,7 @@ struct joystick_module;
 struct keyboard_sdl2_state;
 
 struct ui_sdl2_interface {
-	struct ui_interface public;
+	struct ui_interface ui_interface;
 
 	struct ui_cfg *cfg;
 
@@ -63,9 +64,13 @@ struct ui_sdl2_interface {
 
 extern struct ui_sdl2_interface *global_uisdl2;
 
-//extern struct vo_rect sdl_display;
+struct ui_sdl2_interface *ui_sdl_allocate(size_t usize);
+void ui_sdl_init(struct ui_sdl2_interface *, struct ui_cfg *ui_cfg);
+void ui_sdl_free(void *);
+void ui_sdl_run(void *);
 
-extern struct module vo_sdl_module;
+_Bool sdl_vo_init(struct ui_sdl2_interface *);
+void sdl_keyboard_init(struct ui_sdl2_interface *);
 
 extern struct joystick_submodule sdl_js_submod_physical;
 extern struct joystick_submodule sdl_js_submod_keyboard;
@@ -76,8 +81,6 @@ extern struct joystick_module * const sdl_js_modlist[];
 
 int filter_sdl_events(void *userdata, SDL_Event *event);
 void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2);
-void ui_sdl_run(void *sptr);
-void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2);
 void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);
 void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);
 void sdl_js_physical_shutdown(void);

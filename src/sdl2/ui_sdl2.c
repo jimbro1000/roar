@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface module.
  *
- *  \copyright Copyright 2015-2023 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -48,43 +48,16 @@
 #include "xroar.h"
 #include "sdl2/common.h"
 
-/* Note: prefer the default order for sound and joystick modules, which
- * will include the SDL options. */
-
-static void *ui_sdl_new(void *cfg);
-static void ui_sdl_free(void *sptr);
 static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data);
 
-extern struct module vo_sdl_module;
-extern struct module vo_null_module;
-struct module * const sdl2_vo_module_list[] = {
-	&vo_sdl_module,
-	&vo_null_module,
-	NULL
-};
+// Initialise SDL video and allocate at least enough space for a struct
+// ui_sdl2_interface.
+//
+// UI modules may use this to derive from the base SDL support and add to it.
 
-struct ui_module ui_sdl_module = {
-	.common = { .name = "sdl", .description = "SDL2 UI",
-	            .new = ui_sdl_new,
-	},
-	.vo_module_list = sdl2_vo_module_list,
-	.joystick_module_list = sdl_js_modlist,
-};
-
-#ifdef HAVE_WASM
-static void sdl2_wasm_update_machine_menu(void *sptr);
-static void sdl2_wasm_update_cartridge_menu(void *sptr);
-#endif
-
-static void *ui_sdl_new(void *cfg) {
-	struct ui_cfg *ui_cfg = cfg;
-
+struct ui_sdl2_interface *ui_sdl_allocate(size_t usize) {
 	// Be sure we've not made more than one of these
 	assert(global_uisdl2 == NULL);
-
-#ifdef HAVE_COCOA
-	cocoa_register_app();
-#endif
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
@@ -98,17 +71,102 @@ static void *ui_sdl_new(void *cfg) {
 		return NULL;
 	}
 
-	struct ui_sdl2_interface *uisdl2 = xmalloc(sizeof(*uisdl2));
-	*uisdl2 = (struct ui_sdl2_interface){0};
-	struct ui_interface *ui = &uisdl2->public;
-	// Make available globally for other SDL2 code
-	global_uisdl2 = uisdl2;
+	if (usize < sizeof(struct ui_sdl2_interface))
+		usize = sizeof(struct ui_sdl2_interface);
+	struct ui_sdl2_interface *uisdl2 = xmalloc(usize);
+
+	return uisdl2;
+}
+
+// Populate with useful defaults.
+//
+// After this, it's just up to the caller to also call sdl_vo_init().  Not done
+// here, as derived modules may need to set things up beforehand.
+
+void ui_sdl_init(struct ui_sdl2_interface *uisdl2, struct ui_cfg *ui_cfg) {
 	uisdl2->cfg = ui_cfg;
 
-	// defaults - may be overridden by platform-specific versions below
+	// Defaults - may be overridden by platform-specific versions
+	struct ui_interface *ui = &uisdl2->ui_interface;
 	ui->free = DELEGATE_AS0(void, ui_sdl_free, uisdl2);
 	ui->run = DELEGATE_AS0(void, ui_sdl_run, uisdl2);
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_update_state, uisdl2);
+
+	// Window geometry sensible defaults
+	uisdl2->draw_area.w = 320;
+	uisdl2->draw_area.h = 240;
+
+	// Make available globally for other SDL2 code
+	global_uisdl2 = uisdl2;
+}
+
+void ui_sdl_free(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
+#ifdef WINDOWS32
+	windows32_destroy_menus(uisdl2);
+#endif
+
+	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+	global_uisdl2 = NULL;
+	free(uisdl2);
+}
+
+void ui_sdl_run(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	for (;;) {
+		run_sdl_event_loop(uisdl2);
+		xroar_run(EVENT_MS(10));
+	}
+}
+
+static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
+	(void)value;
+	(void)data;
+	switch (tag) {
+	default:
+		break;
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// The rest of this file defines the basic SDL UI module that will be used if
+// no derived module with more features exists (or if explicitly enabled).
+
+#ifdef WANT_UI_SDL
+
+#ifdef HAVE_WASM
+static void sdl2_wasm_update_machine_menu(void *sptr);
+static void sdl2_wasm_update_cartridge_menu(void *sptr);
+#endif
+
+static void *ui_sdl_new(void *cfg);
+
+struct ui_module ui_sdl_module = {
+	.common = { .name = "sdl", .description = "SDL2 UI",
+	            .new = ui_sdl_new,
+	},
+	.joystick_module_list = sdl_js_modlist,
+};
+
+static void *ui_sdl_new(void *cfg) {
+	struct ui_cfg *ui_cfg = cfg;
+
+#ifdef HAVE_COCOA
+	cocoa_register_app();
+#endif
+
+	struct ui_sdl2_interface *uisdl2 = ui_sdl_allocate(sizeof(*uisdl2));
+	if (!uisdl2) {
+		return NULL;
+	}
+	*uisdl2 = (struct ui_sdl2_interface){0};
+	ui_sdl_init(uisdl2, ui_cfg);
+	struct ui_interface *ui = &uisdl2->ui_interface;
+	(void)ui;
 
 #ifdef HAVE_X11
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
@@ -123,10 +181,13 @@ static void *ui_sdl_new(void *cfg) {
 #endif
 
 #ifdef WINDOWS32
+	windows32_create_menus(uisdl2);
+#endif
+
+#ifdef WINDOWS32
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_update_state, uisdl2);
 	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uisdl2);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uisdl2);
-	windows32_create_menus(uisdl2);
 	windows32_update_machine_menu(uisdl2);
 	windows32_update_cartridge_menu(uisdl2);
 #endif
@@ -136,16 +197,10 @@ static void *ui_sdl_new(void *cfg) {
 	ui->run = DELEGATE_AS0(void, wasm_ui_run, uisdl2);
 #endif
 
-	// Window geometry sensible defaults
-	uisdl2->draw_area.w = 320;
-	uisdl2->draw_area.h = 240;
-
-	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)sdl2_vo_module_list, uisdl2->cfg->vo);
-	if (!(uisdl2->public.vo_interface = module_init(vo_mod, uisdl2))) {
+	if (!sdl_vo_init(uisdl2)) {
+		free(uisdl2);
 		return NULL;
 	}
-
-	sdl_keyboard_init(uisdl2);
 
 #ifdef HAVE_WASM
 	ui->update_machine_menu = DELEGATE_AS0(void, sdl2_wasm_update_machine_menu, uisdl2);
@@ -154,28 +209,7 @@ static void *ui_sdl_new(void *cfg) {
 	sdl2_wasm_update_cartridge_menu(uisdl2);
 #endif
 
-	return ui;
-}
-
-static void ui_sdl_free(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-#ifdef WINDOWS32
-	windows32_destroy_menus(uisdl2);
-#endif
-	SDL_QuitSubSystem(SDL_INIT_VIDEO);
-	global_uisdl2 = NULL;
-	free(uisdl2);
-}
-
-static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
-	(void)value;
-	(void)data;
-	switch (tag) {
-	default:
-		break;
-	}
+	return uisdl2;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -220,4 +254,6 @@ static void sdl2_wasm_update_cartridge_menu(void *sptr) {
 	}
 	slist_free(ccl);
 }
+#endif
+
 #endif

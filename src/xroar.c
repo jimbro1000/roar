@@ -995,7 +995,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// ... modules
 	xroar.ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
-	if (!xroar.ui_interface) {
+	if (!xroar.ui_interface || !xroar.ui_interface->vo_interface) {
 		LOG_ERROR("No UI module initialised.\n");
 		return NULL;
 	}

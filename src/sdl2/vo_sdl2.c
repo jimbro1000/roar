@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 video output module.
  *
- *  \copyright Copyright 2015-2023 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -41,15 +41,8 @@
 #define MAX_VIEWPORT_WIDTH  (800)
 #define MAX_VIEWPORT_HEIGHT (300)
 
-static void *new(void *cfg);
-
-struct module vo_sdl_module = {
-	.name = "sdl", .description = "SDL2 video",
-	.new = new,
-};
-
 struct vo_sdl_interface {
-	struct vo_interface public;
+	struct vo_interface vo_interface;
 
 	struct {
 		// Format SDL is asked to make the texture
@@ -90,13 +83,13 @@ static void set_menubar(void *sptr, _Bool show_menubar);
 
 static void notify_frame_rate(void *, _Bool is_60hz);
 
-static void *new(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
+_Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	struct vo_cfg *vo_cfg = &uisdl2->cfg->vo_cfg;
+	struct ui_interface *ui = &uisdl2->ui_interface;
 
 	struct vo_sdl_interface *vosdl = vo_interface_new(sizeof(*vosdl));
 	*vosdl = (struct vo_sdl_interface){0};
-	struct vo_interface *vo = &vosdl->public;
+	struct vo_interface *vo = &vosdl->vo_interface;
 
 	switch (vo_cfg->pixel_fmt) {
 	default:
@@ -246,8 +239,10 @@ static void *new(void *sptr) {
 
 	// Initialise keyboard
 	sdl_os_keyboard_init(global_uisdl2->vo_window);
+	sdl_keyboard_init(uisdl2);
 
-	return vo;
+	ui->vo_interface = vo;
+	return 1;
 }
 
 // We need to recreate the texture whenever the viewport changes (it needs to
@@ -255,7 +250,7 @@ static void *new(void *sptr) {
 // may change).
 
 static void recreate_texture(struct vo_sdl_interface *vosdl) {
-	struct vo_interface *vo = &vosdl->public;
+	struct vo_interface *vo = &vosdl->vo_interface;
 	struct vo_render *vr = vo->renderer;
 
 	// Destroy old
@@ -290,7 +285,7 @@ static void recreate_texture(struct vo_sdl_interface *vosdl) {
 // Update viewport based on requested dimensions and 60Hz scaling.
 
 static void update_viewport(struct vo_sdl_interface *vosdl) {
-	struct vo_interface *vo = &vosdl->public;
+	struct vo_interface *vo = &vosdl->vo_interface;
 	struct vo_render *vr = vo->renderer;
 
 	int vp_w = global_uisdl2->viewport.w;
@@ -311,7 +306,7 @@ static void update_viewport(struct vo_sdl_interface *vosdl) {
 
 static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->public;
+	struct vo_interface *vo = &vosdl->vo_interface;
 
 	_Bool is_exact_multiple = 0;
 	int multiple = 1;
@@ -357,7 +352,7 @@ static void notify_frame_rate(void *sptr, _Bool is_60hz) {
 }
 
 void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) {
-	struct ui_interface *ui = &uisdl2->public;
+	struct ui_interface *ui = &uisdl2->ui_interface;
 	struct vo_interface *vo = ui->vo_interface;
 	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 
@@ -368,7 +363,7 @@ void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) 
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->public;
+	struct vo_interface *vo = &vosdl->vo_interface;
 
 #ifdef HAVE_WASM
 	// Until WebAssembly fullscreen interaction becomes a little more
@@ -402,7 +397,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 
 static void set_menubar(void *sptr, _Bool show_menubar) {
 	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->public;
+	struct vo_interface *vo = &vosdl->vo_interface;
 
 #ifdef WINDOWS32
 	if (show_menubar && !vo->show_menubar) {
@@ -423,7 +418,7 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 
 static void vo_sdl_free(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->public;
+	struct vo_interface *vo = &vosdl->vo_interface;
 	struct vo_render *vr = vo->renderer;
 
 	vo_render_free(vr);
@@ -452,7 +447,7 @@ static void vo_sdl_free(void *sptr) {
 
 static void draw(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->public;
+	struct vo_interface *vo = &vosdl->vo_interface;
 	struct vo_render *vr = vo->renderer;
 
 	SDL_UpdateTexture(vosdl->texture.texture, NULL, vosdl->texture.pixels, vr->viewport.w * vosdl->texture.pixel_size);

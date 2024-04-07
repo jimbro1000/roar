@@ -34,7 +34,7 @@ static struct ui_module * const default_ui_module_list[] = {
 	&ui_gtk2_module,
 #endif
 #endif
-#ifdef HAVE_SDL2
+#ifdef WANT_UI_SDL
 	&ui_sdl_module,
 #endif
 	&ui_null_module,

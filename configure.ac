@@ -94,6 +94,9 @@ test "x$with_gtk2" = "xno" && with_gtkgl=no
 AC_ARG_WITH([sdl2],
 	AS_HELP_STRING([--without-sdl2], [don't test for SDL2]) )
 
+AC_ARG_ENABLE([ui_sdl],
+	AS_HELP_STRING([--enable-ui-sdl], [force inclusion of basic SDL UI]) )
+
 AC_ARG_WITH([cocoa],
 	AS_HELP_STRING([--without-cocoa], [don't test for Mac OS X Cocoa]) )
 test "x$with_sdl2" = "xno" && with_cocoa=no
@@ -227,6 +230,8 @@ AM_COND_IF([PART_TCC1014], [AC_DEFINE([WANT_PART_TCC1014], 1, [Want TCC1014 GIME
 
 AM_CONDITIONAL([WASM], [test "x$enable_wasm" = "xyes"])
 AM_COND_IF([WASM], [
+		# XXX not yet migrated WASM SDL UI to its own module
+		#test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
 		AC_DEFINE([HAVE_WASM], 1, [WebAssembly build])
 		WASM_CFLAGS=""
 		WASM_LIBS="[-s WASM=1 -s EXPORTED_FUNCTIONS='@wasm/exported_functions' -s EXPORTED_RUNTIME_METHODS=\"['FS','ccall','cwrap']\"]"
@@ -266,6 +271,8 @@ esac
 
 AM_CONDITIONAL([MINGW], [test -n "$have_mingw"])
 AM_COND_IF([MINGW], [
+		# XXX not yet migrated Windows SDL UI to its own module
+		#test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
 		AC_DEFINE([WINDOWS32], 1, [Windows])
 		MINGW_CFLAGS="-D__USE_MINGW_ANSI_STDIO=1"
 		MINGW_LIBS="-lmingw32 -lwinmm -mwindows -lws2_32 -lcomctl32"
@@ -644,6 +651,8 @@ AC_SUBST(COCOA_LIBS)
 
 AM_CONDITIONAL([UI_COCOA], [test -n "$have_cocoa"])
 AM_COND_IF([UI_COCOA], [
+		# XXX not yet migrated Cocoa SDL UI to its own module
+		#test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
 		AC_DEFINE([HAVE_COCOA], 1, [Have Mac OS X Cocoa framework])
 	], [
 		OBJC="$CC"
@@ -721,7 +730,12 @@ AM_COND_IF([PTHREADS], [
 AM_CONDITIONAL([GDB], [test -n "$have_gdb_target"])
 AM_COND_IF([GDB], [AC_DEFINE([WANT_GDB_TARGET], 1, [GDB target])])
 
-### Misc minor features
+### Misc tests & features
+
+AM_COND_IF([UI_SDL2], [ test "x$enable_ui_sdl" != "xno" && enable_ui_sdl=yes ])
+AM_CONDITIONAL([WANT_UI_SDL], [test "x$enable_ui_sdl" = "xyes"])
+AM_COND_IF([WANT_UI_SDL], [
+		AC_DEFINE([WANT_UI_SDL], 1, [Enable basic SDL UI]) ])
 
 AM_CONDITIONAL([SCREENSHOT], [test -n "$have_libpng"])
 AM_COND_IF([SCREENSHOT], [AC_DEFINE([SCREENSHOT], 1, [Screenshots supported])])

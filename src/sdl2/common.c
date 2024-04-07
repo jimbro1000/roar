@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface common functions.
  *
- *  \copyright Copyright 2015-2023 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -195,14 +195,6 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 		default:
 			break;
 		}
-	}
-}
-
-void ui_sdl_run(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	for (;;) {
-		run_sdl_event_loop(uisdl2);
-		xroar_run(EVENT_MS(10));
 	}
 }
 
