@@ -2,7 +2,7 @@
  *
  *  \brief XRoar initialisation and top-level emulator functions.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -199,6 +199,7 @@ void xroar_insert_disk(int drive);
 void xroar_eject_disk(int drive);
 _Bool xroar_set_write_enable(_Bool notify, int drive, int action);
 _Bool xroar_set_write_back(_Bool notify, int drive, int action);
+void xroar_insert_hd_file(int drive, const char *filename);
 void xroar_set_ccr(_Bool notify, int action);
 void xroar_set_tv_input(_Bool notify, int action);
 void xroar_set_vdg_inverted_text(_Bool notify, int action);

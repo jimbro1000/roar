@@ -1513,6 +1513,17 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 	return new_wb;
 }
 
+void xroar_insert_hd_file(int drive, const char *filename) {
+	if (!filename)
+		return;
+	if (drive < 0 || drive > 1)
+		return;
+	if (xroar.cfg.file.hd[drive])
+		free(xroar.cfg.file.hd[drive]);
+	fprintf(stderr, "xroar.cfg.file.hd[%d] = '%s'\n", drive, filename);
+	xroar.cfg.file.hd[drive] = xstrdup(filename);
+}
+
 void xroar_set_ccr(_Bool notify, int action) {
 	if (action < 0 || action >= NUM_VO_CMP_CCR) {
 		action = VO_CMP_CCR_PALETTE;
