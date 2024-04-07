@@ -2,7 +2,7 @@
  *
  *  \brief Windows drive control window.
  *
- *  \copyright Copyright 2023 Ciaran Anscomb
+ *  \copyright Copyright 2023-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -40,11 +40,6 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 static HWND dc_window = NULL;
 
-static HWND dc_stm_drive_filename[VDRIVE_MAX_DRIVES];
-static HWND dc_bn_drive_we[VDRIVE_MAX_DRIVES];
-static HWND dc_bn_drive_wb[VDRIVE_MAX_DRIVES];
-static HWND dc_stm_drive_cyl_head = NULL;
-
 static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -52,14 +47,6 @@ static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsi
 void windows32_dc_create_window(struct ui_sdl2_interface *uisdl2) {
 	// Main dialog window handle
 	dc_window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_DRIVE_CONTROLS), windows32_main_hwnd, (DLGPROC)dc_proc);
-
-	// Control handles
-	for (unsigned i = 0; i < VDRIVE_MAX_DRIVES; i++) {
-		dc_stm_drive_filename[i] = GetDlgItem(dc_window, IDC_STM_DRIVE1_FILENAME + i);
-		dc_bn_drive_we[i] = GetDlgItem(dc_window, IDC_BN_DRIVE1_WE + i);
-		dc_bn_drive_wb[i] = GetDlgItem(dc_window, IDC_BN_DRIVE1_WB + i);
-	}
-	dc_stm_drive_cyl_head = GetDlgItem(dc_window, IDC_STM_DRIVE_CYL_HEAD);
 
 	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uisdl2);
 }
@@ -85,16 +72,20 @@ void windows32_dc_update_drive_disk(struct ui_sdl2_interface *uisdl2,
 		we = !disk->write_protect;
 		wb = disk->write_back;
 	}
-	SendMessage(dc_stm_drive_filename[drive], WM_SETTEXT, 0, (LPARAM)filename);
-	SendMessage(dc_bn_drive_we[drive], BM_SETCHECK, we ? BST_CHECKED : BST_UNCHECKED, 0);
-	SendMessage(dc_bn_drive_wb[drive], BM_SETCHECK, wb ? BST_CHECKED : BST_UNCHECKED, 0);
+	HWND dc_stm_drive_filename = GetDlgItem(dc_window, IDC_STM_DRIVE1_FILENAME + drive);
+	HWND dc_bn_drive_we = GetDlgItem(dc_window, IDC_BN_DRIVE1_WE + drive);
+	HWND dc_bn_drive_wb = GetDlgItem(dc_window, IDC_BN_DRIVE1_WB + drive);
+	SendMessage(dc_stm_drive_filename, WM_SETTEXT, 0, (LPARAM)filename);
+	SendMessage(dc_bn_drive_we, BM_SETCHECK, we ? BST_CHECKED : BST_UNCHECKED, 0);
+	SendMessage(dc_bn_drive_wb, BM_SETCHECK, wb ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 void windows32_dc_update_drive_write_enable(struct ui_sdl2_interface *uisdl2,
 					    int drive, _Bool write_enable) {
 	(void)uisdl2;
 	if (drive >= 0 && drive <= 3) {
-		SendMessage(dc_bn_drive_we[drive], BM_SETCHECK, write_enable ? BST_CHECKED : BST_UNCHECKED, 0);
+		HWND dc_bn_drive_we = GetDlgItem(dc_window, IDC_BN_DRIVE1_WE + drive);
+		SendMessage(dc_bn_drive_we, BM_SETCHECK, write_enable ? BST_CHECKED : BST_UNCHECKED, 0);
 	}
 }
 
@@ -102,7 +93,8 @@ void windows32_dc_update_drive_write_back(struct ui_sdl2_interface *uisdl2,
 					  int drive, _Bool write_back) {
 	(void)uisdl2;
 	if (drive >= 0 && drive <= 3) {
-		SendMessage(dc_bn_drive_wb[drive], BM_SETCHECK, write_back ? BST_CHECKED : BST_UNCHECKED, 0);
+		HWND dc_bn_drive_wb = GetDlgItem(dc_window, IDC_BN_DRIVE1_WB + drive);
+		SendMessage(dc_bn_drive_wb, BM_SETCHECK, write_back ? BST_CHECKED : BST_UNCHECKED, 0);
 	}
 }
 
@@ -111,8 +103,9 @@ void windows32_dc_update_drive_write_back(struct ui_sdl2_interface *uisdl2,
 // Drive control - signal handlers
 
 static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	(void)hwnd;
+	// hwnd is the handle for the dialog window, i.e. dc_window
 	(void)lParam;
+
 	switch (msg) {
 
 	case WM_INITDIALOG:
@@ -130,7 +123,8 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			int id = LOWORD(wParam);
 			if (id >= IDC_STM_DRIVE1_FILENAME && id <= IDC_STM_DRIVE4_FILENAME) {
 				int drive = id - IDC_STM_DRIVE1_FILENAME;
-				windows32_drawtext_path(dc_stm_drive_filename[drive], pDIS);
+				HWND dc_stm_drive_filename = GetDlgItem(hwnd, IDC_STM_DRIVE1_FILENAME + drive);
+				windows32_drawtext_path(dc_stm_drive_filename, pDIS);
 				return TRUE;
 			}
 		}
@@ -143,12 +137,14 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			int id = LOWORD(wParam);
 			if (id >= IDC_BN_DRIVE1_WE && id <= IDC_BN_DRIVE4_WE) {
 				int drive = id - IDC_BN_DRIVE1_WE;
-				int set = (SendMessage(dc_bn_drive_we[drive], BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : 1;
+				HWND dc_bn_drive_we = GetDlgItem(hwnd, IDC_BN_DRIVE1_WE + drive);
+				int set = (SendMessage(dc_bn_drive_we, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : 1;
 				xroar_set_write_enable(1, drive, set);
 
 			} else if (id >= IDC_BN_DRIVE1_WB && id <= IDC_BN_DRIVE4_WB) {
 				int drive = id - IDC_BN_DRIVE1_WB;
-				int set = (SendMessage(dc_bn_drive_wb[drive], BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : 1;
+				HWND dc_bn_drive_wb = GetDlgItem(hwnd, IDC_BN_DRIVE1_WB + drive);
+				int set = (SendMessage(dc_bn_drive_wb, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : 1;
 				xroar_set_write_back(1, drive, set);
 
 			} else if (id >= IDC_BN_DRIVE1_EJECT && id <= IDC_BN_DRIVE4_EJECT) {
@@ -165,7 +161,7 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 			case IDOK:
 			case IDCANCEL:
-				ShowWindow(dc_window, SW_HIDE);
+				ShowWindow(hwnd, SW_HIDE);
 				return TRUE;
 
 			default:
@@ -185,5 +181,6 @@ static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsi
 	(void)uisdl2;
 	char string[16];
 	snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", drive + 1, cyl, head);
+	HWND dc_stm_drive_cyl_head = GetDlgItem(dc_window, IDC_STM_DRIVE_CYL_HEAD);
 	SendMessage(dc_stm_drive_cyl_head, WM_SETTEXT, 0, (LPARAM)string);
 }
