@@ -108,8 +108,8 @@ const struct partdb_entry *partdb[] = {
 	&gmc_part,
 	&orch90_part,
 	&rsdos_part,
-#ifndef HAVE_WASM
 	&idecart_part,
+#ifndef HAVE_WASM
 	&mooh_part,
 	&mpi_part,
 	&nx32_part,

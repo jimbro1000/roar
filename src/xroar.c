@@ -493,12 +493,14 @@ static char const * const default_config[] = {
 	"cart mpi-race",
 	"cart-desc 'RACE Computer Expansion Cage'",
 	"cart-type mpi-race",
+#endif
 	// IDE Cartridge
 	"cart ide",
 	"cart-desc 'IDE Interface'",
 	"cart-type ide",
 	"cart-rom hdblba",
 	"cart-becker",
+#ifndef HAVE_WASM
 	// NX32 memory cartridge
 	"cart nx32",
 	"cart-desc 'NX32 memory cartridge'",
