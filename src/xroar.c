@@ -498,7 +498,7 @@ static char const * const default_config[] = {
 	"cart ide",
 	"cart-desc 'IDE Interface'",
 	"cart-type ide",
-	"cart-rom hdblba",
+	"cart-rom @glenside_ide",
 	"cart-becker",
 #ifndef HAVE_WASM
 	// NX32 memory cartridge
@@ -548,6 +548,7 @@ static char const * const default_config[] = {
 	// CoCo 3 Super Extended Colour BASIC
 	"romlist coco3=coco3",
 	"romlist coco3p=coco3p",
+	"romlist glenside_ide=yados,hdblba",
 #endif
 
 #ifdef WANT_MACHINE_ARCH_MC10
