@@ -2,7 +2,7 @@
  *
  *  \brief Windows video options window.
  *
- *  \copyright Copyright 2023 Ciaran Anscomb
+ *  \copyright Copyright 2023-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -35,71 +35,55 @@
 static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static HWND vo_window = NULL;
-static HWND vo_volume = NULL;
-static HWND vo_brightness = NULL;
-static HWND vo_contrast = NULL;
-static HWND vo_saturation = NULL;
-static HWND vo_hue = NULL;
-static HWND cbt_picture = NULL;
-static HWND tb_ntsc_scaling = NULL;
-static HWND cbt_cmp_renderer = NULL;
-static HWND cbt_cmp_fs = NULL;
-static HWND cbt_cmp_fsc = NULL;
-static HWND cbt_cmp_system = NULL;
-static HWND tb_cmp_colour_killer = NULL;
 
 void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	(void)uisdl2;
 	vo_window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_TV_CONTROLS), windows32_main_hwnd, (DLGPROC)tv_controls_proc);
 
-	vo_volume = GetDlgItem(vo_window, IDC_SPIN_VOLUME);
+	HWND vo_volume = GetDlgItem(vo_window, IDC_SPIN_VOLUME);
 	SendMessage(vo_volume, UDM_SETRANGE, 0, MAKELPARAM(150, 0));
 	SendMessage(vo_volume, UDM_SETPOS, 0, 70);
 
-	vo_brightness = GetDlgItem(vo_window, IDC_SPIN_BRIGHTNESS);
+	HWND vo_brightness = GetDlgItem(vo_window, IDC_SPIN_BRIGHTNESS);
 	SendMessage(vo_brightness, UDM_SETRANGE, 0, MAKELPARAM(100, 0));
 	SendMessage(vo_brightness, UDM_SETPOS, 0, 50);
 
-	vo_contrast = GetDlgItem(vo_window, IDC_SPIN_CONTRAST);
+	HWND vo_contrast = GetDlgItem(vo_window, IDC_SPIN_CONTRAST);
 	SendMessage(vo_contrast, UDM_SETRANGE, 0, MAKELPARAM(100, 0));
 	SendMessage(vo_contrast, UDM_SETPOS, 0, 50);
 
-	vo_saturation = GetDlgItem(vo_window, IDC_SPIN_SATURATION);
+	HWND vo_saturation = GetDlgItem(vo_window, IDC_SPIN_SATURATION);
 	SendMessage(vo_saturation, UDM_SETRANGE, 0, MAKELPARAM(100, 0));
 	SendMessage(vo_saturation, UDM_SETPOS, 0, 0);
 
-	vo_hue = GetDlgItem(vo_window, IDC_SPIN_HUE);
+	HWND vo_hue = GetDlgItem(vo_window, IDC_SPIN_HUE);
 	SendMessage(vo_hue, UDM_SETRANGE, 0, MAKELPARAM(180, -179));
 	SendMessage(vo_hue, UDM_SETPOS, 0, 0);
 
-	cbt_picture = GetDlgItem(vo_window, IDC_CB_PICTURE);
+	HWND cbt_picture = GetDlgItem(vo_window, IDC_CB_PICTURE);
 	for (unsigned i = 0; i < NUM_VO_PICTURE; i++) {
 		SendMessage(cbt_picture, CB_ADDSTRING, 0, (LPARAM)vo_picture_name[i]);
 	}
 
-	tb_ntsc_scaling = GetDlgItem(vo_window, IDC_BN_NTSC_SCALING);
-
-	cbt_cmp_renderer = GetDlgItem(vo_window, IDC_CB_RENDERER);
+	HWND cbt_cmp_renderer = GetDlgItem(vo_window, IDC_CB_RENDERER);
 	for (unsigned i = 0; vo_cmp_ccr_list[i].name; i++) {
 		SendMessage(cbt_cmp_renderer, CB_ADDSTRING, 0, (LPARAM)vo_cmp_ccr_list[i].description);
 	}
 
-	cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
+	HWND cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
 	for (unsigned i = 0; i < NUM_VO_RENDER_FS; i++) {
 		SendMessage(cbt_cmp_fs, CB_ADDSTRING, 0, (LPARAM)vo_render_fs_name[i]);
 	}
 
-	cbt_cmp_fsc = GetDlgItem(vo_window, IDC_CB_FSC);
+	HWND cbt_cmp_fsc = GetDlgItem(vo_window, IDC_CB_FSC);
 	for (unsigned i = 0; i < NUM_VO_RENDER_FSC; i++) {
 		SendMessage(cbt_cmp_fsc, CB_ADDSTRING, 0, (LPARAM)vo_render_fsc_name[i]);
 	}
 
-	cbt_cmp_system = GetDlgItem(vo_window, IDC_CB_SYSTEM);
+	HWND cbt_cmp_system = GetDlgItem(vo_window, IDC_CB_SYSTEM);
 	for (unsigned i = 0; i < NUM_VO_RENDER_SYSTEM; i++) {
 		SendMessage(cbt_cmp_system, CB_ADDSTRING, 0, (LPARAM)vo_render_system_name[i]);
 	}
-
-	tb_cmp_colour_killer = GetDlgItem(vo_window, IDC_BN_COLOUR_KILLER);
 }
 
 void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2) {
@@ -113,61 +97,73 @@ void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2) {
 
 void windows32_vo_update_volume(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND vo_volume = GetDlgItem(vo_window, IDC_SPIN_VOLUME);
 	SendMessage(vo_volume, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_brightness(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND vo_brightness = GetDlgItem(vo_window, IDC_SPIN_BRIGHTNESS);
 	SendMessage(vo_brightness, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_contrast(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND vo_contrast = GetDlgItem(vo_window, IDC_SPIN_CONTRAST);
 	SendMessage(vo_contrast, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_saturation(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND vo_saturation = GetDlgItem(vo_window, IDC_SPIN_SATURATION);
 	SendMessage(vo_saturation, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND vo_hue = GetDlgItem(vo_window, IDC_SPIN_HUE);
 	SendMessage(vo_hue, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_picture(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND cbt_picture = GetDlgItem(vo_window, IDC_CB_PICTURE);
 	SendMessage(cbt_picture, CB_SETCURSEL, value, 0);
 }
 
 void windows32_vo_update_ntsc_scaling(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND tb_ntsc_scaling = GetDlgItem(vo_window, IDC_BN_NTSC_SCALING);
 	SendMessage(tb_ntsc_scaling, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 void windows32_vo_update_cmp_renderer(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND cbt_cmp_renderer = GetDlgItem(vo_window, IDC_CB_RENDERER);
 	SendMessage(cbt_cmp_renderer, CB_SETCURSEL, value, 0);
 }
 
 void windows32_vo_update_cmp_fs(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
 	SendMessage(cbt_cmp_fs, CB_SETCURSEL, value, 0);
 }
 
 void windows32_vo_update_cmp_fsc(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND cbt_cmp_fsc = GetDlgItem(vo_window, IDC_CB_FSC);
 	SendMessage(cbt_cmp_fsc, CB_SETCURSEL, value, 0);
 }
 
 void windows32_vo_update_cmp_system(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND cbt_cmp_system = GetDlgItem(vo_window, IDC_CB_SYSTEM);
 	SendMessage(cbt_cmp_system, CB_SETCURSEL, value, 0);
 }
 
 void windows32_vo_update_cmp_colour_killer(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
+	HWND tb_cmp_colour_killer = GetDlgItem(vo_window, IDC_BN_COLOUR_KILLER);
 	SendMessage(tb_cmp_colour_killer, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
@@ -176,42 +172,51 @@ void windows32_vo_update_cmp_colour_killer(struct ui_sdl2_interface *uisdl2, int
 // Video options - signal handlers
 
 static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	(void)hwnd;
-
+	// hwnd is the handle for the dialog window, i.e. vo_window
 	switch (msg) {
 
 	case WM_INITDIALOG:
 		return TRUE;
 
 	case WM_NOTIFY:
-		if (xroar.vo_interface) {
-			UINT id = ((LPNMHDR)lParam)->idFrom;
-			switch (id) {
-			case IDC_SPIN_VOLUME:
-				if (xroar.ao_interface) {
-					sound_set_volume(xroar.ao_interface->sound_interface, (int16_t)SendMessage(vo_volume, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
-				}
-				break;
-
-			case IDC_SPIN_BRIGHTNESS:
-				DELEGATE_SAFE_CALL(xroar.vo_interface->set_brightness, (int16_t)SendMessage(vo_brightness, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
-				break;
-
-			case IDC_SPIN_CONTRAST:
-				DELEGATE_SAFE_CALL(xroar.vo_interface->set_contrast, (int16_t)SendMessage(vo_contrast, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
-				break;
-
-			case IDC_SPIN_SATURATION:
-				DELEGATE_SAFE_CALL(xroar.vo_interface->set_saturation, (int16_t)SendMessage(vo_saturation, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
-				break;
-
-			case IDC_SPIN_HUE:
-				DELEGATE_SAFE_CALL(xroar.vo_interface->set_hue, (int16_t)SendMessage(vo_hue, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
-				break;
-
-			default:
-				break;
+		switch (((LPNMHDR)lParam)->idFrom) {
+		case IDC_SPIN_VOLUME:
+			if (xroar.ao_interface) {
+				HWND vo_volume = GetDlgItem(hwnd, IDC_SPIN_VOLUME);
+				sound_set_volume(xroar.ao_interface->sound_interface, (int16_t)SendMessage(vo_volume, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 			}
+			break;
+
+		case IDC_SPIN_BRIGHTNESS:
+			if (xroar.vo_interface) {
+				HWND vo_brightness = GetDlgItem(hwnd, IDC_SPIN_BRIGHTNESS);
+				DELEGATE_SAFE_CALL(xroar.vo_interface->set_brightness, (int16_t)SendMessage(vo_brightness, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			}
+			break;
+
+		case IDC_SPIN_CONTRAST:
+			if (xroar.vo_interface) {
+				HWND vo_contrast = GetDlgItem(hwnd, IDC_SPIN_CONTRAST);
+				DELEGATE_SAFE_CALL(xroar.vo_interface->set_contrast, (int16_t)SendMessage(vo_contrast, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			}
+			break;
+
+		case IDC_SPIN_SATURATION:
+			if (xroar.vo_interface) {
+				HWND vo_saturation = GetDlgItem(hwnd, IDC_SPIN_SATURATION);
+				DELEGATE_SAFE_CALL(xroar.vo_interface->set_saturation, (int16_t)SendMessage(vo_saturation, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			}
+			break;
+
+		case IDC_SPIN_HUE:
+			if (xroar.vo_interface) {
+				HWND vo_hue = GetDlgItem(hwnd, IDC_SPIN_HUE);
+				DELEGATE_SAFE_CALL(xroar.vo_interface->set_hue, (int16_t)SendMessage(vo_hue, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			}
+			break;
+
+		default:
+			break;
 		}
 		return TRUE;
 
@@ -258,6 +263,7 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			switch (id) {
 			case IDC_BN_NTSC_SCALING:
 				if (xroar.vo_interface) {
+					HWND tb_ntsc_scaling = GetDlgItem(hwnd, IDC_BN_NTSC_SCALING);
 					int value = !(SendMessage(tb_ntsc_scaling, BM_GETCHECK, 0, 0) == BST_CHECKED);
 					vo_set_ntsc_scaling(xroar.vo_interface, 1, value);
 				}
@@ -265,13 +271,14 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 			case IDC_BN_COLOUR_KILLER:
 				if (xroar.vo_interface) {
+					HWND tb_cmp_colour_killer = GetDlgItem(hwnd, IDC_BN_COLOUR_KILLER);
 					int value = !(SendMessage(tb_cmp_colour_killer, BM_GETCHECK, 0, 0) == BST_CHECKED);
 					vo_set_cmp_colour_killer(xroar.vo_interface, 1, value);
 				}
 				return FALSE;
 			case IDOK:
 			case IDCANCEL:
-				ShowWindow(vo_window, SW_HIDE);
+				ShowWindow(hwnd, SW_HIDE);
 				return TRUE;
 
 			default:
