@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface module.
  *
- *  \copyright Copyright 2014-2023 Ciaran Anscomb
+ *  \copyright Copyright 2014-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -124,7 +124,13 @@ static void setup_file_menu(void) {
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_load), "&Load...");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save Snapshot...");
+	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_tape_control), "Cassette &tapes");
+
+	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_drive_control), "Floppy &disks");
+
+	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save snapshot...");
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_screenshot), "Screenshot to PNG...");
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
@@ -140,7 +146,7 @@ static void setup_view_menu(void) {
 	view_menu = CreatePopupMenu();
 
 	submenu = CreatePopupMenu();
-	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "&TV Input");
+	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "&TV input");
 	for (int i = 0; machine_tv_input_list[i].name; i++) {
 		if (!machine_tv_input_list[i].description)
 			continue;
@@ -148,17 +154,17 @@ static void setup_view_menu(void) {
 	}
 
 	submenu = CreatePopupMenu();
-	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Composite &Rendering");
+	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Composite &rendering");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_PALETTE), "None");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_2BIT), "Simple (2-bit LUT)");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_5BIT), "5-bit LUT");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_PARTIAL), "Partial NTSC");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_SIMULATED), "Simulated");
 
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_controls), "TV &Controls");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_controls), "TV &controls");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "&Inverse Text");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "&Inverse text");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
@@ -167,7 +173,7 @@ static void setup_view_menu(void) {
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_out), "Zoom Out");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "&Full Screen");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "&Full screen");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)view_menu, "&View");
 }
@@ -187,7 +193,7 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
-	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Keyboard Map");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Keyboard type");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon), "Dragon Layout");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon200e), "Dragon 200-E Layout");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_coco), "CoCo Layout");
@@ -197,20 +203,20 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
-	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Right Joystick");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Right joystick");
 	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
 		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_joy_right, i), joystick_names[i].description);
 	}
 	submenu = CreatePopupMenu();
-	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Left Joystick");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Left joystick");
 	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
 		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_joy_left, i), joystick_names[i].description);
 	}
-	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_joystick_swap), "Swap Joysticks");
+	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_joystick_swap), "Swap joysticks");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_soft), "Soft Reset");
-	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_hard), "Hard Reset");
+	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_soft), "Soft reset");
+	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_hard), "Hard reset");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)hardware_menu, "&Hardware");
 
@@ -224,10 +230,8 @@ static void setup_tool_menu(void) {
 
 	tool_menu = CreatePopupMenu();
 
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "&Keyboard Translation");
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_drive_control), "&Drive Control");
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_tape_control), "&Tape Control");
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit), "&Rate Limit");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "&Keyboard translation");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit), "&Rate limit");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)tool_menu, "&Tool");
 }
