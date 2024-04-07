@@ -43,7 +43,7 @@ pad_top=5 xalign=right id=IDOK button &Close
 
 # TV controls dialog
 
-pad=5 id=TV_CONTROLS dialog XRoar TV Controls
+pad=5 id=TV_CONTROLS dialog XRoar · TV controls
 
 h1 Audio
 
@@ -90,7 +90,7 @@ pad_top=5 xalign=right id=IDOK button &Close
 
 # Tape control dialog
 
-pad=5 id=TAPE_CONTROLS dialog XRoar Tape Control
+pad=5 id=TAPE_CONTROLS dialog XRoar · Cassette tapes
 
 h1 Input
 
@@ -170,7 +170,7 @@ id=DRIVE2_INSERT id button
 id=DRIVE3_INSERT id button
 id=DRIVE4_INSERT id button
 
-pad=5 id=DRIVE_CONTROLS dialog XRoar Drive Control
+pad=5 id=DRIVE_CONTROLS dialog XRoar · Floppy disks
 
 hexpand=1 table
 hexpand=1 tr td hexpand=0 text Drive 1
