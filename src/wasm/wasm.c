@@ -2,7 +2,7 @@
  *
  *  \brief WebAssembly (emscripten) support.
  *
- *  \copyright Copyright 2019-2023 Ciaran Anscomb
+ *  \copyright Copyright 2019-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -441,6 +441,7 @@ enum wasm_load_file_type {
 	wasm_load_file_type_tape = 2,
 	wasm_load_file_type_disk = 3,
 	wasm_load_file_type_text = 4,
+	wasm_load_file_type_hd = 5,
 };
 
 struct wasm_event_load_file {
@@ -466,6 +467,9 @@ static void do_wasm_load_file(void *sptr) {
 	case wasm_load_file_type_text:
 		ak_type_file(xroar.auto_kbd, ev->filename);
 		ak_parse_type_string(xroar.auto_kbd, "\\r");
+		break;
+	case wasm_load_file_type_hd:
+		xroar_insert_hd_file(ev->drive, ev->filename);
 		break;
 	}
 	free(ev->filename);
