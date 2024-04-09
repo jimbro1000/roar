@@ -19,16 +19,16 @@
 #ifndef XROAR_WINDOWS_DRIVECONTROL_H_
 #define XROAR_WINDOWS_DRIVECONTROL_H_
 
-struct ui_sdl2_interface;
+struct ui_windows32_interface;
 
-void windows32_dc_create_window(struct ui_sdl2_interface *uisdl2);
-void windows32_dc_show_window(struct ui_sdl2_interface *uisdl2);
+void windows32_dc_create_window(struct ui_windows32_interface *);
+void windows32_dc_show_window(struct ui_windows32_interface *);
 
-void windows32_dc_update_drive_disk(struct ui_sdl2_interface *uisdl2,
+void windows32_dc_update_drive_disk(struct ui_windows32_interface *,
 				    int drive, const struct vdisk *disk);
-void windows32_dc_update_drive_write_enable(struct ui_sdl2_interface *uisdl2,
+void windows32_dc_update_drive_write_enable(struct ui_windows32_interface *,
 					    int drive, _Bool write_enable);
-void windows32_dc_update_drive_write_back(struct ui_sdl2_interface *uisdl2,
+void windows32_dc_update_drive_write_back(struct ui_windows32_interface *,
 					  int drive, _Bool write_back);
 
 #endif

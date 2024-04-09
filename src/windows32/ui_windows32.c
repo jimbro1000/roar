@@ -98,7 +98,7 @@ struct ui_module ui_windows32_module = {
 };
 
 static void windows32_ui_update_state(void *, int tag, int value, const void *data);
-static void windows32_create_menus(struct ui_sdl2_interface *);
+static void windows32_create_menus(struct ui_windows32_interface *);
 static void windows32_update_machine_menu(void *);
 static void windows32_update_cartridge_menu(void *);
 
@@ -114,11 +114,11 @@ static void *ui_windows32_new(void *cfg) {
 	ui_sdl_init(uisdl2, ui_cfg);
 	struct ui_interface *ui = &uisdl2->ui_interface;
 	ui->free = DELEGATE_AS0(void, ui_windows32_free, uiw32);
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_update_state, uisdl2);
-	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uisdl2);
-	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uisdl2);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_update_state, uiw32);
+	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uiw32);
+	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uiw32);
 
-	windows32_create_menus(uisdl2);
+	windows32_create_menus(uiw32);
 
 	if (!sdl_vo_init(uisdl2)) {
 		ui_windows32_free(uiw32);
@@ -141,20 +141,20 @@ static void ui_windows32_free(void *sptr) {
 
 static void setup_file_menu(void);
 static void setup_view_menu(void);
-static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2);
+static void setup_hardware_menu(struct ui_windows32_interface *);
 static void setup_tool_menu(void);
 static void setup_help_menu(void);
 
-static void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
+static void windows32_create_menus(struct ui_windows32_interface *uiw32) {
 	top_menu = CreateMenu();
 	setup_file_menu();
 	setup_view_menu();
-	setup_hardware_menu(uisdl2);
+	setup_hardware_menu(uiw32);
 	setup_tool_menu();
 	setup_help_menu();
-	windows32_dc_create_window(uisdl2);
-	windows32_tc_create_window(uisdl2);
-	windows32_vo_create_window(uisdl2);
+	windows32_dc_create_window(uiw32);
+	windows32_tc_create_window(uiw32);
+	windows32_vo_create_window(uiw32);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -222,7 +222,7 @@ static void setup_view_menu(void) {
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)view_menu, "&View");
 }
 
-static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
+static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
 	HMENU hardware_menu;
 	HMENU submenu;
 
@@ -264,9 +264,9 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)hardware_menu, "&Hardware");
 
-	windows32_ui_update_state(uisdl2, ui_tag_machine, xroar.machine_config ? xroar.machine_config->id : 0, NULL);
+	windows32_ui_update_state(uiw32, ui_tag_machine, xroar.machine_config ? xroar.machine_config->id : 0, NULL);
 	struct cart *cart = xroar.machine ? xroar.machine->get_interface(xroar.machine, "cart") : NULL;
-	windows32_ui_update_state(uisdl2, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
+	windows32_ui_update_state(uiw32, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
 }
 
 static void setup_tool_menu(void) {
@@ -429,7 +429,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Cassettes:
 	case ui_tag_tape_control:
-		windows32_tc_show_window(global_uisdl2);
+		windows32_tc_show_window((struct ui_windows32_interface *)global_uisdl2);
 		break;
 	case ui_tag_tape_flags:
 		tape_select_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ tag_value);
@@ -437,7 +437,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Disks:
 	case ui_tag_drive_control:
-		windows32_dc_show_window(global_uisdl2);
+		windows32_dc_show_window((struct ui_windows32_interface *)global_uisdl2);
 		break;
 	case ui_tag_disk_insert:
 		xroar_insert_disk(tag_value);
@@ -459,7 +459,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// TV controls:
 	case ui_tag_tv_controls:
-		windows32_vo_show_window(global_uisdl2);
+		windows32_vo_show_window((struct ui_windows32_interface *)global_uisdl2);
 		break;
 
 	case ui_tag_fullscreen:
@@ -515,7 +515,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void windows32_ui_update_state(void *sptr, int tag, int value, const void *data) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
+	struct ui_windows32_interface *uiw32 = sptr;
 	switch (tag) {
 
 	// Simple toggles
@@ -538,48 +538,48 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 	// Tape
 
 	case ui_tag_tape_control:
-		windows32_tc_show_window(global_uisdl2);
+		windows32_tc_show_window(uiw32);
 		break;
 
 	case ui_tag_tape_flags:
-		windows32_tc_update_tape_state(uisdl2, value);
+		windows32_tc_update_tape_state(uiw32, value);
 		break;
 
 	case ui_tag_tape_input_filename:
-		windows32_tc_update_input_filename(uisdl2, (const char *)data);
+		windows32_tc_update_input_filename(uiw32, (const char *)data);
 		break;
 
 	case ui_tag_tape_output_filename:
-		windows32_tc_update_output_filename(uisdl2, (const char *)data);
+		windows32_tc_update_output_filename(uiw32, (const char *)data);
 		break;
 
 	case ui_tag_tape_playing:
-		windows32_tc_update_tape_playing(uisdl2, value);
+		windows32_tc_update_tape_playing(uiw32, value);
 		break;
 
 	// Disk
 
 	case ui_tag_drive_control:
-		windows32_dc_show_window(global_uisdl2);
+		windows32_dc_show_window(uiw32);
 		break;
 
 	case ui_tag_disk_data:
-		windows32_dc_update_drive_disk(uisdl2, value, (const struct vdisk *)data);
+		windows32_dc_update_drive_disk(uiw32, value, (const struct vdisk *)data);
 		break;
 
 	case ui_tag_disk_write_enable:
-		windows32_dc_update_drive_write_enable(uisdl2, value, (intptr_t)data);
+		windows32_dc_update_drive_write_enable(uiw32, value, (intptr_t)data);
 		break;
 
 	case ui_tag_disk_write_back:
-		windows32_dc_update_drive_write_back(uisdl2, value, (intptr_t)data);
+		windows32_dc_update_drive_write_back(uiw32, value, (intptr_t)data);
 		break;
 
 	// Video
 
 	case ui_tag_ccr:
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 4), TAGV(tag, value), MF_BYCOMMAND);
-		windows32_vo_update_cmp_renderer(uisdl2, value);
+		windows32_vo_update_cmp_renderer(uiw32, value);
 		break;
 
 	case ui_tag_tv_input:
@@ -587,47 +587,47 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		break;
 
 	case ui_tag_tv_controls:
-		windows32_vo_show_window(global_uisdl2);
+		windows32_vo_show_window(uiw32);
 		break;
 
 	case ui_tag_brightness:
-		windows32_vo_update_brightness(uisdl2, value);
+		windows32_vo_update_brightness(uiw32, value);
 		break;
 
 	case ui_tag_contrast:
-		windows32_vo_update_contrast(uisdl2, value);
+		windows32_vo_update_contrast(uiw32, value);
 		break;
 
 	case ui_tag_saturation:
-		windows32_vo_update_saturation(uisdl2, value);
+		windows32_vo_update_saturation(uiw32, value);
 		break;
 
 	case ui_tag_hue:
-		windows32_vo_update_hue(uisdl2, value);
+		windows32_vo_update_hue(uiw32, value);
 		break;
 
 	case ui_tag_picture:
-		windows32_vo_update_picture(uisdl2, value);
+		windows32_vo_update_picture(uiw32, value);
 		break;
 
 	case ui_tag_ntsc_scaling:
-		windows32_vo_update_ntsc_scaling(uisdl2, value);
+		windows32_vo_update_ntsc_scaling(uiw32, value);
 		break;
 
 	case ui_tag_cmp_fs:
-		windows32_vo_update_cmp_fs(uisdl2, value);
+		windows32_vo_update_cmp_fs(uiw32, value);
 		break;
 
 	case ui_tag_cmp_fsc:
-		windows32_vo_update_cmp_fsc(uisdl2, value);
+		windows32_vo_update_cmp_fsc(uiw32, value);
 		break;
 
 	case ui_tag_cmp_system:
-		windows32_vo_update_cmp_system(uisdl2, value);
+		windows32_vo_update_cmp_system(uiw32, value);
 		break;
 
 	case ui_tag_cmp_colour_killer:
-		windows32_vo_update_cmp_colour_killer(uisdl2, value);
+		windows32_vo_update_cmp_colour_killer(uiw32, value);
 		break;
 
 	// Audio
@@ -637,7 +637,7 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		break;
 
 	case ui_tag_gain:
-		windows32_vo_update_volume(uisdl2, value);
+		windows32_vo_update_volume(uiw32, value);
 		break;
 
 	// Keyboard

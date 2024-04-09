@@ -47,14 +47,14 @@ struct tc_program {
 
 static int num_programs = 0;
 static struct tc_program *programs = NULL;
-static void update_programlist(struct ui_sdl2_interface *uisdl2);
+static void update_programlist(struct ui_windows32_interface *);
 
 static struct event ev_update_tape_counters;
 static void update_tape_counters(void *);
 
 static void tc_seek(struct tape *tape, int scroll, int value);
 
-void windows32_tc_create_window(struct ui_sdl2_interface *uisdl2) {
+void windows32_tc_create_window(struct ui_windows32_interface *uiw32) {
 	// Main dialog window handle
 	tc_window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_TAPE_CONTROLS), windows32_main_hwnd, (DLGPROC)tc_proc);
 
@@ -72,20 +72,20 @@ void windows32_tc_create_window(struct ui_sdl2_interface *uisdl2) {
 	SendMessage(tc_lvs_input_programlist, LVM_INSERTCOLUMN, 1, (LPARAM)&col);
 
 	// While window displayed, an event triggers updating tape counters
-	event_init(&ev_update_tape_counters, DELEGATE_AS0(void, update_tape_counters, uisdl2));
+	event_init(&ev_update_tape_counters, DELEGATE_AS0(void, update_tape_counters, uiw32));
 }
 
-void windows32_tc_show_window(struct ui_sdl2_interface *uisdl2) {
+void windows32_tc_show_window(struct ui_windows32_interface *uiw32) {
 	ShowWindow(tc_window, SW_SHOW);
-	update_programlist(uisdl2);
+	update_programlist(uiw32);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Tape control - update values in UI
 
-void windows32_tc_update_tape_state(struct ui_sdl2_interface *uisdl2, int flags) {
-	(void)uisdl2;
+void windows32_tc_update_tape_state(struct ui_windows32_interface *uiw32, int flags) {
+	(void)uiw32;
 	HWND tc_bn_tape_fast = GetDlgItem(tc_window, IDC_BN_TAPE_FAST);
 	HWND tc_bn_tape_pad_auto = GetDlgItem(tc_window, IDC_BN_TAPE_PAD_AUTO);
 	HWND tc_bn_tape_rewrite = GetDlgItem(tc_window, IDC_BN_TAPE_REWRITE);
@@ -94,7 +94,7 @@ void windows32_tc_update_tape_state(struct ui_sdl2_interface *uisdl2, int flags)
 	SendMessage(tc_bn_tape_rewrite, BM_SETCHECK, (flags & TAPE_REWRITE) ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
-void windows32_tc_update_input_filename(struct ui_sdl2_interface *uisdl2, const char *filename) {
+void windows32_tc_update_input_filename(struct ui_windows32_interface *uiw32, const char *filename) {
 	HWND tc_stm_input_filename = GetDlgItem(tc_window, IDC_STM_INPUT_FILENAME);
 	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
 	SendMessage(tc_stm_input_filename, WM_SETTEXT, 0, (LPARAM)filename);
@@ -106,18 +106,18 @@ void windows32_tc_update_input_filename(struct ui_sdl2_interface *uisdl2, const 
 	}
 	num_programs = 0;
 	if (IsWindowVisible(tc_window)) {
-		update_programlist(uisdl2);
+		update_programlist(uiw32);
 	}
 }
 
-void windows32_tc_update_output_filename(struct ui_sdl2_interface *uisdl2, const char *filename) {
-	(void)uisdl2;
+void windows32_tc_update_output_filename(struct ui_windows32_interface *uiw32, const char *filename) {
+	(void)uiw32;
 	HWND tc_stm_output_filename = GetDlgItem(tc_window, IDC_STM_OUTPUT_FILENAME);
 	SendMessage(tc_stm_output_filename, WM_SETTEXT, 0, (LPARAM)filename);
 }
 
-void windows32_tc_update_tape_playing(struct ui_sdl2_interface *uisdl2, int playing) {
-	(void)uisdl2;
+void windows32_tc_update_tape_playing(struct ui_windows32_interface *uiw32, int playing) {
+	(void)uiw32;
 	HWND tc_bn_input_play = GetDlgItem(tc_window, IDC_BN_INPUT_PLAY);
 	HWND tc_bn_input_pause = GetDlgItem(tc_window, IDC_BN_INPUT_PAUSE);
 	HWND tc_bn_output_record = GetDlgItem(tc_window, IDC_BN_OUTPUT_RECORD);
@@ -328,8 +328,8 @@ static char *ms_to_string(int ms) {
 	return timestr;
 }
 
-static void update_programlist(struct ui_sdl2_interface *uisdl2) {
-	(void)uisdl2;
+static void update_programlist(struct ui_windows32_interface *uiw32) {
+	(void)uiw32;
 	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
 	if (ListView_GetItemCount(tc_lvs_input_programlist) > 0) {
 		return;
@@ -359,8 +359,8 @@ static void update_programlist(struct ui_sdl2_interface *uisdl2) {
 }
 
 static void update_tape_counters(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
+	struct ui_windows32_interface *uiw32 = sptr;
+	(void)uiw32;
 	HWND tc_stm_input_position = GetDlgItem(tc_window, IDC_STM_INPUT_POSITION);
 	HWND tc_sbm_input_position = GetDlgItem(tc_window, IDC_SBM_INPUT_POSITION);
 	HWND tc_stm_output_position = GetDlgItem(tc_window, IDC_STM_OUTPUT_POSITION);

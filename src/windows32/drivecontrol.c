@@ -44,15 +44,15 @@ static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsi
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void windows32_dc_create_window(struct ui_sdl2_interface *uisdl2) {
+void windows32_dc_create_window(struct ui_windows32_interface *uiw32) {
 	// Main dialog window handle
 	dc_window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_DRIVE_CONTROLS), windows32_main_hwnd, (DLGPROC)dc_proc);
 
-	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uisdl2);
+	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uiw32);
 }
 
-void windows32_dc_show_window(struct ui_sdl2_interface *uisdl2) {
-	(void)uisdl2;
+void windows32_dc_show_window(struct ui_windows32_interface *uiw32) {
+	(void)uiw32;
 	ShowWindow(dc_window, SW_SHOW);
 }
 
@@ -60,9 +60,9 @@ void windows32_dc_show_window(struct ui_sdl2_interface *uisdl2) {
 
 // Drive control - update values in UI
 
-void windows32_dc_update_drive_disk(struct ui_sdl2_interface *uisdl2,
+void windows32_dc_update_drive_disk(struct ui_windows32_interface *uiw32,
 				    int drive, const struct vdisk *disk) {
-	(void)uisdl2;
+	(void)uiw32;
 	if (drive < 0 || drive > 3)
 		return;
 	char *filename = NULL;
@@ -80,18 +80,18 @@ void windows32_dc_update_drive_disk(struct ui_sdl2_interface *uisdl2,
 	SendMessage(dc_bn_drive_wb, BM_SETCHECK, wb ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
-void windows32_dc_update_drive_write_enable(struct ui_sdl2_interface *uisdl2,
+void windows32_dc_update_drive_write_enable(struct ui_windows32_interface *uiw32,
 					    int drive, _Bool write_enable) {
-	(void)uisdl2;
+	(void)uiw32;
 	if (drive >= 0 && drive <= 3) {
 		HWND dc_bn_drive_we = GetDlgItem(dc_window, IDC_BN_DRIVE1_WE + drive);
 		SendMessage(dc_bn_drive_we, BM_SETCHECK, write_enable ? BST_CHECKED : BST_UNCHECKED, 0);
 	}
 }
 
-void windows32_dc_update_drive_write_back(struct ui_sdl2_interface *uisdl2,
+void windows32_dc_update_drive_write_back(struct ui_windows32_interface *uiw32,
 					  int drive, _Bool write_back) {
-	(void)uisdl2;
+	(void)uiw32;
 	if (drive >= 0 && drive <= 3) {
 		HWND dc_bn_drive_wb = GetDlgItem(dc_window, IDC_BN_DRIVE1_WB + drive);
 		SendMessage(dc_bn_drive_wb, BM_SETCHECK, write_back ? BST_CHECKED : BST_UNCHECKED, 0);
@@ -177,8 +177,8 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 }
 
 static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
+	struct ui_windows32_interface *uiw32 = sptr;
+	(void)uiw32;
 	char string[16];
 	snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", drive + 1, cyl, head);
 	HWND dc_stm_drive_cyl_head = GetDlgItem(dc_window, IDC_STM_DRIVE_CYL_HEAD);
