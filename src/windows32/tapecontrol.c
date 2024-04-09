@@ -37,16 +37,6 @@
 
 static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-static HWND tc_window = NULL;
-
-struct tc_program {
-	struct tape_file *file;
-	char *filename;
-	char *position;
-};
-
-static int num_programs = 0;
-static struct tc_program *programs = NULL;
 static void update_programlist(struct ui_windows32_interface *);
 
 static struct event ev_update_tape_counters;
@@ -56,10 +46,10 @@ static void tc_seek(struct tape *tape, int scroll, int value);
 
 void windows32_tc_create_window(struct ui_windows32_interface *uiw32) {
 	// Main dialog window handle
-	tc_window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_TAPE_CONTROLS), windows32_main_hwnd, (DLGPROC)tc_proc);
+	uiw32->tape.window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_TAPE_CONTROLS), windows32_main_hwnd, (DLGPROC)tc_proc);
 
 	// Initialise program list dialog
-	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
+	HWND tc_lvs_input_programlist = GetDlgItem(uiw32->tape.window, IDC_LVS_INPUT_PROGRAMLIST);
 	LVCOLUMNA col = {
 		.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT,
 		.fmt = LVCFMT_LEFT,
@@ -76,7 +66,7 @@ void windows32_tc_create_window(struct ui_windows32_interface *uiw32) {
 }
 
 void windows32_tc_show_window(struct ui_windows32_interface *uiw32) {
-	ShowWindow(tc_window, SW_SHOW);
+	ShowWindow(uiw32->tape.window, SW_SHOW);
 	update_programlist(uiw32);
 }
 
@@ -85,43 +75,40 @@ void windows32_tc_show_window(struct ui_windows32_interface *uiw32) {
 // Tape control - update values in UI
 
 void windows32_tc_update_tape_state(struct ui_windows32_interface *uiw32, int flags) {
-	(void)uiw32;
-	HWND tc_bn_tape_fast = GetDlgItem(tc_window, IDC_BN_TAPE_FAST);
-	HWND tc_bn_tape_pad_auto = GetDlgItem(tc_window, IDC_BN_TAPE_PAD_AUTO);
-	HWND tc_bn_tape_rewrite = GetDlgItem(tc_window, IDC_BN_TAPE_REWRITE);
+	HWND tc_bn_tape_fast = GetDlgItem(uiw32->tape.window, IDC_BN_TAPE_FAST);
+	HWND tc_bn_tape_pad_auto = GetDlgItem(uiw32->tape.window, IDC_BN_TAPE_PAD_AUTO);
+	HWND tc_bn_tape_rewrite = GetDlgItem(uiw32->tape.window, IDC_BN_TAPE_REWRITE);
 	SendMessage(tc_bn_tape_fast, BM_SETCHECK, (flags & TAPE_FAST) ? BST_CHECKED : BST_UNCHECKED, 0);
 	SendMessage(tc_bn_tape_pad_auto, BM_SETCHECK, (flags & TAPE_PAD_AUTO) ? BST_CHECKED : BST_UNCHECKED, 0);
 	SendMessage(tc_bn_tape_rewrite, BM_SETCHECK, (flags & TAPE_REWRITE) ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 void windows32_tc_update_input_filename(struct ui_windows32_interface *uiw32, const char *filename) {
-	HWND tc_stm_input_filename = GetDlgItem(tc_window, IDC_STM_INPUT_FILENAME);
-	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
+	HWND tc_stm_input_filename = GetDlgItem(uiw32->tape.window, IDC_STM_INPUT_FILENAME);
+	HWND tc_lvs_input_programlist = GetDlgItem(uiw32->tape.window, IDC_LVS_INPUT_PROGRAMLIST);
 	SendMessage(tc_stm_input_filename, WM_SETTEXT, 0, (LPARAM)filename);
 	SendMessage(tc_lvs_input_programlist, LVM_DELETEALLITEMS, 0, 0);
-	for (int i = 0; i < num_programs; i++) {
-		free(programs[i].filename);
-		free(programs[i].position);
-		free(programs[i].file);
+	for (int i = 0; i < uiw32->tape.num_programs; i++) {
+		free(uiw32->tape.programs[i].filename);
+		free(uiw32->tape.programs[i].position);
+		free(uiw32->tape.programs[i].file);
 	}
-	num_programs = 0;
-	if (IsWindowVisible(tc_window)) {
+	uiw32->tape.num_programs = 0;
+	if (IsWindowVisible(uiw32->tape.window)) {
 		update_programlist(uiw32);
 	}
 }
 
 void windows32_tc_update_output_filename(struct ui_windows32_interface *uiw32, const char *filename) {
-	(void)uiw32;
-	HWND tc_stm_output_filename = GetDlgItem(tc_window, IDC_STM_OUTPUT_FILENAME);
+	HWND tc_stm_output_filename = GetDlgItem(uiw32->tape.window, IDC_STM_OUTPUT_FILENAME);
 	SendMessage(tc_stm_output_filename, WM_SETTEXT, 0, (LPARAM)filename);
 }
 
 void windows32_tc_update_tape_playing(struct ui_windows32_interface *uiw32, int playing) {
-	(void)uiw32;
-	HWND tc_bn_input_play = GetDlgItem(tc_window, IDC_BN_INPUT_PLAY);
-	HWND tc_bn_input_pause = GetDlgItem(tc_window, IDC_BN_INPUT_PAUSE);
-	HWND tc_bn_output_record = GetDlgItem(tc_window, IDC_BN_OUTPUT_RECORD);
-	HWND tc_bn_output_pause = GetDlgItem(tc_window, IDC_BN_OUTPUT_PAUSE);
+	HWND tc_bn_input_play = GetDlgItem(uiw32->tape.window, IDC_BN_INPUT_PLAY);
+	HWND tc_bn_input_pause = GetDlgItem(uiw32->tape.window, IDC_BN_INPUT_PAUSE);
+	HWND tc_bn_output_record = GetDlgItem(uiw32->tape.window, IDC_BN_OUTPUT_RECORD);
+	HWND tc_bn_output_pause = GetDlgItem(uiw32->tape.window, IDC_BN_OUTPUT_PAUSE);
 	EnableWindow(tc_bn_input_play, !playing ? TRUE : FALSE);
 	EnableWindow(tc_bn_input_pause, playing ? TRUE : FALSE);
 	EnableWindow(tc_bn_output_record, !playing ? TRUE : FALSE);
@@ -133,6 +120,7 @@ void windows32_tc_update_tape_playing(struct ui_windows32_interface *uiw32, int 
 // Tape control - signal handlers
 
 static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)global_uisdl2;
 	// hwnd is the handle for the dialog window, i.e. tc_window
 
 	switch (msg) {
@@ -160,15 +148,15 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				NMLVDISPINFO *plvdi = (NMLVDISPINFO *)lParam;
 				int item = plvdi->item.iItem;
-				if (item >= num_programs) {
+				if (item >= uiw32->tape.num_programs) {
 					return TRUE;
 				}
 				switch (plvdi->item.iSubItem) {
 				case 0:
-					plvdi->item.pszText = programs[item].filename;
+					plvdi->item.pszText = uiw32->tape.programs[item].filename;
 					break;
 				case 1:
-					plvdi->item.pszText = programs[item].position;
+					plvdi->item.pszText = uiw32->tape.programs[item].position;
 					break;
 				default:
 					break;
@@ -180,7 +168,7 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			{
 				LPNMITEMACTIVATE lpnmitem = (LPNMITEMACTIVATE)lParam;
 				int iItem = lpnmitem->iItem;
-				tape_seek_to_file(xroar.tape_interface->tape_input, programs[iItem].file);
+				tape_seek_to_file(xroar.tape_interface->tape_input, uiw32->tape.programs[iItem].file);
 			}
 			break;
 
@@ -329,8 +317,7 @@ static char *ms_to_string(int ms) {
 }
 
 static void update_programlist(struct ui_windows32_interface *uiw32) {
-	(void)uiw32;
-	HWND tc_lvs_input_programlist = GetDlgItem(tc_window, IDC_LVS_INPUT_PROGRAMLIST);
+	HWND tc_lvs_input_programlist = GetDlgItem(uiw32->tape.window, IDC_LVS_INPUT_PROGRAMLIST);
 	if (ListView_GetItemCount(tc_lvs_input_programlist) > 0) {
 		return;
 	}
@@ -339,32 +326,32 @@ static void update_programlist(struct ui_windows32_interface *uiw32) {
 	struct tape_file *file;
 	long old_offset = tape_tell(xroar.tape_interface->tape_input);
 	tape_rewind(xroar.tape_interface->tape_input);
-	num_programs = 0;
+	int nprograms = 0;
 	while ((file = tape_file_next(xroar.tape_interface->tape_input, 1))) {
 		int ms = tape_to_ms(xroar.tape_interface->tape_input, file->offset);
-		programs = xrealloc(programs, (num_programs + 1) * sizeof(struct tc_program));
-		programs[num_programs].file = file;
-		programs[num_programs].filename = xstrdup(file->name);
-		programs[num_programs].position = xstrdup(ms_to_string(ms));
+		uiw32->tape.programs = xrealloc(uiw32->tape.programs, (nprograms + 1) * sizeof(*uiw32->tape.programs));
+		uiw32->tape.programs[nprograms].file = file;
+		uiw32->tape.programs[nprograms].filename = xstrdup(file->name);
+		uiw32->tape.programs[nprograms].position = xstrdup(ms_to_string(ms));
 		LVITEMA item = {
 			.mask = LVIF_TEXT,
-			.iItem = num_programs,
+			.iItem = nprograms,
 			.iSubItem = 0,
 			.pszText = LPSTR_TEXTCALLBACK,
 		};
 		SendMessage(tc_lvs_input_programlist, LVM_INSERTITEM, 0, (LPARAM)&item);
-		num_programs++;
+		nprograms++;
 	}
+	uiw32->tape.num_programs = nprograms;
 	tape_seek(xroar.tape_interface->tape_input, old_offset, SEEK_SET);
 }
 
 static void update_tape_counters(void *sptr) {
 	struct ui_windows32_interface *uiw32 = sptr;
-	(void)uiw32;
-	HWND tc_stm_input_position = GetDlgItem(tc_window, IDC_STM_INPUT_POSITION);
-	HWND tc_sbm_input_position = GetDlgItem(tc_window, IDC_SBM_INPUT_POSITION);
-	HWND tc_stm_output_position = GetDlgItem(tc_window, IDC_STM_OUTPUT_POSITION);
-	HWND tc_sbm_output_position = GetDlgItem(tc_window, IDC_SBM_OUTPUT_POSITION);
+	HWND tc_stm_input_position = GetDlgItem(uiw32->tape.window, IDC_STM_INPUT_POSITION);
+	HWND tc_sbm_input_position = GetDlgItem(uiw32->tape.window, IDC_SBM_INPUT_POSITION);
+	HWND tc_stm_output_position = GetDlgItem(uiw32->tape.window, IDC_STM_OUTPUT_POSITION);
+	HWND tc_sbm_output_position = GetDlgItem(uiw32->tape.window, IDC_SBM_OUTPUT_POSITION);
 
 	static long imax = -1, ipos = -1;
 	long new_imax = 0, new_ipos = 0;

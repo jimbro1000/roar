@@ -76,8 +76,6 @@ static struct {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static HMENU top_menu;
-
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HWND about_dialog = NULL;
 static WNDPROC sdl_window_proc = NULL;
@@ -133,25 +131,25 @@ static void *ui_windows32_new(void *cfg) {
 
 static void ui_windows32_free(void *sptr) {
 	struct ui_windows32_interface *uiw32 = sptr;
-	DestroyMenu(top_menu);
+	DestroyMenu(uiw32->top_menu);
 	ui_sdl_free(uiw32);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void setup_file_menu(void);
-static void setup_view_menu(void);
+static void setup_file_menu(struct ui_windows32_interface *);
+static void setup_view_menu(struct ui_windows32_interface *);
 static void setup_hardware_menu(struct ui_windows32_interface *);
-static void setup_tool_menu(void);
-static void setup_help_menu(void);
+static void setup_tool_menu(struct ui_windows32_interface *);
+static void setup_help_menu(struct ui_windows32_interface *);
 
 static void windows32_create_menus(struct ui_windows32_interface *uiw32) {
-	top_menu = CreateMenu();
-	setup_file_menu();
-	setup_view_menu();
+	uiw32->top_menu = CreateMenu();
+	setup_file_menu(uiw32);
+	setup_view_menu(uiw32);
 	setup_hardware_menu(uiw32);
-	setup_tool_menu();
-	setup_help_menu();
+	setup_tool_menu(uiw32);
+	setup_help_menu(uiw32);
 	windows32_dc_create_window(uiw32);
 	windows32_tc_create_window(uiw32);
 	windows32_vo_create_window(uiw32);
@@ -159,7 +157,7 @@ static void windows32_create_menus(struct ui_windows32_interface *uiw32) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void setup_file_menu(void) {
+static void setup_file_menu(struct ui_windows32_interface *uiw32) {
 	HMENU file_menu;
 
 	file_menu = CreatePopupMenu();
@@ -180,10 +178,10 @@ static void setup_file_menu(void) {
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_quit), "&Quit");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)file_menu, "&File");
+	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)file_menu, "&File");
 }
 
-static void setup_view_menu(void) {
+static void setup_view_menu(struct ui_windows32_interface *uiw32) {
 	HMENU view_menu;
 	HMENU submenu;
 
@@ -219,7 +217,7 @@ static void setup_view_menu(void) {
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "&Full screen");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)view_menu, "&View");
+	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)view_menu, "&View");
 }
 
 static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
@@ -262,14 +260,14 @@ static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_soft), "Soft reset");
 	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_hard), "Hard reset");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)hardware_menu, "&Hardware");
+	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)hardware_menu, "&Hardware");
 
 	windows32_ui_update_state(uiw32, ui_tag_machine, xroar.machine_config ? xroar.machine_config->id : 0, NULL);
 	struct cart *cart = xroar.machine ? xroar.machine->get_interface(xroar.machine, "cart") : NULL;
 	windows32_ui_update_state(uiw32, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
 }
 
-static void setup_tool_menu(void) {
+static void setup_tool_menu(struct ui_windows32_interface *uiw32) {
 	HMENU tool_menu;
 
 	tool_menu = CreatePopupMenu();
@@ -277,22 +275,24 @@ static void setup_tool_menu(void) {
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "&Keyboard translation");
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit), "&Rate limit");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)tool_menu, "&Tool");
+	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)tool_menu, "&Tool");
 }
 
-static void setup_help_menu(void) {
+static void setup_help_menu(struct ui_windows32_interface *uiw32) {
 	HMENU help_menu;
 
 	help_menu = CreatePopupMenu();
 	AppendMenu(help_menu, MF_STRING, TAG(ui_tag_about), "About");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)help_menu, "&Help");
+	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)help_menu, "&Help");
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void windows32_update_machine_menu(void *sptr) {
-	(void)sptr;
+	struct ui_windows32_interface *uiw32 = sptr;
+	(void)uiw32;
+
 	// Get list of machine configs
 	struct slist *mcl = machine_config_list();
 	// Note: this list is not a copy, so does not need freeing
@@ -313,7 +313,9 @@ static void windows32_update_machine_menu(void *sptr) {
 }
 
 static void windows32_update_cartridge_menu(void *sptr) {
-	(void)sptr;
+	struct ui_windows32_interface *uiw32 = sptr;
+	(void)uiw32;
+
 	// Get list of cart configs
 	struct slist *ccl = NULL;
 	if (xroar.machine) {
@@ -341,6 +343,8 @@ static void windows32_update_cartridge_menu(void *sptr) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)global_uisdl2;
+
 	HWND hwnd = wmmsg->msg.win.hwnd;
 	UINT msg = wmmsg->msg.win.msg;
 	WPARAM wParam = wmmsg->msg.win.wParam;
@@ -398,7 +402,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 				tape_rewind(xroar.tape_interface->tape_output);
 			break;
 		case ui_action_tape_play_pause:
-			tape_set_playing(xroar.tape_interface, !(GetMenuState(top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND) & MF_CHECKED), 1);
+			tape_set_playing(xroar.tape_interface, !(GetMenuState(uiw32->top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND) & MF_CHECKED), 1);
 			break;
 		case ui_action_zoom_in:
 			sdl_zoom_in(global_uisdl2);
@@ -522,17 +526,17 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	case ui_tag_fullscreen:
 	case ui_tag_vdg_inverse:
-		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Hardware
 
 	case ui_tag_machine:
-		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_cartridge:
-		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, max_cartridge_id), TAGV(tag, value + 1), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_cartridge_id), TAGV(tag, value + 1), MF_BYCOMMAND);
 		break;
 
 	// Tape
@@ -578,12 +582,12 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 	// Video
 
 	case ui_tag_ccr:
-		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 4), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 4), TAGV(tag, value), MF_BYCOMMAND);
 		windows32_vo_update_cmp_renderer(uiw32, value);
 		break;
 
 	case ui_tag_tv_input:
-		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_tv_controls:
@@ -633,7 +637,7 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 	// Audio
 
 	case ui_tag_ratelimit:
-		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	case ui_tag_gain:
@@ -643,11 +647,11 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 	// Keyboard
 
 	case ui_tag_keymap:
-		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, (dkbd_num_layouts - 1)), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, (dkbd_num_layouts - 1)), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_kbd_translate:
-		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Joysticks
@@ -664,7 +668,7 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 					}
 				}
 			}
-			CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, NUM_JOYSTICK_NAMES - 1), TAGV(tag, joy), MF_BYCOMMAND);
+			CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, NUM_JOYSTICK_NAMES - 1), TAGV(tag, joy), MF_BYCOMMAND);
 		}
 		break;
 
@@ -764,13 +768,15 @@ void sdl_windows32_set_events_window(SDL_Window *sw) {
  * itself to account for this. */
 
 void sdl_windows32_add_menu(SDL_Window *sw) {
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)global_uisdl2;
+
 	HWND hwnd = get_hwnd(sw);
 	if (GetMenu(hwnd) != NULL) {
 		return;
 	}
 	int w, h;
 	SDL_GetWindowSize(sw, &w, &h);
-	SetMenu(hwnd, top_menu);
+	SetMenu(hwnd, uiw32->top_menu);
 	SDL_GetWindowSize(sw, &w, &h);
 }
 

@@ -25,6 +25,24 @@
 
 struct ui_windows32_interface {
 	struct ui_sdl2_interface ui_sdl2_interface;
+
+	HMENU top_menu;
+
+	// Cassette tapes dialog
+	struct {
+		HWND window;
+		int num_programs;
+		struct {
+			struct tape_file *file;
+			char *filename;
+			char *position;
+		} *programs;
+	} tape;
+
+	// Floppy disks dialog
+	struct {
+		HWND window;
+	} disk;
 };
 
 extern HWND windows32_main_hwnd;
