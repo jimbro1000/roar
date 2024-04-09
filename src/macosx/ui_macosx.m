@@ -1,8 +1,8 @@
 /** \file
  *
- *  \brief Mac OS X user-interface module.
+ *  \brief Mac OS X+ user-interface module.
  *
- *  \copyright Copyright 2011-2022 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -1191,12 +1191,55 @@ int main(int argc, char **argv) {
 }
 #endif
 
-/**************************************************************************/
+// -------------------------------------------------------------------------
 
-/* XRoar UI definition */
+// XRoar UI definition
 
-void cocoa_update_machine_menu(void *sptr) {
-	(void)sptr;
+static void *ui_cocoa_new(void *cfg);
+static void cocoa_ui_run(void *);
+
+struct ui_module ui_cocoa_module = {
+	.common = { .name = "macosx", .description = "Mac OS X+ SDL2 UI",
+		.new = ui_cocoa_new,
+	},
+	.joystick_module_list = sdl_js_modlist,
+};
+
+static void cocoa_update_machine_menu(void *);
+static void cocoa_update_cartridge_menu(void *);
+static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data);
+
+static void *ui_cocoa_new(void *cfg) {
+	struct ui_cfg *ui_cfg = cfg;
+
+	cocoa_register_app();
+
+	struct ui_sdl2_interface *uisdl2 = ui_sdl_allocate(sizeof(*uisdl2));
+	if (!uisdl2) {
+		return NULL;
+	}
+	*uisdl2 = (struct ui_sdl2_interface){0};
+	ui_sdl_init(uisdl2, ui_cfg);
+	struct ui_interface *ui = &uisdl2->ui_interface;
+
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_update_state, uisdl2);
+	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uisdl2);
+	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
+	cocoa_update_machine_menu(uisdl2);
+	cocoa_update_cartridge_menu(uisdl2);
+
+	if (!sdl_vo_init(uisdl2)) {
+		free(uisdl2);
+		return NULL;
+	}
+
+	return uisdl2;
+}
+
+static void cocoa_update_machine_menu(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
+
 	// Get list of machine configs
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
 
@@ -1223,8 +1266,10 @@ void cocoa_update_machine_menu(void *sptr) {
 	slist_free(mcl);
 }
 
-void cocoa_update_cartridge_menu(void *sptr) {
-	(void)sptr;
+static void cocoa_update_cartridge_menu(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
+
 	// Get list of cart configs
 	struct slist *ccl = NULL;
 	struct cart *cart = NULL;
@@ -1262,7 +1307,7 @@ void cocoa_update_cartridge_menu(void *sptr) {
 	slist_free(ccl);
 }
 
-void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
+static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 	(void)uisdl2;
 

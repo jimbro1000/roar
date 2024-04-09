@@ -138,10 +138,6 @@ struct ui_module ui_sdl_module = {
 static void *ui_sdl_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 
-#ifdef HAVE_COCOA
-	cocoa_register_app();
-#endif
-
 	struct ui_sdl2_interface *uisdl2 = ui_sdl_allocate(sizeof(*uisdl2));
 	if (!uisdl2) {
 		return NULL;
@@ -153,14 +149,6 @@ static void *ui_sdl_new(void *cfg) {
 
 #ifdef HAVE_X11
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
-
-#ifdef HAVE_COCOA
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_update_state, uisdl2);
-	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uisdl2);
-	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
-	cocoa_update_machine_menu(uisdl2);
-	cocoa_update_cartridge_menu(uisdl2);
 #endif
 
 	if (!sdl_vo_init(uisdl2)) {

@@ -29,6 +29,7 @@ extern struct ui_module ui_gtk2_module;
 extern struct ui_module ui_null_module;
 extern struct ui_module ui_windows32_module;
 extern struct ui_module ui_wasm_module;
+extern struct ui_module ui_cocoa_module;
 extern struct ui_module ui_sdl_module;
 static struct ui_module * const default_ui_module_list[] = {
 #ifdef HAVE_GTK2
@@ -41,6 +42,9 @@ static struct ui_module * const default_ui_module_list[] = {
 #endif
 #ifdef HAVE_WASM
 	&ui_wasm_module,
+#endif
+#ifdef HAVE_COCOA
+	&ui_cocoa_module,
 #endif
 #ifdef WANT_UI_SDL
 	&ui_sdl_module,

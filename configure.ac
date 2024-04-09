@@ -649,8 +649,7 @@ AC_SUBST(COCOA_LIBS)
 
 AM_CONDITIONAL([UI_COCOA], [test -n "$have_cocoa"])
 AM_COND_IF([UI_COCOA], [
-		# XXX not yet migrated Cocoa SDL UI to its own module
-		#test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
+		test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
 		AC_DEFINE([HAVE_COCOA], 1, [Have Mac OS X Cocoa framework])
 	], [
 		OBJC="$CC"
