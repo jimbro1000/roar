@@ -271,8 +271,7 @@ esac
 
 AM_CONDITIONAL([MINGW], [test -n "$have_mingw"])
 AM_COND_IF([MINGW], [
-		# XXX not yet migrated Windows SDL UI to its own module
-		#test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
+		test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
 		AC_DEFINE([WINDOWS32], 1, [Windows])
 		MINGW_CFLAGS="-D__USE_MINGW_ANSI_STDIO=1"
 		MINGW_LIBS="-lmingw32 -lwinmm -mwindows -lws2_32 -lcomctl32"

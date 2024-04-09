@@ -18,10 +18,6 @@
 
 #include "top-config.h"
 
-#ifdef WINDOWS32
-#include <windows.h>
-#endif
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,10 +99,6 @@ void ui_sdl_init(struct ui_sdl2_interface *uisdl2, struct ui_cfg *ui_cfg) {
 void ui_sdl_free(void *sptr) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 
-#ifdef WINDOWS32
-	windows32_destroy_menus(uisdl2);
-#endif
-
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	global_uisdl2 = NULL;
 	free(uisdl2);
@@ -178,18 +170,6 @@ static void *ui_sdl_new(void *cfg) {
 	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
 	cocoa_update_machine_menu(uisdl2);
 	cocoa_update_cartridge_menu(uisdl2);
-#endif
-
-#ifdef WINDOWS32
-	windows32_create_menus(uisdl2);
-#endif
-
-#ifdef WINDOWS32
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_update_state, uisdl2);
-	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uisdl2);
-	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uisdl2);
-	windows32_update_machine_menu(uisdl2);
-	windows32_update_cartridge_menu(uisdl2);
 #endif
 
 #ifdef HAVE_WASM

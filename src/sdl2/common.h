@@ -98,12 +98,6 @@ void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data);
 void cocoa_update_machine_menu(void *sptr);
 void cocoa_update_cartridge_menu(void *sptr);
 
-void windows32_create_menus(struct ui_sdl2_interface *uisdl2);
-void windows32_destroy_menus(struct ui_sdl2_interface *uisdl2);
-void windows32_ui_update_state(void *sptr, int tag, int value, const void *data);
-void windows32_update_machine_menu(void *sptr);
-void windows32_update_cartridge_menu(void *sptr);
-
 #ifdef HAVE_X11
 
 /* X11 event interception. */

@@ -76,9 +76,6 @@ static struct {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Note: prefer the default order for sound and joystick modules, which
- * will include the SDL options. */
-
 static HMENU top_menu;
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -90,13 +87,65 @@ static HMENU cartridge_menu = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void *ui_windows32_new(void *cfg);
+static void ui_windows32_free(void *);
+
+struct ui_module ui_windows32_module = {
+	.common = { .name = "windows32", .description = "Windows32 SDL2 UI",
+		.new = ui_windows32_new,
+	},
+	.joystick_module_list = sdl_js_modlist,
+};
+
+static void windows32_ui_update_state(void *, int tag, int value, const void *data);
+static void windows32_create_menus(struct ui_sdl2_interface *);
+static void windows32_update_machine_menu(void *);
+static void windows32_update_cartridge_menu(void *);
+
+static void *ui_windows32_new(void *cfg) {
+	struct ui_cfg *ui_cfg = cfg;
+
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)ui_sdl_allocate(sizeof(*uiw32));
+	if (!uiw32) {
+		return NULL;
+	}
+	*uiw32 = (struct ui_windows32_interface){0};
+	struct ui_sdl2_interface *uisdl2 = &uiw32->ui_sdl2_interface;
+	ui_sdl_init(uisdl2, ui_cfg);
+	struct ui_interface *ui = &uisdl2->ui_interface;
+	ui->free = DELEGATE_AS0(void, ui_windows32_free, uiw32);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_update_state, uisdl2);
+	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uisdl2);
+	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uisdl2);
+
+	windows32_create_menus(uisdl2);
+
+	if (!sdl_vo_init(uisdl2)) {
+		ui_windows32_free(uiw32);
+		return NULL;
+	}
+
+	windows32_update_machine_menu(uiw32);
+	windows32_update_cartridge_menu(uiw32);
+
+	return uiw32;
+}
+
+static void ui_windows32_free(void *sptr) {
+	struct ui_windows32_interface *uiw32 = sptr;
+	DestroyMenu(top_menu);
+	ui_sdl_free(uiw32);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 static void setup_file_menu(void);
 static void setup_view_menu(void);
 static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2);
 static void setup_tool_menu(void);
 static void setup_help_menu(void);
 
-void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
+static void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
 	top_menu = CreateMenu();
 	setup_file_menu();
 	setup_view_menu();
@@ -106,11 +155,6 @@ void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
 	windows32_dc_create_window(uisdl2);
 	windows32_tc_create_window(uisdl2);
 	windows32_vo_create_window(uisdl2);
-}
-
-void windows32_destroy_menus(struct ui_sdl2_interface *uisdl2) {
-	(void)uisdl2;
-	DestroyMenu(top_menu);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -247,7 +291,7 @@ static void setup_help_menu(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void windows32_update_machine_menu(void *sptr) {
+static void windows32_update_machine_menu(void *sptr) {
 	(void)sptr;
 	// Get list of machine configs
 	struct slist *mcl = machine_config_list();
@@ -268,7 +312,7 @@ void windows32_update_machine_menu(void *sptr) {
 	}
 }
 
-void windows32_update_cartridge_menu(void *sptr) {
+static void windows32_update_cartridge_menu(void *sptr) {
 	(void)sptr;
 	// Get list of cart configs
 	struct slist *ccl = NULL;
@@ -470,7 +514,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void windows32_ui_update_state(void *sptr, int tag, int value, const void *data) {
+static void windows32_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 	switch (tag) {
 

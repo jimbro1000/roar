@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface common functions.
  *
- *  \copyright Copyright 2006-2021 Ciaran Anscomb
+ *  \copyright Copyright 2006-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -20,6 +20,12 @@
 #define XROAR_COMMON_WINDOWS32_H_
 
 #include <windows.h>
+
+#include "sdl2/common.h"
+
+struct ui_windows32_interface {
+	struct ui_sdl2_interface ui_sdl2_interface;
+};
 
 extern HWND windows32_main_hwnd;
 

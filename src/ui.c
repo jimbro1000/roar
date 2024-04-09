@@ -27,12 +27,16 @@
 
 extern struct ui_module ui_gtk2_module;
 extern struct ui_module ui_null_module;
+extern struct ui_module ui_windows32_module;
 extern struct ui_module ui_sdl_module;
 static struct ui_module * const default_ui_module_list[] = {
 #ifdef HAVE_GTK2
 #ifdef HAVE_GTKGL
 	&ui_gtk2_module,
 #endif
+#endif
+#ifdef WINDOWS32
+	&ui_windows32_module,
 #endif
 #ifdef WANT_UI_SDL
 	&ui_sdl_module,
