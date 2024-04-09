@@ -230,8 +230,7 @@ AM_COND_IF([PART_TCC1014], [AC_DEFINE([WANT_PART_TCC1014], 1, [Want TCC1014 GIME
 
 AM_CONDITIONAL([WASM], [test "x$enable_wasm" = "xyes"])
 AM_COND_IF([WASM], [
-		# XXX not yet migrated WASM SDL UI to its own module
-		#test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
+		test "x$enable_ui_sdl" != "xyes" && enable_ui_sdl=no
 		AC_DEFINE([HAVE_WASM], 1, [WebAssembly build])
 		WASM_CFLAGS=""
 		WASM_LIBS="[-s WASM=1 -s EXPORTED_FUNCTIONS='@wasm/exported_functions' -s EXPORTED_RUNTIME_METHODS=\"['FS','ccall','cwrap']\"]"

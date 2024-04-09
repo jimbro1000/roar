@@ -47,23 +47,66 @@
 // Currently tied to SDL2, as we need to poll SDL events.  Refactor soon...
 #include <SDL.h>
 #include "sdl2/common.h"
+#include "wasm/wasm.h"
 
 #ifndef WASM_DEBUG
 #define WASM_DEBUG(...) LOG_PRINT(__VA_ARGS__)
 #endif
 
-_Bool wasm_retry_open = 0;
-
 // Functions prefixed wasm_ui_ are called from UI to interact with the browser
 // environment.  Other functions prefixed wasm_ are exported and called from
 // the JavaScript support code.
 
+// Global flag indicates a download was required - retry open.
+_Bool wasm_retry_open = 0;
+
 // Flag pending downloads.  Emulator will not run while waiting for files.
 int wasm_waiting_files = 0;
 
-static _Bool done_first_frame = 0;
-static double last_t;
-static double tickerr = 0.;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void *ui_wasm_new(void *cfg);
+static void wasm_ui_run(void *);
+
+struct ui_module ui_wasm_module = {
+	.common = { .name = "wasm", .description = "WebAssembly SDL2 UI",
+		.new = ui_wasm_new,
+	},
+	.joystick_module_list = sdl_js_modlist,
+};
+
+static void wasm_update_machine_menu(void *sptr);
+static void wasm_update_cartridge_menu(void *sptr);
+
+static void *ui_wasm_new(void *cfg) {
+	struct ui_cfg *ui_cfg = cfg;
+
+	struct ui_wasm_interface *uiwasm = (struct ui_wasm_interface *)ui_sdl_allocate(sizeof(*uiwasm));
+	if (!uiwasm) {
+		return NULL;
+	}
+	*uiwasm = (struct ui_wasm_interface){0};
+	struct ui_sdl2_interface *uisdl2 = &uiwasm->ui_sdl2_interface;
+	ui_sdl_init(uisdl2, ui_cfg);
+	struct ui_interface *ui = &uisdl2->ui_interface;
+
+	ui->run = DELEGATE_AS0(void, wasm_ui_run, uiwasm);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, wasm_ui_update_state, uiwasm);
+	ui->update_machine_menu = DELEGATE_AS0(void, wasm_update_machine_menu, uiwasm);
+	ui->update_cartridge_menu = DELEGATE_AS0(void, wasm_update_cartridge_menu, uiwasm);
+
+	if (!sdl_vo_init(uisdl2)) {
+		free(uisdl2);
+		return NULL;
+	}
+
+	wasm_update_machine_menu(uisdl2);
+	wasm_update_cartridge_menu(uisdl2);
+
+	return uiwasm;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // The WebAssembly main "loop" - really called once per frame by the browser.
 // For normal operation, we calculate elapsed time since the last frame and run
@@ -71,19 +114,18 @@ static double tickerr = 0.;
 // immediately return control to the emscripten environment to handle the
 // asynchronous messaging until everything is ready.
 
-void wasm_ui_run(void *sptr) {
-	struct ui_interface *ui = sptr;
-	(void)ui;
+static void wasm_ui_run(void *sptr) {
+	struct ui_wasm_interface *uiwasm = sptr;
 
 	// Calculate time delta since last call in milliseconds.
 	double t = emscripten_get_now();
-	double dt = t - last_t;
-	last_t = t;
+	double dt = t - uiwasm->last_t;
+	uiwasm->last_t = t;
 
 	// For the first call, we definitely don't have an accurate time delta,
 	// so wait until the second frame...
-	if (!done_first_frame) {
-		done_first_frame = 1;
+	if (!uiwasm->done_first_frame) {
+		uiwasm->done_first_frame = 1;
 		return;
 	}
 
@@ -98,8 +140,8 @@ void wasm_ui_run(void *sptr) {
 	}
 
 	// Calculate number of ticks to run based on time delta.
-	tickerr += ((double)EVENT_TICK_RATE / 1000.) * dt;
-	int nticks = (int)(tickerr + 0.5);
+	uiwasm->tickerr += ((double)EVENT_TICK_RATE / 1000.) * dt;
+	int nticks = (int)(uiwasm->tickerr + 0.5);
 	event_ticks last_tick = event_current_tick;
 
 	// Poll SDL events (need to refactor this).
@@ -110,7 +152,7 @@ void wasm_ui_run(void *sptr) {
 
 	// Record time offset based on actual number of ticks run.
 	int dtick = event_current_tick - last_tick;
-	tickerr -= (double)dtick;
+	uiwasm->tickerr -= (double)dtick;
 }
 
 // Wasm event handler relays information to web page handlers.
@@ -188,6 +230,52 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 		break;
 	}
 }
+
+static void wasm_update_machine_menu(void *sptr) {
+	struct ui_wasm_interface *uiwasm = sptr;
+	(void)uiwasm;
+
+	// Get list of machine configs
+	struct slist *mcl = machine_config_list();
+	// Note: this list is not a copy, so does not need freeing
+
+	// Note: this list isn't even currently updated, so not removing old
+	// entries.
+
+	// Add new entries
+	for (struct slist *iter = mcl; iter; iter = iter->next) {
+		struct machine_config *mc = iter->data;
+		EM_ASM_({ ui_add_machine($0, $1); }, mc->id, mc->description);
+	}
+	if (xroar.machine_config) {
+		EM_ASM_({ ui_update_machine($0); }, xroar.machine_config->id);
+	}
+}
+
+static void wasm_update_cartridge_menu(void *sptr) {
+	struct ui_wasm_interface *uiwasm = sptr;
+	(void)uiwasm;
+
+	// Get list of cart configs
+	struct slist *ccl = NULL;
+	if (xroar.machine) {
+		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
+		const char *cart_arch = mpe->cart_arch;
+		ccl = cart_config_list_is_a(cart_arch);
+	}
+
+	// Remove old entries
+	EM_ASM_({ ui_clear_carts(); });
+
+	// Add new entries
+	for (struct slist *iter = ccl; iter; iter = iter->next) {
+		struct cart_config *cc = iter->data;
+		EM_ASM_({ ui_add_cart($0, $1); }, cc->id, cc->description);
+	}
+	slist_free(ccl);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // File fetching.  Locks files to prevent multiple attempts to fetch the same
 // file, and deals with "stub" files (zero length preloaded equivalents only

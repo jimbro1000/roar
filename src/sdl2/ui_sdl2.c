@@ -23,10 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef HAVE_WASM
-#include <emscripten.h>
-#endif
-
 #include <SDL.h>
 #include <SDL_syswm.h>
 
@@ -130,11 +126,6 @@ static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data
 
 #ifdef WANT_UI_SDL
 
-#ifdef HAVE_WASM
-static void sdl2_wasm_update_machine_menu(void *sptr);
-static void sdl2_wasm_update_cartridge_menu(void *sptr);
-#endif
-
 static void *ui_sdl_new(void *cfg);
 
 struct ui_module ui_sdl_module = {
@@ -172,68 +163,12 @@ static void *ui_sdl_new(void *cfg) {
 	cocoa_update_cartridge_menu(uisdl2);
 #endif
 
-#ifdef HAVE_WASM
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, wasm_ui_update_state, uisdl2);
-	ui->run = DELEGATE_AS0(void, wasm_ui_run, uisdl2);
-#endif
-
 	if (!sdl_vo_init(uisdl2)) {
 		free(uisdl2);
 		return NULL;
 	}
 
-#ifdef HAVE_WASM
-	ui->update_machine_menu = DELEGATE_AS0(void, sdl2_wasm_update_machine_menu, uisdl2);
-	ui->update_cartridge_menu = DELEGATE_AS0(void, sdl2_wasm_update_cartridge_menu, uisdl2);
-	sdl2_wasm_update_machine_menu(uisdl2);
-	sdl2_wasm_update_cartridge_menu(uisdl2);
-#endif
-
 	return uisdl2;
 }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-#ifdef HAVE_WASM
-static void sdl2_wasm_update_machine_menu(void *sptr) {
-	(void)sptr;
-	// Get list of machine configs
-	struct slist *mcl = machine_config_list();
-	// Note: this list is not a copy, so does not need freeing
-
-	// Note: this list isn't even currently updated, so not removing old
-	// entries.
-
-	// Add new entries
-	for (struct slist *iter = mcl; iter; iter = iter->next) {
-		struct machine_config *mc = iter->data;
-		EM_ASM_({ ui_add_machine($0, $1); }, mc->id, mc->description);
-	}
-	if (xroar.machine_config) {
-		EM_ASM_({ ui_update_machine($0); }, xroar.machine_config->id);
-	}
-}
-
-static void sdl2_wasm_update_cartridge_menu(void *sptr) {
-	(void)sptr;
-	// Get list of cart configs
-	struct slist *ccl = NULL;
-	if (xroar.machine) {
-		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
-                const char *cart_arch = mpe->cart_arch;
-                ccl = cart_config_list_is_a(cart_arch);
-	}
-
-	// Remove old entries
-	EM_ASM_({ ui_clear_carts(); });
-
-	// Add new entries
-	for (struct slist *iter = ccl; iter; iter = iter->next) {
-		struct cart_config *cc = iter->data;
-		EM_ASM_({ ui_add_cart($0, $1); }, cc->id, cc->description);
-	}
-	slist_free(ccl);
-}
-#endif
 
 #endif
