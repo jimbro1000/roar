@@ -68,6 +68,7 @@ struct ao_sdl2_interface {
 
 static void ao_sdl2_free(void *sptr);
 static void *ao_sdl2_write_buffer(void *sptr, void *buffer);
+static void *ao_sdl2_write_silence(void *sptr, void *buffer);
 
 static void *new(void *cfg) {
 	(void)cfg;
@@ -242,6 +243,9 @@ static void *new(void *cfg) {
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_sdl2_write_buffer, ao);
+#ifndef HAVE_WASM
+	ao->sound_interface->write_silence = DELEGATE_AS1(voidp, voidp, ao_sdl2_write_silence, ao);
+#endif
 	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", buf_nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
 	SDL_PauseAudioDevice(aosdl->device, 0);
@@ -280,7 +284,6 @@ static void ao_sdl2_free(void *sptr) {
 
 static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 	struct ao_sdl2_interface *aosdl = sptr;
-
 	(void)buffer;
 
 	if (!aosdl->public.sound_interface->ratelimit) {
@@ -305,4 +308,15 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 	SDL_QueueAudio(aosdl->device, aosdl->fragment_buffer, aosdl->fragment_nbytes);
 	return aosdl->fragment_buffer;
 
+}
+
+static void *ao_sdl2_write_silence(void *sptr, void *buffer) {
+	struct ao_sdl2_interface *aosdl = sptr;
+	(void)buffer;
+
+	Uint32 qbytes = SDL_GetQueuedAudioSize(aosdl->device);
+	if (qbytes < aosdl->qbytes_threshold) {
+		SDL_QueueAudio(aosdl->device, aosdl->fragment_buffer, aosdl->fragment_nbytes);
+	}
+	return aosdl->fragment_buffer;
 }
