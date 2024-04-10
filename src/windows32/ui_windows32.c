@@ -691,14 +691,8 @@ static HWND get_hwnd(SDL_Window *w) {
 	SDL_SysWMinfo sdlinfo;
 	SDL_VERSION(&sdlver);
 	sdlinfo.version = sdlver;
-#ifdef HAVE_SDL2
 	SDL_GetWindowWMInfo(w, &sdlinfo);
 	return sdlinfo.info.win.window;
-#else
-	(void)w;
-	SDL_GetWMInfo(&sdlinfo);
-	return sdlinfo.window;
-#endif
 }
 
 /* Custom window event handler to intercept menu selections. */
@@ -711,17 +705,10 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 	case WM_COMMAND:
 		// Selectively push WM events onto the SDL queue.
-#ifdef HAVE_SDL2
 		wmmsg.msg.win.hwnd = hwnd;
 		wmmsg.msg.win.msg = msg;
 		wmmsg.msg.win.wParam = wParam;
 		wmmsg.msg.win.lParam = lParam;
-#else
-		wmmsg.hwnd = hwnd;
-		wmmsg.msg = msg;
-		wmmsg.wParam = wParam;
-		wmmsg.lParam = lParam;
-#endif
 		event.type = SDL_SYSWMEVENT;
 		event.syswm.msg = &wmmsg;
 		SDL_PushEvent(&event);
