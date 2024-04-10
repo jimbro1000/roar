@@ -34,6 +34,7 @@
 #include "slist.h"
 #include "xalloc.h"
 
+#include "ao.h"
 #include "cart.h"
 #include "events.h"
 #include "joystick.h"
@@ -41,6 +42,7 @@
 #include "logging.h"
 #include "machine.h"
 #include "module.h"
+#include "sound.h"
 #include "tape.h"
 #include "ui.h"
 #include "vdisk.h"
@@ -716,6 +718,13 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 	case WM_UNINITMENUPOPUP:
 		DELEGATE_SAFE_CALL(xroar.vo_interface->draw);
+		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
+
+	case WM_TIMER:
+		// In Wine, this event only seems to fire when menus are being
+		// browsed, which is exactly the time we need to keep the audio
+		// buffer full with silence:
+		sound_send_silence(xroar.ao_interface->sound_interface);
 		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
 
 	default:
