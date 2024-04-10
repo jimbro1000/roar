@@ -2,7 +2,7 @@
  *
  *  \brief Dragon sound interface.
  *
- *  \copyright Copyright 2003-2018 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -44,6 +44,7 @@ struct sound_interface {
 	DELEGATE_T3(float, uint32, int, floatp) get_cart_audio;
 	DELEGATE_T3(float, uint32, int, floatp) get_ay_audio;
 	DELEGATE_T1(voidp, voidp) write_buffer;
+	DELEGATE_T1(voidp, voidp) write_silence;
 };
 
 struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsigned rate,
@@ -55,6 +56,7 @@ void sound_set_gain(struct sound_interface *sndp, double db);  // -ve wrt 0dBFS
 void sound_set_volume(struct sound_interface *sndp, int v);  // linear 0-100
 
 void sound_update(struct sound_interface *sndp);
+void sound_send_silence(struct sound_interface *);
 
 // Rate limit control
 void sound_set_ratelimit(struct sound_interface *sndp, _Bool ratelimit);

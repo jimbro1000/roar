@@ -2,7 +2,7 @@
  *
  *  \brief Dragon sound interface.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -49,6 +49,7 @@ struct sound_interface_private {
 	int output_nchannels;
 	enum sound_fmt output_fmt;
 	void *output_buffer;  // final output may not be floats
+	_Bool output_buffer_is_silent;
 
 	// Current index into the buffer
 	unsigned buffer_frame;
@@ -311,6 +312,53 @@ static void send_buffer(struct sound_interface_private *snd) {
 	snd->buffer_frame = 0;
 }
 
+// Send "silence" if audio module needs to be kept up to date with queued audio
+
+void sound_send_silence(struct sound_interface *sndp) {
+	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
+	// Only if the audio module needs it:
+	if (!DELEGATE_DEFINED(snd->public.write_silence))
+		return;
+
+	if (snd->output_buffer && !snd->output_buffer_is_silent) {
+		// Fill the output buffer with copies of its last sample
+		int nsamples = snd->output_nchannels * snd->buffer_nframes;
+		switch (snd->output_fmt) {
+		case SOUND_FMT_U8:
+		case SOUND_FMT_S8: {
+			uint8_t *output = snd->output_buffer;
+			uint8_t v = output[nsamples - 1];
+			for (int i = nsamples - 1; i; i--)
+				*(output++) = v;
+		} break;
+		case SOUND_FMT_S16_HE:
+		case SOUND_FMT_S16_SE: {
+			uint16_t *output = snd->output_buffer;
+			uint16_t v = output[nsamples - 1];
+			for (int i = nsamples - 1; i; i--)
+				*(output++) = v;
+		} break;
+		case SOUND_FMT_FLOAT: {
+			float *output = snd->output_buffer;
+			float v = output[nsamples - 1];
+			for (int i = nsamples; i; i--)
+				*(output++) = v;
+		} break;
+		default:
+			break;
+		}
+		// Flag so we don't have to do this every time
+		snd->output_buffer_is_silent = 1;
+	}
+
+	snd->output_buffer = DELEGATE_CALL(snd->public.write_silence, snd->output_buffer);
+	if (snd->output_fmt == SOUND_FMT_FLOAT) {
+		// No need to convert floats, point mix buffer at output buffer.
+		snd->mix_buffer = snd->output_buffer;
+	}
+	snd->buffer_frame = 0;
+}
+
 // Fill sound buffer to current point in time, sending to audio module when full.
 
 void sound_update(struct sound_interface *sndp) {
@@ -423,6 +471,7 @@ void sound_update(struct sound_interface *sndp) {
 		if (snd->buffer_frame >= snd->buffer_nframes) {
 			send_buffer(snd);
 		}
+		snd->output_buffer_is_silent = 0;
 	}
 
 	// Now that audio has been dealt with up to the current point in time,
