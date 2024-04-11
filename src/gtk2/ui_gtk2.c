@@ -622,7 +622,7 @@ static void *ui_gtk2_new(void *cfg) {
 	uigtk2->picture_area.h = 480;
 
 	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)gtk2_vo_module_list, uigtk2->cfg->vo);
-	if (!(uigtk2->public.vo_interface = module_init(vo_mod, uigtk2))) {
+	if (!module_init(vo_mod, uigtk2)) {
 		return NULL;
 	}
 
