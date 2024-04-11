@@ -81,16 +81,15 @@ static const char *lpstrFilter =
 
 static char *load_filename(void *sptr, char const * const *extensions) {
 	struct windows32_filereq_interface *frw32 = sptr;
-	OPENFILENAME ofn;
-	char fn_buf[260];
-	int was_fullscreen;
+	(void)extensions;
 
-	(void)extensions;  /* unused */
-	was_fullscreen = xroar.vo_interface->is_fullscreen;
+	_Bool was_fullscreen = xroar.vo_interface->is_fullscreen;
 	if (was_fullscreen)
 		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 0);
 
-	memset(&ofn, 0, sizeof(ofn));
+	OPENFILENAME ofn = (OPENFILENAME){0};
+	char fn_buf[260];
+
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = windows32_main_hwnd;
 	ofn.lpstrFile = fn_buf;
@@ -101,15 +100,17 @@ static char *load_filename(void *sptr, char const * const *extensions) {
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;
 	ofn.lpstrInitialDir = NULL;
+	ofn.lpstrTitle = NULL;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR
 		| OFN_HIDEREADONLY;
 
 	if (frw32->filename)
 		free(frw32->filename);
 	frw32->filename = NULL;
-	if (GetOpenFileName(&ofn)==TRUE) {
+	if (GetOpenFileName(&ofn) == TRUE) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
+
 	if (was_fullscreen)
 		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 1);
 	return frw32->filename;
@@ -117,16 +118,15 @@ static char *load_filename(void *sptr, char const * const *extensions) {
 
 static char *save_filename(void *sptr, char const * const *extensions) {
 	struct windows32_filereq_interface *frw32 = sptr;
-	OPENFILENAME ofn;
-	char fn_buf[260];
-	int was_fullscreen;
+	(void)extensions;
 
-	(void)extensions;  /* unused */
-	was_fullscreen = xroar.vo_interface->is_fullscreen;
+	_Bool was_fullscreen = xroar.vo_interface->is_fullscreen;
 	if (was_fullscreen)
 		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 0);
 
-	memset(&ofn, 0, sizeof(ofn));
+	OPENFILENAME ofn = (OPENFILENAME){0};
+	char fn_buf[260];
+
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = windows32_main_hwnd;
 	ofn.lpstrFile = fn_buf;
@@ -137,15 +137,17 @@ static char *save_filename(void *sptr, char const * const *extensions) {
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;
 	ofn.lpstrInitialDir = NULL;
+	ofn.lpstrTitle = NULL;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY
 		| OFN_OVERWRITEPROMPT;
 
 	if (frw32->filename)
 		free(frw32->filename);
 	frw32->filename = NULL;
-	if (GetSaveFileName(&ofn)==TRUE) {
+	if (GetSaveFileName(&ofn) == TRUE) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
+
 	if (was_fullscreen)
 		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 1);
 	return frw32->filename;
