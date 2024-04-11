@@ -555,7 +555,7 @@ static _Bool coco3_finish(struct part *p) {
 			// adding them to the palette.
 			b_y /= 0.504;
 			r_y /= 0.711;
-			DELEGATE_CALL(mcc3->vo->palette_set_ybr, c, y, b_y, r_y);
+			DELEGATE_SAFE_CALL(mcc3->vo->palette_set_ybr, c, y, b_y, r_y);
 		}
 	}
 
@@ -563,7 +563,7 @@ static _Bool coco3_finish(struct part *p) {
 		float r = rgb_intensity_map[((j>>4)&2)|((j>>2)&1)];
 		float g = rgb_intensity_map[((j>>3)&2)|((j>>1)&1)];
 		float b = rgb_intensity_map[((j>>2)&2)|((j>>0)&1)];
-		DELEGATE_CALL(mcc3->vo->palette_set_rgb, j, r, g, b);
+		DELEGATE_SAFE_CALL(mcc3->vo->palette_set_rgb, j, r, g, b);
 	}
 
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_burst, 1, 0);    // Normal burst

@@ -2,7 +2,7 @@
  *
  *  \brief Null video output module.
  *
- *  \copyright Copyright 2011-2023 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -35,7 +35,6 @@ struct module vo_null_module = {
 
 static void null_free(void *sptr);
 static void no_op_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
-static void no_op_palette_set(void *sptr, uint8_t c, float y, float pb, float pr);
 
 static void *new(void *cfg) {
 	(void)cfg;
@@ -43,10 +42,6 @@ static void *new(void *cfg) {
 	*vo = (struct vo_interface){0};
 
 	vo->free = DELEGATE_AS0(void, null_free, vo);
-
-	// Used by machine to configure video output
-	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, no_op_palette_set, vo);
-	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, no_op_palette_set, vo);
 
 	// Used by machine to render video
 	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, no_op_render, vo->renderer);
@@ -57,14 +52,6 @@ static void *new(void *cfg) {
 static void null_free(void *sptr) {
 	struct vo_interface *vo = sptr;
 	free(vo);
-}
-
-static void no_op_palette_set(void *sptr, uint8_t c, float y, float pb, float pr) {
-	(void)sptr;
-	(void)c;
-	(void)y;
-	(void)pb;
-	(void)pr;
 }
 
 static void no_op_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {

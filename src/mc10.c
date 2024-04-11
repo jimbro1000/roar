@@ -455,7 +455,7 @@ static _Bool mc10_finish(struct part *p) {
 			float b_y = (palette->palette[c].b - chb) * 0.6;
 			float r_y = (palette->palette[c].a - chb) * 0.6;
 			y = (palette->blank_y - y) / (palette->blank_y - palette->white_y);
-			DELEGATE_CALL(mp->vo->palette_set_ybr, c, y, b_y, r_y);
+			DELEGATE_SAFE_CALL(mp->vo->palette_set_ybr, c, y, b_y, r_y);
 		}
 	}
 
