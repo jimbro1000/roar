@@ -2,7 +2,7 @@
  *
  *  \brief Null user-interface module.
  *
- *  \copyright Copyright 2011-2022 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -38,12 +38,6 @@ static struct module * const null_filereq_module_list[] = {
 	&filereq_null_module, NULL
 };
 
-extern struct module vo_null_module;
-static struct module * const null_vo_module_list[] = {
-	&vo_null_module,
-	NULL
-};
-
 static void update_state(void *sptr, int tag, int value, const void *data);
 
 static void *new(void *cfg);
@@ -51,7 +45,6 @@ static void *new(void *cfg);
 struct ui_module ui_null_module = {
 	.common = { .name = "null", .description = "No UI", .new = new, },
 	.filereq_module_list = null_filereq_module_list,
-	.vo_module_list = null_vo_module_list,
 };
 
 /* */
@@ -63,6 +56,7 @@ static char *filereq_noop(void *sptr, char const * const *extensions) {
 }
 
 static void null_free(void *sptr);
+static void null_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 
 static void *new(void *cfg) {
 	(void)cfg;
@@ -71,16 +65,19 @@ static void *new(void *cfg) {
 
 	uinull->free = DELEGATE_AS0(void, null_free, uinull);
 	uinull->update_state = DELEGATE_AS3(void, int, int, cvoidp, update_state, uinull);
-	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)null_vo_module_list, NULL);
-	if (!(uinull->vo_interface = module_init(vo_mod, uinull))) {
-		return NULL;
-	}
+
+	struct vo_interface *vo = xmalloc(sizeof(*vo));
+	uinull->vo_interface = vo;
+	*vo = (struct vo_interface){0};
+
+	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, null_render, vo->renderer);
 
 	return uinull;
 }
 
 static void null_free(void *sptr) {
 	struct ui_interface *uinull = sptr;
+	free(uinull->vo_interface);
 	free(uinull);
 }
 
@@ -104,4 +101,11 @@ static void *filereq_null_new(void *cfg) {
 static void filereq_null_free(void *sptr) {
 	struct filereq_interface *frnull = sptr;
 	free(frnull);
+}
+
+static void null_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
+	(void)sptr;
+	(void)burst;
+	(void)npixels;
+	(void)data;
 }

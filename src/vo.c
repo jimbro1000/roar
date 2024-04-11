@@ -29,14 +29,6 @@
 #include "xconfig.h"
 #include "xroar.h"
 
-extern struct module vo_null_module;
-static struct module * const default_vo_module_list[] = {
-	&vo_null_module,
-	NULL
-};
-
-struct module * const *vo_module_list = default_vo_module_list;
-
 const char *vo_picture_name[NUM_VO_PICTURE] = {
 	"Zoomed (512x384)",
 	"Title (640x480)",

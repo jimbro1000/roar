@@ -56,12 +56,10 @@ static void ui_gtk2_run(void *sptr);
 static void ui_gtk2_update_state(void *, int tag, int value, const void *data);
 
 extern struct module vo_gtkgl_module;
-extern struct module vo_null_module;
 static struct module * const gtk2_vo_module_list[] = {
 #ifdef HAVE_GTKGL
 	&vo_gtkgl_module,
 #endif
-	&vo_null_module,
 	NULL
 };
 

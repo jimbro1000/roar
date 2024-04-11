@@ -41,7 +41,6 @@ xroar_SOURCES = \
 	mos6551.c mos6551.h \
 	ntsc.c ntsc.h \
 	null/ui_null.c \
-	null/vo_null.c \
 	part.c part.h \
 	path.c path.h \
 	printer.c printer.h \
