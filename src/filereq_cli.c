@@ -52,16 +52,16 @@ struct cli_filereq_interface {
 };
 
 static void filereq_cli_free(void *sptr);
-static char *load_filename(void *sptr, char const * const *extensions);
-static char *save_filename(void *sptr, char const * const *extensions);
+static char *load_filename(void *sptr, char const *title);
+static char *save_filename(void *sptr, char const *title);
 
 static void *filereq_cli_new(void *cfg) {
 	(void)cfg;
 	struct cli_filereq_interface *frcli = xmalloc(sizeof(*frcli));
 	*frcli = (struct cli_filereq_interface){0};
 	frcli->public.free = DELEGATE_AS0(void, filereq_cli_free, frcli);
-	frcli->public.load_filename = DELEGATE_AS1(charp, charcpcp, load_filename, frcli);
-	frcli->public.save_filename = DELEGATE_AS1(charp, charcpcp, save_filename, frcli);
+	frcli->public.load_filename = DELEGATE_AS1(charp, charcp, load_filename, frcli);
+	frcli->public.save_filename = DELEGATE_AS1(charp, charcp, save_filename, frcli);
 	return frcli;
 }
 
@@ -94,9 +94,7 @@ static void printent(void *sptr, void *data) {
 	printf("%s\n", s);
 }
 
-static char *get_filename(struct cli_filereq_interface *frcli, char const * const *extensions, const char *prompt) {
-	(void)extensions;  /* unused */
-
+static char *get_filename(struct cli_filereq_interface *frcli, const char *prompt) {
 #ifdef WINDOWS32
 	const char *home = getenv("USERPROFILE");
 #else
@@ -190,14 +188,21 @@ static char *get_filename(struct cli_filereq_interface *frcli, char const * cons
 	}
 }
 
-static char *load_filename(void *sptr, char const * const *extensions) {
+static char *load_filename(void *sptr, char const *title) {
 	struct cli_filereq_interface *frcli = sptr;
-	return get_filename(frcli, extensions, "load filename? ");
+	sds prompt = sdsnew(title);
+	prompt = sdscat(prompt, "? ");
+	char *filename = get_filename(frcli, prompt);
+	sdsfree(prompt);
+	return filename;
 }
 
-static char *save_filename(void *sptr, char const * const *extensions) {
+static char *save_filename(void *sptr, char const *title) {
 	struct cli_filereq_interface *frcli = sptr;
-	char *filename = get_filename(frcli, extensions, "save filename? ");
+	sds prompt = sdsnew(title);
+	prompt = sdscat(prompt, "? ");
+	char *filename = get_filename(frcli, prompt);
+	sdsfree(prompt);
 	if (frcli->exists) {
 		char buf[64];
 		printf("File exists: overwrite (y/n)? ");

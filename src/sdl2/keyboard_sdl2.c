@@ -237,7 +237,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 			xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 #ifndef HAVE_WASM
 		} else {
-			xroar_run_file(NULL);
+			xroar_run_file();
 #endif
 		}
 		return;
@@ -254,9 +254,9 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 #ifndef HAVE_WASM
 	case 'l':
 		if (shift) {
-			xroar_run_file(NULL);
+			xroar_run_file();
 		} else {
-			xroar_load_file(NULL);
+			xroar_load_file();
 		}
 		return;
 	case 'm':

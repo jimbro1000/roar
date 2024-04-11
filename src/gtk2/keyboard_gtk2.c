@@ -303,7 +303,7 @@ static void emulator_command(guint keyval, int shift) {
 		if (shift)
 			xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 		else
-			xroar_run_file(NULL);
+			xroar_run_file();
 		break;
 	case GDK_KEY_j:
 		if (shift) {

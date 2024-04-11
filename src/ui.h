@@ -44,12 +44,12 @@ extern struct xconfig_enum ui_gl_filter_list[];
 
 // File requesters
 
-typedef DELEGATE_S1(char *, char const * const *) DELEGATE_T1(charp, charcpcp);
+typedef DELEGATE_S1(char *, char const *) DELEGATE_T1(charp, charcp);
 
 struct filereq_interface {
 	DELEGATE_T0(void) free;
-	DELEGATE_T1(charp, charcpcp) load_filename;
-	DELEGATE_T1(charp, charcpcp) save_filename;
+	DELEGATE_T1(charp, charcp) load_filename;
+	DELEGATE_T1(charp, charcp) save_filename;
 };
 
 extern struct module * const *filereq_module_list;

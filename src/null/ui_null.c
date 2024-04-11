@@ -49,7 +49,7 @@ struct ui_module ui_null_module = {
 
 /* */
 
-static char *filereq_noop(void *sptr, char const * const *extensions) {
+static char *filereq_noop(void *sptr, char const *extensions) {
 	(void)sptr;
 	(void)extensions;
 	return NULL;
@@ -93,8 +93,8 @@ static void *filereq_null_new(void *cfg) {
 	struct filereq_interface *frnull = xmalloc(sizeof(*frnull));
 	*frnull = (struct filereq_interface){0};
 	frnull->free = DELEGATE_AS0(void, filereq_null_free, frnull);
-	frnull->load_filename = DELEGATE_AS1(charp, charcpcp, filereq_noop, frnull);
-	frnull->save_filename = DELEGATE_AS1(charp, charcpcp, filereq_noop, frnull);
+	frnull->load_filename = DELEGATE_AS1(charp, charcp, filereq_noop, frnull);
+	frnull->save_filename = DELEGATE_AS1(charp, charcp, filereq_noop, frnull);
 	return frnull;
 }
 

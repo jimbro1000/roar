@@ -237,10 +237,10 @@ int cocoa_super_all_keys = 0;
 			xroar_hard_reset();
 			break;
 		case TAG_FILE_RUN:
-			xroar_run_file(NULL);
+			xroar_run_file();
 			break;
 		case TAG_FILE_LOAD:
-			xroar_load_file(NULL);
+			xroar_load_file();
 			break;
 		case TAG_FILE_SAVE_SNAPSHOT:
 			xroar_save_snapshot();

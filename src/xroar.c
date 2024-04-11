@@ -649,13 +649,18 @@ static char const * const default_config[] = {
 
 static void do_load_binaries(void *);
 
+/*
+// I will want these back in some form, but they've never been used yet, so
+// they're commented out while I rejig how the file requesters work.
+
 static char const * const xroar_disk_exts[] = { "DMK", "JVC", "OS9", "VDK", "DSK", NULL };
 static char const * const xroar_tape_exts[] = { "CAS", "C10", "K7", NULL };
 static char const * const xroar_snap_exts[] = { "SNA", NULL };
-/* static char const * const xroar_cart_exts[] = { "ROM", NULL }; */
+// static char const * const xroar_cart_exts[] = { "ROM", NULL };
 #ifdef SCREENSHOT
 static char const * const xroar_screenshot_exts[] = { "PNG", NULL };
 #endif
+*/
 
 static struct {
 	const char *ext;
@@ -1409,7 +1414,7 @@ void xroar_set_trace(int mode) {
 }
 
 void xroar_new_disk(int drive) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_disk_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, "Create floppy image");
 	if (filename == NULL)
 		return;
 	int filetype = xroar_filetype_by_ext(filename);
@@ -1460,7 +1465,7 @@ void xroar_insert_disk(int drive) {
 	if (old_disk) {
 		vdisk_save(old_disk);
 	}
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, xroar_disk_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, "Load floppy image");
 	xroar_insert_disk_file(drive, filename);
 }
 
@@ -1720,13 +1725,13 @@ void xroar_set_menubar(int action) {
 	DELEGATE_SAFE_CALL(xroar.vo_interface->set_menubar, set_to);
 }
 
-void xroar_load_file(char const * const *exts) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, exts);
+void xroar_load_file(void) {
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, "Load file");
 	xroar_load_file_by_type(filename, 0);
 }
 
-void xroar_run_file(char const * const *exts) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, exts);
+void xroar_run_file(void) {
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, "Run file");
 	xroar_load_file_by_type(filename, 1);
 }
 
@@ -1995,7 +2000,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 }
 
 void xroar_save_snapshot(void) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_snap_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, "Save snapshot");
 	if (filename) {
 		write_snapshot(filename);
 	}
@@ -2008,7 +2013,7 @@ void xroar_insert_input_tape_file(const char *filename) {
 }
 
 void xroar_insert_input_tape(void) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, xroar_tape_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, "Select input tape");
 	xroar_insert_input_tape_file(filename);
 }
 
@@ -2024,7 +2029,7 @@ void xroar_insert_output_tape_file(const char *filename) {
 }
 
 void xroar_insert_output_tape(void) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_tape_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, "Select output tape");
 	xroar_insert_output_tape_file(filename);
 }
 
@@ -2048,7 +2053,7 @@ void xroar_hard_reset(void) {
 #ifdef SCREENSHOT
 void xroar_screenshot(void) {
 #ifdef HAVE_PNG
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_screenshot_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, "Save screenshot");
 	if (!filename)
 		return;
 

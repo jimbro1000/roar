@@ -2,7 +2,7 @@
  *
  *  \brief Windows file requester module.
  *
- *  \copyright Copyright 2005-2021 Ciaran Anscomb
+ *  \copyright Copyright 2005-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -51,16 +51,16 @@ struct windows32_filereq_interface {
 };
 
 static void filereq_windows32_free(void *sptr);
-static char *load_filename(void *sptr, char const * const *extensions);
-static char *save_filename(void *sptr, char const * const *extensions);
+static char *load_filename(void *sptr, char const *title);
+static char *save_filename(void *sptr, char const *title);
 
 static void *filereq_windows32_new(void *cfg) {
 	(void)cfg;
 	struct windows32_filereq_interface *frw32 = xmalloc(sizeof(*frw32));
 	*frw32 = (struct windows32_filereq_interface){0};
 	frw32->public.free = DELEGATE_AS0(void, filereq_windows32_free, frw32);
-	frw32->public.load_filename = DELEGATE_AS1(charp, charcpcp, load_filename, frw32);
-	frw32->public.save_filename = DELEGATE_AS1(charp, charcpcp, save_filename, frw32);
+	frw32->public.load_filename = DELEGATE_AS1(charp, charcp, load_filename, frw32);
+	frw32->public.save_filename = DELEGATE_AS1(charp, charcp, save_filename, frw32);
 	return frw32;
 }
 
@@ -79,9 +79,8 @@ static const char *lpstrFilter =
 	"Snapshots\0"       "*.SNA\0"
 	;
 
-static char *load_filename(void *sptr, char const * const *extensions) {
+static char *load_filename(void *sptr, char const *title) {
 	struct windows32_filereq_interface *frw32 = sptr;
-	(void)extensions;
 
 	_Bool was_fullscreen = xroar.vo_interface->is_fullscreen;
 	if (was_fullscreen)
@@ -100,7 +99,7 @@ static char *load_filename(void *sptr, char const * const *extensions) {
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;
 	ofn.lpstrInitialDir = NULL;
-	ofn.lpstrTitle = NULL;
+	ofn.lpstrTitle = title;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR
 		| OFN_HIDEREADONLY;
 
@@ -116,9 +115,8 @@ static char *load_filename(void *sptr, char const * const *extensions) {
 	return frw32->filename;
 }
 
-static char *save_filename(void *sptr, char const * const *extensions) {
+static char *save_filename(void *sptr, char const *title) {
 	struct windows32_filereq_interface *frw32 = sptr;
-	(void)extensions;
 
 	_Bool was_fullscreen = xroar.vo_interface->is_fullscreen;
 	if (was_fullscreen)
@@ -137,7 +135,7 @@ static char *save_filename(void *sptr, char const * const *extensions) {
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;
 	ofn.lpstrInitialDir = NULL;
-	ofn.lpstrTitle = NULL;
+	ofn.lpstrTitle = title;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY
 		| OFN_OVERWRITEPROMPT;
 

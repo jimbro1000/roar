@@ -348,8 +348,8 @@ static void about(GtkMenuItem *item, gpointer user_data) {
 	gtk_widget_show(GTK_WIDGET(dialog));
 }
 
-static void do_load_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_load_file(NULL); }
-static void do_run_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_run_file(NULL); }
+static void do_load_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_load_file(); }
+static void do_run_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_run_file(); }
 
 static GtkActionEntry const ui_entries[] = {
 	/* Top level */

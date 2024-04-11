@@ -377,10 +377,10 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 			xroar_hard_reset();
 			break;
 		case ui_action_file_run:
-			xroar_run_file(NULL);
+			xroar_run_file();
 			break;
 		case ui_action_file_load:
-			xroar_load_file(NULL);
+			xroar_load_file();
 			break;
 		case ui_action_file_save_snapshot:
 			xroar_save_snapshot();
