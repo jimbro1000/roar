@@ -2,7 +2,7 @@
  *
  *  \brief User-interface modules & interfaces.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -24,6 +24,37 @@
 #include "module.h"
 #include "ui.h"
 #include "xconfig.h"
+
+// File requester modules
+//
+// Kept here for now, intention being to roll them into the UI
+
+extern struct module filereq_cocoa_module;
+extern struct module filereq_windows32_module;
+extern struct module filereq_gtk2_module;
+extern struct module filereq_cli_module;
+extern struct module filereq_null_module;
+static struct module * const default_filereq_module_list[] = {
+#ifdef HAVE_COCOA
+	&filereq_cocoa_module,
+#endif
+#ifdef WINDOWS32
+	&filereq_windows32_module,
+#endif
+#ifdef HAVE_GTK2
+	&filereq_gtk2_module,
+#endif
+#ifdef HAVE_CLI
+	&filereq_cli_module,
+#endif
+	&filereq_null_module,
+	NULL
+};
+
+struct module * const *filereq_module_list = default_filereq_module_list;
+struct module *filereq_module = NULL;
+
+// UI modules
 
 extern struct ui_module ui_gtk2_module;
 extern struct ui_module ui_null_module;

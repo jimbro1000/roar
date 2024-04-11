@@ -2,7 +2,7 @@
  *
  *  \brief User-interface modules & interfaces.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,7 +26,6 @@
 #include "xconfig.h"
 
 struct joystick_module;
-struct vdisk;
 
 /* Filtering option for OpenGL video */
 #define UI_GL_FILTER_AUTO (-1)
@@ -42,6 +41,19 @@ struct ui_cfg {
 };
 
 extern struct xconfig_enum ui_gl_filter_list[];
+
+// File requesters
+
+typedef DELEGATE_S1(char *, char const * const *) DELEGATE_T1(charp, charcpcp);
+
+struct filereq_interface {
+	DELEGATE_T0(void) free;
+	DELEGATE_T1(charp, charcpcp) load_filename;
+	DELEGATE_T1(charp, charcpcp) save_filename;
+};
+
+extern struct module * const *filereq_module_list;
+extern struct filereq_interface *filereq_interface;
 
 /* To fit into the limits of the various UI toolkits in use, tag ids are 7
  * bits, and values are 16 bits wide. */

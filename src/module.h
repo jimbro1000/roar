@@ -2,7 +2,7 @@
  *
  *  \brief Generic module support.
  *
- *  \copyright Copyright 2003-2019 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -23,25 +23,11 @@
 
 #include "delegate.h"
 
-struct joystick_module;
-struct vdisk;
-
 struct module {
 	const char *name;
 	const char *description;
 	void *(*new)(void *cfg);
 };
-
-typedef DELEGATE_S1(char *, char const * const *) DELEGATE_T1(charp, charcpcp);
-
-struct filereq_interface {
-	DELEGATE_T0(void) free;
-	DELEGATE_T1(charp, charcpcp) load_filename;
-	DELEGATE_T1(charp, charcpcp) save_filename;
-};
-
-extern struct module * const *filereq_module_list;
-extern struct filereq_interface *filereq_interface;
 
 void module_print_list(struct module * const *list);
 struct module *module_select(struct module * const *list, const char *name);
