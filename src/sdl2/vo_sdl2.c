@@ -75,21 +75,21 @@ static const Uint32 renderer_flags[] = {
 	SDL_RENDERER_SOFTWARE
 };
 
-static void vo_sdl_free(void *sptr);
-static void set_viewport(void *sptr, int vp_w, int vp_h);
-static void draw(void *sptr);
-static int set_fullscreen(void *sptr, _Bool fullscreen);
-static void set_menubar(void *sptr, _Bool show_menubar);
+static void vo_sdl_free(void *);
+static void set_viewport(void *, int vp_w, int vp_h);
+static void draw(void *);
+static int set_fullscreen(void *, _Bool fullscreen);
+static void set_menubar(void *, _Bool show_menubar);
 
 static void notify_frame_rate(void *, _Bool is_60hz);
 
 _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	struct vo_cfg *vo_cfg = &uisdl2->cfg->vo_cfg;
-	struct ui_interface *ui = &uisdl2->ui_interface;
 
 	struct vo_sdl_interface *vosdl = vo_interface_new(sizeof(*vosdl));
 	*vosdl = (struct vo_sdl_interface){0};
 	struct vo_interface *vo = &vosdl->vo_interface;
+	uisdl2->ui_interface.vo_interface = vo;
 
 	switch (vo_cfg->pixel_fmt) {
 	default:
@@ -138,22 +138,22 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	vosdl->filter = vo_cfg->gl_filter;
 
-	vo->free = DELEGATE_AS0(void, vo_sdl_free, vosdl);
+	vo->free = DELEGATE_AS0(void, vo_sdl_free, uisdl2);
 
 	// Used by UI to adjust viewing parameters
-	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, vosdl);
-	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vosdl);
-	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vosdl);
+	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, uisdl2);
+	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, uisdl2);
+	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, uisdl2);
 
-	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, vosdl);
+	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, uisdl2);
 
 	// Used by machine to render video
-	vo->draw = DELEGATE_AS0(void, draw, vosdl);
+	vo->draw = DELEGATE_AS0(void, draw, uisdl2);
 
 	vosdl->window_area.w = 640;
 	vosdl->window_area.h = 480;
-	global_uisdl2->viewport.w = 640;
-	global_uisdl2->viewport.h = 240;
+	uisdl2->viewport.w = 640;
+	uisdl2->viewport.h = 240;
 	if (vo_cfg->geometry) {
 		struct vo_geometry geometry;
 		vo_parse_geometry(vo_cfg->geometry, &geometry);
@@ -161,7 +161,7 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 			vosdl->window_area.w = geometry.w;
 		if (geometry.flags & VO_GEOMETRY_H)
 			vosdl->window_area.h = geometry.h;
-		global_uisdl2->user_specified_geometry = 1;
+		uisdl2->user_specified_geometry = 1;
 	}
 
 	// Create window, setting fullscreen hint if appropriate
@@ -200,7 +200,7 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 #endif
 
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); i++) {
-		vosdl->sdl_renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, renderer_flags[i]);
+		vosdl->sdl_renderer = SDL_CreateRenderer(uisdl2->vo_window, -1, renderer_flags[i]);
 		if (vosdl->sdl_renderer)
 			break;
 	}
@@ -238,10 +238,9 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 #endif
 
 	// Initialise keyboard
-	sdl_os_keyboard_init(global_uisdl2->vo_window);
+	sdl_os_keyboard_init(uisdl2->vo_window);
 	sdl_keyboard_init(uisdl2);
 
-	ui->vo_interface = vo;
 	return 1;
 }
 
@@ -249,8 +248,9 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 // be a different size) or the window size changes (texture scaling argument
 // may change).
 
-static void recreate_texture(struct vo_sdl_interface *vosdl) {
-	struct vo_interface *vo = &vosdl->vo_interface;
+static void recreate_texture(struct ui_sdl2_interface *uisdl2) {
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 	struct vo_render *vr = vo->renderer;
 
 	// Destroy old
@@ -284,12 +284,13 @@ static void recreate_texture(struct vo_sdl_interface *vosdl) {
 
 // Update viewport based on requested dimensions and 60Hz scaling.
 
-static void update_viewport(struct vo_sdl_interface *vosdl) {
-	struct vo_interface *vo = &vosdl->vo_interface;
+static void update_viewport(struct ui_sdl2_interface *uisdl2) {
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 	struct vo_render *vr = vo->renderer;
 
-	int vp_w = global_uisdl2->viewport.w;
-	int vp_h = global_uisdl2->viewport.h;
+	int vp_w = uisdl2->viewport.w;
+	int vp_h = uisdl2->viewport.h;
 
 	if (vosdl->scale_60hz) {
 		vp_h = (vp_h * 5) / 6;
@@ -297,21 +298,23 @@ static void update_viewport(struct vo_sdl_interface *vosdl) {
 
 	vo_render_set_viewport(vr, vp_w, vp_h);
 
-	recreate_texture(vosdl);
+	recreate_texture(uisdl2);
 
-	int mw = global_uisdl2->viewport.w;
-	int mh = global_uisdl2->viewport.h * 2;
+	int mw = uisdl2->viewport.w;
+	int mh = uisdl2->viewport.h * 2;
 	SDL_RenderSetLogicalSize(vosdl->sdl_renderer, mw, mh);
 }
 
 static void set_viewport(void *sptr, int vp_w, int vp_h) {
-	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->vo_interface;
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 
 	_Bool is_exact_multiple = 0;
 	int multiple = 1;
-	int mw = global_uisdl2->viewport.w;
-	int mh = global_uisdl2->viewport.h * 2;
+	int mw = uisdl2->viewport.w;
+	int mh = uisdl2->viewport.h * 2;
 
 	if (!vo->is_fullscreen && mw > 0 && mh > 0) {
 		if ((vosdl->window_area.w % mw) == 0 &&
@@ -334,36 +337,42 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	if (vp_h > MAX_VIEWPORT_HEIGHT)
 		vp_h = MAX_VIEWPORT_HEIGHT;
 
-	global_uisdl2->viewport.w = vp_w;
-	global_uisdl2->viewport.h = vp_h;
+	uisdl2->viewport.w = vp_w;
+	uisdl2->viewport.h = vp_h;
 
-	if (is_exact_multiple && !global_uisdl2->user_specified_geometry) {
+	if (is_exact_multiple && !uisdl2->user_specified_geometry) {
 		int new_w = multiple * vp_w;
 		int new_h = multiple * vp_h * 2;
-		SDL_SetWindowSize(global_uisdl2->vo_window, new_w, new_h);
+		SDL_SetWindowSize(uisdl2->vo_window, new_w, new_h);
 	}
-	update_viewport(vosdl);
+	update_viewport(uisdl2);
 }
 
 static void notify_frame_rate(void *sptr, _Bool is_60hz) {
-	struct vo_sdl_interface *vosdl = sptr;
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
+
 	vosdl->scale_60hz = is_60hz;
-	update_viewport(vosdl);
+	update_viewport(uisdl2);
 }
 
 void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) {
 	struct ui_interface *ui = &uisdl2->ui_interface;
+
 	struct vo_interface *vo = ui->vo_interface;
 	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 
 	vosdl->window_area.w = w;
 	vosdl->window_area.h = h;
-	update_viewport(vosdl);
+	update_viewport(uisdl2);
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
-	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->vo_interface;
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
 
 #ifdef HAVE_WASM
 	// Until WebAssembly fullscreen interaction becomes a little more
@@ -371,7 +380,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	return 0;
 #endif
 
-	_Bool is_fullscreen = SDL_GetWindowFlags(global_uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
+	_Bool is_fullscreen = SDL_GetWindowFlags(uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
 
 	if (is_fullscreen == fullscreen) {
 		return 0;
@@ -379,46 +388,51 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 
 	if (fullscreen && vo->show_menubar) {
 #ifdef WINDOWS32
-		sdl_windows32_remove_menu(global_uisdl2->vo_window);
+		sdl_windows32_remove_menu(uisdl2->vo_window);
 #endif
 		vo->show_menubar = 0;
 	} else if (!fullscreen && !vo->show_menubar) {
 #ifdef WINDOWS32
-		sdl_windows32_add_menu(global_uisdl2->vo_window);
+		sdl_windows32_add_menu(uisdl2->vo_window);
 #endif
 		vo->show_menubar = 1;
 	}
 
 	vo->is_fullscreen = fullscreen;
-	SDL_SetWindowFullscreen(global_uisdl2->vo_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+	SDL_SetWindowFullscreen(uisdl2->vo_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 
 	return 0;
 }
 
 static void set_menubar(void *sptr, _Bool show_menubar) {
-	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->vo_interface;
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
+	(void)vosdl;
 
 #ifdef WINDOWS32
 	if (show_menubar && !vo->show_menubar) {
-		sdl_windows32_add_menu(global_uisdl2->vo_window);
+		sdl_windows32_add_menu(uisdl2->vo_window);
 	} else if (!show_menubar && vo->show_menubar) {
-		sdl_windows32_remove_menu(global_uisdl2->vo_window);
+		sdl_windows32_remove_menu(uisdl2->vo_window);
 	}
 	if (!vo->is_fullscreen) {
-		SDL_SetWindowSize(global_uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
+		SDL_SetWindowSize(uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
 	} else {
 		int w, h;
-		SDL_GetWindowSize(global_uisdl2->vo_window, &w, &h);
-		sdl_vo_notify_size_changed(global_uisdl2, w, h);
+		SDL_GetWindowSize(uisdl2->vo_window, &w, &h);
+		sdl_vo_notify_size_changed(uisdl2, w, h);
 	}
 #endif
 	vo->show_menubar = show_menubar;
 }
 
 static void vo_sdl_free(void *sptr) {
-	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->vo_interface;
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 	struct vo_render *vr = vo->renderer;
 
 	vo_render_free(vr);
@@ -436,18 +450,20 @@ static void vo_sdl_free(void *sptr) {
 		vosdl->sdl_renderer = NULL;
 	}
 
-	if (global_uisdl2->vo_window) {
-		sdl_os_keyboard_free(global_uisdl2->vo_window);
-		SDL_DestroyWindow(global_uisdl2->vo_window);
-		global_uisdl2->vo_window = NULL;
+	if (uisdl2->vo_window) {
+		sdl_os_keyboard_free(uisdl2->vo_window);
+		SDL_DestroyWindow(uisdl2->vo_window);
+		uisdl2->vo_window = NULL;
 	}
 
 	free(vosdl);
 }
 
 static void draw(void *sptr) {
-	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->vo_interface;
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 	struct vo_render *vr = vo->renderer;
 
 	SDL_UpdateTexture(vosdl->texture.texture, NULL, vosdl->texture.pixels, vr->viewport.w * vosdl->texture.pixel_size);
