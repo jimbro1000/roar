@@ -28,6 +28,12 @@
 #include "ui.h"
 #include "vo.h"
 
+#define GTK_KBD_JS_MAX_AXES (4)
+#define GTK_KBD_JS_MAX_BUTTONS (4)
+
+struct gtk_kbd_js_axis;
+struct gtk_kbd_js_button;
+
 struct ui_gtk2_interface {
 	struct ui_interface public;
 
@@ -55,6 +61,8 @@ struct ui_gtk2_interface {
 	struct {
 		// Is a non-preempted control key pressed?
 		_Bool control;
+		struct gtk_kbd_js_axis *enabled_axis[GTK_KBD_JS_MAX_AXES];
+		struct gtk_kbd_js_button *enabled_button[GTK_KBD_JS_MAX_BUTTONS];
 	} keyboard;
 
 	// Mouse tracking

@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 keyboard support.
  *
- *  \copyright Copyright 2010-2023 Ciaran Anscomb
+ *  \copyright Copyright 2010-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -39,6 +39,7 @@
 
 #include "pl-string.h"
 #include "slist.h"
+#include "xalloc.h"
 
 #include "joystick.h"
 #include "keyboard.h"
@@ -54,34 +55,28 @@
 
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
-static void unmap_axis(struct joystick_axis *axis);
-static void unmap_button(struct joystick_button *button);
 
 struct joystick_submodule gtk2_js_submod_keyboard = {
 	.name = "keyboard",
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
-	.unmap_axis = unmap_axis,
-	.unmap_button = unmap_button,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct axis {
+struct gtk_kbd_js_axis {
+	struct joystick_control joystick_control;
+	struct ui_gtk2_interface *ui_gtk2_interface;
 	unsigned key0, key1;
 	unsigned value;
 };
 
-struct button {
+struct gtk_kbd_js_button {
+	struct joystick_control joystick_control;
+	struct ui_gtk2_interface *ui_gtk2_interface;
 	unsigned key;
 	_Bool value;
 };
-
-#define MAX_AXES (4)
-#define MAX_BUTTONS (4)
-
-static struct axis *enabled_axis[MAX_AXES];
-static struct button *enabled_button[MAX_BUTTONS];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -371,22 +366,22 @@ gboolean gtk2_keyboard_handle_key_press(GtkWidget *widget, GdkEventKey *event, g
 		uigtk2->keyboard.control = 0;
 	}
 
-	for (unsigned i = 0; i < MAX_AXES; i++) {
-		if (enabled_axis[i]) {
-			if (keyval == enabled_axis[i]->key0) {
-				enabled_axis[i]->value = 0;
+	for (unsigned i = 0; i < GTK_KBD_JS_MAX_AXES; i++) {
+		if (uigtk2->keyboard.enabled_axis[i]) {
+			if (keyval == uigtk2->keyboard.enabled_axis[i]->key0) {
+				uigtk2->keyboard.enabled_axis[i]->value = 0;
 				return FALSE;
 			}
-			if (keyval == enabled_axis[i]->key1) {
-				enabled_axis[i]->value = 65535;
+			if (keyval == uigtk2->keyboard.enabled_axis[i]->key1) {
+				uigtk2->keyboard.enabled_axis[i]->value = 65535;
 				return FALSE;
 			}
 		}
 	}
-	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
-		if (enabled_button[i]) {
-			if (keyval == enabled_button[i]->key) {
-				enabled_button[i]->value = 1;
+	for (unsigned i = 0; i < GTK_KBD_JS_MAX_BUTTONS; i++) {
+		if (uigtk2->keyboard.enabled_button[i]) {
+			if (keyval == uigtk2->keyboard.enabled_button[i]->key) {
+				uigtk2->keyboard.enabled_button[i]->value = 1;
 				return FALSE;
 			}
 		}
@@ -478,24 +473,24 @@ gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 		uigtk2->keyboard.control = 0;
 	}
 
-	for (unsigned i = 0; i < MAX_AXES; i++) {
-		if (enabled_axis[i]) {
-			if (keyval == enabled_axis[i]->key0) {
-				if (enabled_axis[i]->value < 32768)
-					enabled_axis[i]->value = 32256;
+	for (unsigned i = 0; i < GTK_KBD_JS_MAX_AXES; i++) {
+		if (uigtk2->keyboard.enabled_axis[i]) {
+			if (keyval == uigtk2->keyboard.enabled_axis[i]->key0) {
+				if (uigtk2->keyboard.enabled_axis[i]->value < 32768)
+					uigtk2->keyboard.enabled_axis[i]->value = 32256;
 				return FALSE;
 			}
-			if (keyval == enabled_axis[i]->key1) {
-				if (enabled_axis[i]->value >= 32768)
-					enabled_axis[i]->value = 33280;
+			if (keyval == uigtk2->keyboard.enabled_axis[i]->key1) {
+				if (uigtk2->keyboard.enabled_axis[i]->value >= 32768)
+					uigtk2->keyboard.enabled_axis[i]->value = 33280;
 				return FALSE;
 			}
 		}
 	}
-	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
-		if (enabled_button[i]) {
-			if (keyval == enabled_button[i]->key) {
-				enabled_button[i]->value = 0;
+	for (unsigned i = 0; i < GTK_KBD_JS_MAX_BUTTONS; i++) {
+		if (uigtk2->keyboard.enabled_button[i]) {
+			if (keyval == uigtk2->keyboard.enabled_button[i]->key) {
+				uigtk2->keyboard.enabled_button[i]->value = 0;
 				return FALSE;
 			}
 		}
@@ -543,13 +538,10 @@ gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static unsigned read_axis(struct axis *a) {
-	return a->value;
-}
-
-static _Bool read_button(struct button *b) {
-	return b->value;
-}
+static int gtk_kbd_js_axis_read(void *);
+static int gtk_kbd_js_button_read(void *);
+static void gtk_kbd_js_axis_free(void *);
+static void gtk_kbd_js_button_free(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -579,61 +571,79 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 		key0 = get_key_by_name(a0);
 	if (a1 && *a1)
 		key1 = get_key_by_name(a1);
-	struct axis *axis_data = g_malloc(sizeof(*axis_data));
-	axis_data->key0 = key0;
-	axis_data->key1 = key1;
-	axis_data->value = 32256;
-	struct joystick_axis *axis = g_malloc(sizeof(*axis));
-	axis->read = (js_read_axis_func)read_axis;
-	axis->data = axis_data;
-	for (unsigned i = 0; i < MAX_AXES; i++) {
-		if (!enabled_axis[i]) {
-			enabled_axis[i] = axis_data;
+
+	struct gtk_kbd_js_axis *axis = xmalloc(sizeof(*axis));
+	*axis = (struct gtk_kbd_js_axis){0};
+	axis->ui_gtk2_interface = global_uigtk2;
+	axis->key0 = key0;
+	axis->key1 = key1;
+	axis->value = 32256;
+
+	axis->joystick_control.read = DELEGATE_AS0(int, gtk_kbd_js_axis_read, axis);
+	axis->joystick_control.free = DELEGATE_AS0(void, gtk_kbd_js_axis_free, axis);
+
+	for (unsigned i = 0; i < GTK_KBD_JS_MAX_AXES; i++) {
+		if (!global_uigtk2->keyboard.enabled_axis[i]) {
+			global_uigtk2->keyboard.enabled_axis[i] = axis;
 			break;
 		}
 	}
-	return axis;
+	return (struct joystick_axis *)&axis->joystick_control;
 }
 
 static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 	unsigned key = (jbutton == 0) ? GDK_KEY_Alt_L : GDK_KEY_Super_L;
 	if (spec && *spec)
 		key = get_key_by_name(spec);
-	struct button *button_data = g_malloc(sizeof(*button_data));
-	button_data->key = key;
-	button_data->value = 0;
-	struct joystick_button *button = g_malloc(sizeof(*button));
-	button->read = (js_read_button_func)read_button;
-	button->data = button_data;
-	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
-		if (!enabled_button[i]) {
-			enabled_button[i] = button_data;
+
+	struct gtk_kbd_js_button *button = xmalloc(sizeof(*button));
+	*button = (struct gtk_kbd_js_button){0};
+	button->ui_gtk2_interface = global_uigtk2;
+	button->key = key;
+	button->value = 0;
+
+	button->joystick_control.read = DELEGATE_AS0(int, gtk_kbd_js_button_read, button);
+	button->joystick_control.free = DELEGATE_AS0(void, gtk_kbd_js_button_free, button);
+
+	for (unsigned i = 0; i < GTK_KBD_JS_MAX_BUTTONS; i++) {
+		if (!global_uigtk2->keyboard.enabled_button[i]) {
+			global_uigtk2->keyboard.enabled_button[i] = button;
 			break;
 		}
 	}
-	return button;
+	return (struct joystick_button *)&button->joystick_control;
 }
 
-static void unmap_axis(struct joystick_axis *axis) {
-	if (!axis)
-		return;
-	for (unsigned i = 0; i < MAX_AXES; i++) {
-		if (axis->data == enabled_axis[i]) {
-			enabled_axis[i] = NULL;
-		}
-	}
-	g_free(axis->data);
-	g_free(axis);
+static int gtk_kbd_js_axis_read(void *sptr) {
+	struct gtk_kbd_js_axis *axis = sptr;
+	return axis->value;
 }
 
-static void unmap_button(struct joystick_button *button) {
-	if (!button)
-		return;
-	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
-		if (button->data == enabled_button[i]) {
-			enabled_button[i] = NULL;
+static int gtk_kbd_js_button_read(void *sptr) {
+	struct gtk_kbd_js_button *button = sptr;
+	return button->value;
+}
+
+static void gtk_kbd_js_axis_free(void *sptr) {
+	struct gtk_kbd_js_axis *axis = sptr;
+	struct ui_gtk2_interface *uigtk2 = axis->ui_gtk2_interface;
+
+	for (unsigned i = 0; i < GTK_KBD_JS_MAX_AXES; i++) {
+		if (axis == uigtk2->keyboard.enabled_axis[i]) {
+			uigtk2->keyboard.enabled_axis[i] = NULL;
 		}
 	}
-	g_free(button->data);
-	g_free(button);
+	free(axis);
+}
+
+static void gtk_kbd_js_button_free(void *sptr) {
+	struct gtk_kbd_js_button *button = sptr;
+	struct ui_gtk2_interface *uigtk2 = button->ui_gtk2_interface;
+
+	for (unsigned i = 0; i < GTK_KBD_JS_MAX_BUTTONS; i++) {
+		if (button == uigtk2->keyboard.enabled_button[i]) {
+			uigtk2->keyboard.enabled_button[i] = NULL;
+		}
+	}
+	free(button);
 }
