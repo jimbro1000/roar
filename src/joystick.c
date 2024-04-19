@@ -1,8 +1,8 @@
 /** \file
  *
- *  \brief Dragon joysticks.
+ *  \brief Joysticks.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -253,7 +253,9 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 		struct joystick_axis *axis = selected_interface->configure_axis(spec, i);
 		j->axes[i] = axis;
 		if (axis) {
-			axis->submod = selected_interface;
+			if (!DELEGATE_DEFINED(axis->as_control.read)) {
+				axis->submod = selected_interface;
+			}
 			valid_joystick = 1;
 		}
 		free(spec_copy);
@@ -272,7 +274,9 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 		struct joystick_button *button = selected_interface->configure_button(spec, i);
 		j->buttons[i] = button;
 		if (button) {
-			button->submod = selected_interface;
+			if (!DELEGATE_DEFINED(button->as_control.read)) {
+				button->submod = selected_interface;
+			}
 			valid_joystick = 1;
 		}
 		free(spec_copy);
@@ -281,19 +285,7 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 		free(j);
 		return;
 	}
-	LOG_DEBUG(1, "Joystick port %u = %s [ ", port, jc->name);
-	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
-		if (j->axes[i])
-			LOG_DEBUG(1, "%u=%s:", i, j->axes[i]->submod->name);
-		LOG_DEBUG(1, ", ");
-	}
-	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
-		if (j->buttons[i])
-			LOG_DEBUG(1, "%u=%s:", i, j->buttons[i]->submod->name);
-		if ((i + 1) < JOYSTICK_NUM_BUTTONS)
-			LOG_DEBUG(1, ", ");
-	}
-	LOG_DEBUG(1, " ]\n");
+	LOG_DEBUG(1, "Joystick port %u = %s\n", port, jc->name);
 	joystick_port[port] = j;
 	joystick_port_config[port] = jc;
 }
@@ -308,25 +300,35 @@ void joystick_unmap(unsigned port) {
 		return;
 	for (unsigned a = 0; a < JOYSTICK_NUM_AXES; a++) {
 		struct joystick_axis *axis = j->axes[a];
+		struct joystick_control *control = &axis->as_control;
 		if (axis) {
-			struct joystick_submodule *submod = axis->submod;
-			if (submod->unmap_axis) {
-				submod->unmap_axis(axis);
+			if (DELEGATE_DEFINED(control->read)) {
+				DELEGATE_SAFE_CALL(control->free);
 			} else {
-				free(j->axes[a]);
-				j->axes[a] = NULL;
+				struct joystick_submodule *submod = axis->submod;
+				if (submod->unmap_axis) {
+					submod->unmap_axis(axis);
+				} else {
+					free(j->axes[a]);
+					j->axes[a] = NULL;
+				}
 			}
 		}
 	}
 	for (unsigned b = 0; b < JOYSTICK_NUM_BUTTONS; b++) {
 		struct joystick_button *button = j->buttons[b];
+		struct joystick_control *control = &button->as_control;
 		if (button) {
-			struct joystick_submodule *submod = button->submod;
-			if (submod->unmap_button) {
-				submod->unmap_button(button);
+			if (DELEGATE_DEFINED(control->read)) {
+				DELEGATE_SAFE_CALL(control->free);
 			} else {
-				free(j->buttons[b]);
-				j->buttons[b] = NULL;
+				struct joystick_submodule *submod = button->submod;
+				if (submod->unmap_button) {
+					submod->unmap_button(button);
+				} else {
+					free(j->buttons[b]);
+					j->buttons[b] = NULL;
+				}
 			}
 		}
 	}
@@ -376,12 +378,32 @@ void joystick_cycle(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-int joystick_read_axis(int port, int axis) {
+int joystick_read_axis(int port, int axis_index) {
 	struct joystick *j = joystick_port[port];
-	if (j && j->axes[axis]) {
-		return j->axes[axis]->read(j->axes[axis]->data);
+	if (j && j->axes[axis_index]) {
+		struct joystick_axis *axis = j->axes[axis_index];
+		struct joystick_control *control = &axis->as_control;
+		if (DELEGATE_DEFINED(control->read)) {
+			return DELEGATE_CALL(control->read);
+		} else {
+			return axis->read(axis->data);
+		}
 	}
 	return 32767;
+}
+
+static inline int read_button(int port, int button_index) {
+	struct joystick *j = joystick_port[port];
+	if (j && j->buttons[button_index]) {
+		struct joystick_button *button = j->buttons[button_index];
+		struct joystick_control *control = &button->as_control;
+		if (DELEGATE_DEFINED(control->read)) {
+			return DELEGATE_CALL(control->read);
+		} else {
+			return button->read(button->data);
+		}
+	}
+	return 0;
 }
 
 // Reads up to four buttons (one from each joystick).  The returned value is
@@ -390,29 +412,13 @@ int joystick_read_axis(int port, int axis) {
 
 int joystick_read_buttons(void) {
 	int buttons = 0;
-	if (joystick_port[0]) {
-	       if (joystick_port[0]->buttons[0]) {
-		       if (joystick_port[0]->buttons[0]->read(joystick_port[0]->buttons[0]->data)) {
-			       buttons |= 1;
-		       }
-	       }
-	       if (joystick_port[0]->buttons[1]) {
-		       if (joystick_port[0]->buttons[1]->read(joystick_port[0]->buttons[1]->data)) {
-			       buttons |= 4;
-		       }
-	       }
-	}
-	if (joystick_port[1]) {
-		if (joystick_port[1]->buttons[0]) {
-			if (joystick_port[1]->buttons[0]->read(joystick_port[1]->buttons[0]->data)) {
-				buttons |= 2;
-			}
-		}
-		if (joystick_port[1]->buttons[1]) {
-			if (joystick_port[1]->buttons[1]->read(joystick_port[1]->buttons[1]->data)) {
-				buttons |= 8;
-			}
-		}
-	}
+	if (read_button(0, 0))
+		buttons |= 1;
+	if (read_button(0, 1))
+		buttons |= 4;
+	if (read_button(1, 0))
+		buttons |= 2;
+	if (read_button(1, 1))
+		buttons |= 8;
 	return buttons;
 }

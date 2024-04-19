@@ -1,8 +1,8 @@
 /** \file
  *
- *  \brief Dragon joysticks.
+ *  \brief Joysticks.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,9 +21,13 @@
 
 #include <stdio.h>
 
+#include "delegate.h"
+
 #include "module.h"
 
 struct slist;
+
+typedef DELEGATE_S0(int) DELEGATE_T0(int);
 
 // Each joystick module contains a list of submodules, with standard names:
 //
@@ -80,13 +84,24 @@ extern struct joystick_module * const *ui_joystick_module_list;
 typedef unsigned (*js_read_axis_func)(void *);
 typedef _Bool (*js_read_button_func)(void *);
 
+struct joystick_control {
+	DELEGATE_T0(int) read;
+	DELEGATE_T0(void) free;
+};
+
 struct joystick_axis {
+	struct joystick_control as_control;
+
+	// Transition period!  Old approach:
 	js_read_axis_func read;
 	void *data;
 	struct joystick_submodule *submod;
 };
 
 struct joystick_button {
+	struct joystick_control as_control;
+
+	// Transition period!  Old approach:
 	js_read_button_func read;
 	void *data;
 	struct joystick_submodule *submod;
