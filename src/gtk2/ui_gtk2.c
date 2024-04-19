@@ -627,7 +627,6 @@ static void *ui_gtk2_new(void *cfg) {
 	}
 
 	gtk2_keyboard_init(ui_cfg);
-	gtk2_joystick_init(uigtk2);
 
 	// Connect relevant event signals
 	g_signal_connect(G_OBJECT(uigtk2->top_window), "key-press-event", G_CALLBACK(gtk2_handle_key_press), uigtk2);

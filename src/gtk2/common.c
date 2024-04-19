@@ -97,16 +97,8 @@ gboolean gtk2_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpo
 	// Update position data (for mouse mapped joystick)
 	int x = (event->x - uigtk2->picture_area.x) * 320;
 	int y = (event->y - uigtk2->picture_area.y) * 240;
-	float xx = (float)x / (float)uigtk2->picture_area.w;
-	float yy = (float)y / (float)uigtk2->picture_area.h;
-	xx = (xx - uigtk2->mouse_xoffset) / uigtk2->mouse_xdiv;
-	yy = (yy - uigtk2->mouse_yoffset) / uigtk2->mouse_ydiv;
-	if (xx < 0.0) xx = 0.0;
-	if (xx > 1.0) xx = 1.0;
-	if (yy < 0.0) yy = 0.0;
-	if (yy > 1.0) yy = 1.0;
-	uigtk2->mouse_axis[0] = xx * 65535.;
-	uigtk2->mouse_axis[1] = yy * 65535.;
+	uigtk2->mouse.axis[0] = (float)x / (float)uigtk2->picture_area.w;
+	uigtk2->mouse.axis[1] = (float)y / (float)uigtk2->picture_area.h;
 
 	return FALSE;
 }
@@ -146,7 +138,7 @@ gboolean gtk2_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpoi
 
 	// Update button data (for mouse mapped joystick)
 	if (event->button >= 1 && event->button <= 3) {
-		uigtk2->mouse_button[event->button-1] = 1;
+		uigtk2->mouse.button[event->button-1] = 1;
 	}
 
 	return FALSE;
@@ -158,7 +150,7 @@ gboolean gtk2_handle_button_release(GtkWidget *widget, GdkEventButton *event, gp
 
 	// Update button data (for mouse mapped joystick)
 	if (event->button >= 1 && event->button <= 3) {
-		uigtk2->mouse_button[event->button-1] = 0;
+		uigtk2->mouse.button[event->button-1] = 0;
 	}
 
 	return FALSE;

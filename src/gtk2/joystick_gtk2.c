@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 joystick interfaces.
  *
- *  \copyright Copyright 2010-2023 Ciaran Anscomb
+ *  \copyright Copyright 2010-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -34,6 +34,7 @@
 #pragma GCC diagnostic pop
 
 #include "pl-string.h"
+#include "xalloc.h"
 
 #include "joystick.h"
 #include "logging.h"
@@ -72,26 +73,38 @@ struct joystick_module *gtk2_js_modlist[] = {
 	NULL
 };
 
-void gtk2_joystick_init(struct ui_gtk2_interface *uigtk2) {
-	// Mouse tracking
-	uigtk2->mouse_xoffset = 34.0;
-	uigtk2->mouse_yoffset = 25.5;
-	uigtk2->mouse_xdiv = 252.;
-	uigtk2->mouse_ydiv = 189.;
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static unsigned read_axis(unsigned *a) {
-	return *a;
-}
+struct gtk_mouse_js_axis {
+	struct joystick_control joystick_control;
+	struct ui_gtk2_interface *ui_gtk2_interface;
+	int axis;
+	float offset;
+	float div;
+};
 
-static _Bool read_button(_Bool *b) {
-	return *b;
-}
+struct gtk_mouse_js_button {
+	struct joystick_control joystick_control;
+	struct ui_gtk2_interface *ui_gtk2_interface;
+	int button;
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static int gtk_mouse_js_axis_read(void *);
+static int gtk_mouse_js_button_read(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
+	struct gtk_mouse_js_axis *axis = xmalloc(sizeof(*axis));
+	*axis = (struct gtk_mouse_js_axis){0};
+
+	axis->ui_gtk2_interface = global_uigtk2;
+
 	jaxis %= 2;
+	axis->axis = jaxis;
+
 	float off0 = (jaxis == 0) ? 2.0 : 1.5;
 	float off1 = (jaxis == 0) ? 254.0 : 190.5;
 	char *tmp = NULL;
@@ -106,18 +119,19 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	if (jaxis == 0) {
 		if (off0 < -32.0) off0 = -32.0;
 		if (off1 > 288.0) off0 = 288.0;
-		global_uigtk2->mouse_xoffset = off0 + 32.0;
-		global_uigtk2->mouse_xdiv = off1 - off0;
+		axis->offset = off0 + 32.0;
+		axis->div = off1 - off0;
 	} else {
 		if (off0 < -24.0) off0 = -24.0;
 		if (off1 > 216.0) off0 = 216.0;
-		global_uigtk2->mouse_yoffset = off0 + 24.0;
-		global_uigtk2->mouse_ydiv = off1 - off0;
+		axis->offset = off0 + 24.0;
+		axis->div = off1 - off0;
 	}
-	struct joystick_axis *axis = g_malloc(sizeof(*axis));
-	axis->read = (js_read_axis_func)read_axis;
-	axis->data = &global_uigtk2->mouse_axis[jaxis];
-	return axis;
+
+	axis->joystick_control.read = DELEGATE_AS0(int, gtk_mouse_js_axis_read, axis);
+	axis->joystick_control.free = DELEGATE_AS0(void, free, axis);
+
+	return (struct joystick_axis *)&axis->joystick_control;
 }
 
 static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
@@ -126,8 +140,30 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 		jbutton = strtol(spec, NULL, 0) - 1;
 	if (jbutton >= 3)
 		return NULL;
-	struct joystick_button *button = g_malloc(sizeof(*button));
-	button->read = (js_read_button_func)read_button;
-	button->data = &global_uigtk2->mouse_button[jbutton];
-	return button;
+
+	struct gtk_mouse_js_button *button = xmalloc(sizeof(*button));
+	*button = (struct gtk_mouse_js_button){0};
+
+	button->ui_gtk2_interface = global_uigtk2;
+	button->button = jbutton;
+
+	button->joystick_control.read = DELEGATE_AS0(int, gtk_mouse_js_button_read, button);
+	button->joystick_control.free = DELEGATE_AS0(void, free, button);
+
+	return (struct joystick_button *)&button->joystick_control;
+}
+
+static int gtk_mouse_js_axis_read(void *sptr) {
+	struct gtk_mouse_js_axis *axis = sptr;
+	struct ui_gtk2_interface *uigtk2 = axis->ui_gtk2_interface;
+	float v = (uigtk2->mouse.axis[axis->axis] - axis->offset) / axis->div;
+	if (v < 0.0) v = 0.0;
+	if (v > 1.0) v = 1.0;
+	return (int)(v * 65535.);
+}
+
+static int gtk_mouse_js_button_read(void *sptr) {
+	struct gtk_mouse_js_button *button = sptr;
+	struct ui_gtk2_interface *uigtk2 = button->ui_gtk2_interface;
+	return uigtk2->mouse.button[button->button];
 }
