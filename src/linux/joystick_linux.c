@@ -2,7 +2,7 @@
  *
  *  \brief Linux joystick module.
  *
- *  \copyright Copyright 2010-2021 Ciaran Anscomb
+ *  \copyright Copyright 2010-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -47,16 +47,12 @@
 
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
-static void unmap_axis(struct joystick_axis *axis);
-static void unmap_button(struct joystick_button *button);
 static void linux_js_print_physical(void);
 
 static struct joystick_submodule linux_js_submod_physical = {
 	.name = "physical",
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
-	.unmap_axis = unmap_axis,
-	.unmap_button = unmap_button,
 	.print_list = linux_js_print_physical,
 };
 
@@ -74,7 +70,15 @@ struct joystick_module linux_js_mod = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct device {
+struct linux_js_context {
+	// List of opened devices
+	struct slist *device_list;
+};
+static struct linux_js_context *global_linux_js_context = NULL;
+
+struct linux_js_device {
+	struct linux_js_context *ctx;
+
 	int joystick_index;
 	int fd;
 	unsigned open_count;
@@ -84,10 +88,10 @@ struct device {
 	_Bool *button_value;
 };
 
-static struct slist *device_list = NULL;
+struct linux_js_control {
+	struct joystick_control joystick_control;
 
-struct control {
-	struct device *device;
+	struct linux_js_device *device;
 	unsigned control;
 	_Bool inverted;
 };
@@ -96,11 +100,15 @@ struct control {
 
 // For sorting joystick device filenames
 
-static unsigned linux_js_prefix_len = 0;
-
-static int linux_js_compar(const void *ap, const void *bp) {
-	long a = strtol(*(const char **)ap + linux_js_prefix_len, NULL, 10);
-	long b = strtol(*(const char **)bp + linux_js_prefix_len, NULL, 10);
+static int compar_device_path(const void *ap, const void *bp) {
+	const char *ac = ap;
+	const char *bc = bp;
+	while (*ac && *bc && *ac == *bc) {
+		ac++;
+		bc++;
+	}
+	long a = strtol(ac, NULL, 10);
+	long b = strtol(bc, NULL, 10);
 	if (a < b)
 		return -1;
 	if (a == b)
@@ -115,20 +123,20 @@ static int linux_js_compar(const void *ap, const void *bp) {
 static void linux_js_print_physical(void) {
 	glob_t globbuf;
 	globbuf.gl_offs = 0;
-	linux_js_prefix_len = 13;
+	unsigned prefix_len = 13;
 	glob("/dev/input/js*", GLOB_ERR|GLOB_NOSORT, NULL, &globbuf);
 	if (!globbuf.gl_pathc) {
-		linux_js_prefix_len = 7;
+		prefix_len = 7;
 		glob("/dev/js*", GLOB_ERR|GLOB_NOSORT, NULL, &globbuf);
 	}
 	// Sort the list so we can spot removed devices
-	qsort(globbuf.gl_pathv, globbuf.gl_pathc, sizeof(char *), linux_js_compar);
+	qsort(globbuf.gl_pathv, globbuf.gl_pathc, sizeof(char *), compar_device_path);
 	// Now iterate
 	LOG_PRINT("%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
 	for (unsigned i = 0; i < globbuf.gl_pathc; i++) {
-		if (strlen(globbuf.gl_pathv[i]) < linux_js_prefix_len)
+		if (strlen(globbuf.gl_pathv[i]) < prefix_len)
 			continue;
-		const char *index = globbuf.gl_pathv[i] + linux_js_prefix_len;
+		const char *index = globbuf.gl_pathv[i] + prefix_len;
 		int fd  = open(globbuf.gl_pathv[i], O_RDONLY|O_NONBLOCK);
 		if (fd < 0) {
 			continue;
@@ -152,10 +160,24 @@ static void linux_js_print_physical(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct device *open_device(int joystick_index) {
+struct linux_js_context *init_context(void) {
+	if (!global_linux_js_context) {
+		struct linux_js_context *ctx = xmalloc(sizeof(*ctx));
+		*ctx = (struct linux_js_context){0};
+		global_linux_js_context = ctx;
+	}
+	return global_linux_js_context;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static struct linux_js_device *open_device(int joystick_index) {
+	// TODO: context becomes a module that is initialised
+	struct linux_js_context *ctx = init_context();
+
 	// If the device is already open, just up its count and return it
-	for (struct slist *iter = device_list; iter; iter = iter->next) {
-		struct device *d = iter->data;
+	for (struct slist *iter = ctx->device_list; iter; iter = iter->next) {
+		struct linux_js_device *d = iter->data;
 		if (d->joystick_index == joystick_index) {
 			d->open_count++;
 			return d;
@@ -172,9 +194,13 @@ static struct device *open_device(int joystick_index) {
 	}
 	if (fd < 0)
 		return NULL;
-	struct device *d = xmalloc(sizeof(*d));
+
+	struct linux_js_device *d = xmalloc(sizeof(*d));
+	*d = (struct linux_js_device){0};
+	d->ctx = ctx;
 	d->joystick_index = joystick_index;
 	d->fd = fd;
+
 	char tmp;
 	ioctl(fd, JSIOCGAXES, &tmp);
 	d->num_axes = tmp;
@@ -195,26 +221,27 @@ static struct device *open_device(int joystick_index) {
 	LOG_DEBUG(1, "Opened joystick %d: %s\n", joystick_index, namebuf);
 	LOG_DEBUG(1, "\t%u axes, %u buttons\n", d->num_axes, d->num_buttons);
 	d->open_count = 1;
-	device_list = slist_prepend(device_list, d);
+	ctx->device_list = slist_prepend(ctx->device_list, d);
 	return d;
 }
 
-static void close_device(struct device *d) {
+static void close_device(struct linux_js_device *d) {
+	struct linux_js_context *ctx = d->ctx;
 	d->open_count--;
 	if (d->open_count == 0) {
 		close(d->fd);
 		free(d->axis_value);
 		free(d->button_value);
-		device_list = slist_remove(device_list, d);
+		ctx->device_list = slist_remove(ctx->device_list, d);
 		free(d);
 	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void poll_devices(void) {
-	for (struct slist *iter = device_list; iter; iter = iter->next) {
-		struct device *d = iter->data;
+static void poll_devices(struct linux_js_context *ctx) {
+	for (struct slist *iter = ctx->device_list; iter; iter = iter->next) {
+		struct linux_js_device *d = iter->data;
 		struct js_event e;
 		while (read(d->fd, &e, sizeof(e)) == sizeof(e)) {
 			switch (e.type) {
@@ -237,24 +264,15 @@ static void poll_devices(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static unsigned read_axis(struct control *c) {
-	poll_devices();
-	unsigned ret = c->device->axis_value[c->control];
-	if (c->inverted)
-		ret ^= 0xffff;
-	return ret;
-}
-
-static _Bool read_button(struct control *c) {
-	poll_devices();
-	return c->device->button_value[c->control];
-}
+static int linux_js_axis_read(void *);
+static int linux_js_button_read(void *);
+static void linux_js_control_free(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // axis & button specs are basically the same, just track a different
 // "selected" variable.
-static struct control *configure_control(char *spec, unsigned control) {
+static struct linux_js_control *configure_control(char *spec, unsigned control) {
 	unsigned joystick = 0;
 	_Bool inverted = 0;
 	char *tmp = NULL;
@@ -273,10 +291,13 @@ static struct control *configure_control(char *spec, unsigned control) {
 			control = strtol(spec, NULL, 0);
 		}
 	}
-	struct device *d = open_device(joystick);
+
+	struct linux_js_device *d = open_device(joystick);
 	if (!d)
 		return NULL;
-	struct control *c = xmalloc(sizeof(*c));
+
+	struct linux_js_control *c = xmalloc(sizeof(*c));
+	*c = (struct linux_js_control){0};
 	c->device = d;
 	c->control = control;
 	c->inverted = inverted;
@@ -284,7 +305,7 @@ static struct control *configure_control(char *spec, unsigned control) {
 }
 
 static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
-	struct control *c = configure_control(spec, jaxis);
+	struct linux_js_control *c = configure_control(spec, jaxis);
 	if (!c)
 		return NULL;
 	if (c->control >= c->device->num_axes) {
@@ -292,14 +313,16 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 		free(c);
 		return NULL;
 	}
-	struct joystick_axis *axis = xmalloc(sizeof(*axis));
-	axis->read = (js_read_axis_func)read_axis;
-	axis->data = c;
-	return axis;
+
+	struct joystick_control *axis = &c->joystick_control;
+	axis->read = DELEGATE_AS0(int, linux_js_axis_read, c);
+	axis->free = DELEGATE_AS0(void, linux_js_control_free, c);
+
+	return (struct joystick_axis *)axis;
 }
 
 static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
-	struct control *c = configure_control(spec, jbutton);
+	struct linux_js_control *c = configure_control(spec, jbutton);
 	if (!c)
 		return NULL;
 	if (c->control >= c->device->num_buttons) {
@@ -307,26 +330,30 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 		free(c);
 		return NULL;
 	}
-	struct joystick_button *button = xmalloc(sizeof(*button));
-	button->read = (js_read_button_func)read_button;
-	button->data = c;
-	return button;
+	struct joystick_control *button = &c->joystick_control;
+	button->read = DELEGATE_AS0(int, linux_js_button_read, c);
+	button->free = DELEGATE_AS0(void, linux_js_control_free, c);
+
+	return (struct joystick_button *)button;
 }
 
-static void unmap_axis(struct joystick_axis *axis) {
-	if (!axis)
-		return;
-	struct control *c = axis->data;
-	close_device(c->device);
-	free(c);
-	free(axis);
+static int linux_js_axis_read(void *sptr) {
+	struct linux_js_control *c = sptr;
+	poll_devices(c->device->ctx);
+	unsigned ret = c->device->axis_value[c->control];
+	if (c->inverted)
+		ret ^= 0xffff;
+	return (int)ret;
 }
 
-static void unmap_button(struct joystick_button *button) {
-	if (!button)
-		return;
-	struct control *c = button->data;
+static int linux_js_button_read(void *sptr) {
+	struct linux_js_control *c = sptr;
+	poll_devices(c->device->ctx);
+	return c->device->button_value[c->control];
+}
+
+static void linux_js_control_free(void *sptr) {
+	struct linux_js_control *c = sptr;
 	close_device(c->device);
 	free(c);
-	free(button);
 }
