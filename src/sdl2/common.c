@@ -235,6 +235,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 		mouse_ydiv = off1 - off0;
 	}
 	struct joystick_axis *axis = xmalloc(sizeof(*axis));
+	*axis = (struct joystick_axis){0};
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = &mouse_axis[jaxis];
 	mouse_xscale = 320. / global_uisdl2->draw_area.w;
@@ -249,6 +250,7 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 	if (jbutton >= 3)
 		return NULL;
 	struct joystick_button *button = xmalloc(sizeof(*button));
+	*button = (struct joystick_button){0};
 	button->read = (js_read_button_func)read_button;
 	button->data = &mouse_button[jbutton];
 	return button;
