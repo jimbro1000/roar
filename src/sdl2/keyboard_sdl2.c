@@ -629,6 +629,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	axis_data->key1 = key1;
 	axis_data->value = 32256;
 	struct joystick_axis *axis = xmalloc(sizeof(*axis));
+	*axis = (struct joystick_axis){0};
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = axis_data;
 	for (unsigned i = 0; i < MAX_AXES; i++) {
@@ -648,6 +649,7 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 	button_data->key = key;
 	button_data->value = 0;
 	struct joystick_button *button = xmalloc(sizeof(*button));
+	*button = (struct joystick_button){0};
 	button->read = (js_read_button_func)read_button;
 	button->data = button_data;
 	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
