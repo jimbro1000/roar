@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 joystick module.
  *
- *  \copyright Copyright 2015-2021 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -216,6 +216,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 		return NULL;
 	}
 	struct joystick_axis *axis = xmalloc(sizeof(*axis));
+	*axis = (struct joystick_axis){0};
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = c;
 	return axis;
@@ -232,6 +233,7 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 		return NULL;
 	}
 	struct joystick_button *button = xmalloc(sizeof(*button));
+	*button = (struct joystick_button){0};
 	button->read = (js_read_button_func)read_button;
 	button->data = c;
 	return button;
