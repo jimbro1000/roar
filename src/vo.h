@@ -101,7 +101,7 @@ struct vo_draw_area {
 };
 
 // Picture Area is the largest 4:3 region contained within the Draw Area.  A
-// renderer's Picture Area will be copied (probably with scaling) into this
+// renderer's Viewport will be copied (probably with scaling) into this
 // region.  Also defined in host screen pixels.  Origin defined relative to
 // Window Area.
 
