@@ -222,7 +222,54 @@ xroar_SOURCES += \
 	vo_opengl.c vo_opengl.h
 endif
 
-# GTK+-2.0 user interface
+# GTK+ 3 user interface
+
+if GTK3
+xroar_CFLAGS += $(GTK3_CFLAGS)
+xroar_LDADD += $(GTK3_LIBS)
+xroar_SOURCES += \
+	gtk3/common.c gtk3/common.h \
+	gtk3/drivecontrol.c gtk3/drivecontrol.h \
+	gtk3/filereq_gtk3.c \
+	gtk3/gtk3.gresource.c \
+	gtk3/joystick_gtk3.c \
+	gtk3/keyboard_gtk3.c \
+	gtk3/printercontrol.c gtk3/printercontrol.h \
+	gtk3/tapecontrol.c gtk3/tapecontrol.h \
+	gtk3/ui_gtk3.c \
+	gtk3/video_options.c gtk3/video_options.h \
+	gtk3/vo_gtk3.c
+
+BUILT_SOURCES += \
+	gtk3/gtk3.gresource.c
+endif
+
+GTK3_RESOURCES = \
+	gtk3/application.ui \
+	gtk3/menu.ui \
+	gtk3/drivecontrol.ui \
+	gtk3/printercontrol.ui \
+	gtk3/tapecontrol.ui \
+	gtk3/video_options.ui
+
+EXTRA_DIST += \
+	$(GTK3_RESOURCES) \
+	gtk3/gtk3.gresource.c \
+	gtk3/gtk3.gresource.xml \
+	gtk3/keyboard_gtk3_mappings.c
+
+.INTERMEDIATE: gtk3/gtk3.gresource.tmp
+
+gtk3/gtk3.gresource.tmp: $(GTK3_RESOURCES)
+
+gtk3/gtk3.gresource.tmp: gtk3/gtk3.gresource.xml
+	$(GLIB_COMPILE_RESOURCES) $< --target=$@ --sourcedir=gtk3 --generate-source
+
+gtk3/gtk3.gresource.c: gtk3/gtk3.gresource.tmp
+	echo "#include \"top-config.h\"" > $@
+	cat $< >> $@
+
+# GTK+ 2.0 user interface
 
 if GTK2
 xroar_CFLAGS += $(GTK2_CFLAGS)

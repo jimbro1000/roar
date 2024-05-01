@@ -86,8 +86,14 @@ AC_ARG_ENABLE([experimental],
 AC_ARG_ENABLE([wasm],
 	AS_HELP_STRING([--enable-wasm], [build for WebAssembly using emscripten]) )
 
+AC_ARG_WITH([gtk3],
+	AS_HELP_STRING([--without-gtk3], [don't test for GTK+ 3]) )
+
 AC_ARG_WITH([gtk2],
-	AS_HELP_STRING([--without-gtk2], [don't test for GTK+-2]) )
+	AS_HELP_STRING([--without-gtk2], [don't test for GTK+ 2]) )
+
+test "x$with_gtk3" = "xyes" && with_gtk2="no"
+test "x$with_gtk2" = "xyes" && with_gtk3="no"
 
 AC_ARG_WITH([gtkgl],
 	AS_HELP_STRING([--without-gtkgl], [don't test for GtkGLExt]) )
@@ -246,6 +252,7 @@ AM_COND_IF([WASM], [
 		test -z "$enable_gdb_target" && enable_gdb_target=no
 		test -z "$with_x" && with_x=no
 		test -z "$no_x" && no_x=yes
+		test -z "$with_gtk3" && with_gtk3=no
 		test -z "$with_gtk2" && with_gtk2=no
 		test -z "$with_opengl" && with_opengl=no
 		test -z "$with_cocoa" && with_cocoa=no
@@ -494,7 +501,36 @@ int main(int argc, char **argv) { (void)argc; (void)argv; jack_client_t *c; jack
 AM_CONDITIONAL([AO_JACK], [test -n "$JACK_LIBS"])
 AM_COND_IF([AO_JACK], [AC_DEFINE([HAVE_JACK_AUDIO], 1, [Use JACK audio])])
 
-### GTK+-2
+### GTK+ 3
+
+AS_IF([test "x$with_gtk3" != "xno"], [
+		PKG_CHECK_MODULES([GTK3], [gtk+-3.0], :, :) ], :)
+
+unset have_gtk3
+AS_IF([test -n "$GTK3_LIBS"], [
+		OLD_CFLAGS="$CFLAGS"
+		OLD_LIBS="$LIBS"
+		CFLAGS="$CFLAGS $GTK3_CFLAGS"
+		LIBS="$LIBS $GTK3_LIBS"
+		AC_MSG_CHECKING([if GTK+ 3 is usable])
+		AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <gtk/gtk.h>
+int main(int argc, char **argv) { gtk_init(&argc, &argv); return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			have_gtk3=1
+			], [AC_MSG_RESULT([no])] )
+		CFLAGS="$OLD_CFLAGS"
+		LIBS="$OLD_LIBS"
+		])
+
+AM_CONDITIONAL([GTK3], [test -n "$have_gtk3"])
+AM_COND_IF([GTK3], [AC_DEFINE([HAVE_GTK3], 1, [Use GTK+ 3])])
+
+test -n "$have_gtk3" && with_gtk2=no
+test -n "$have_gtk3" && with_gtkgl=no
+
+### GTK+ 2
 
 AS_IF([test "x$with_gtk2" != "xno"], [
 		PKG_CHECK_MODULES([GTK2], [gtk+-2.0], :, :) ], :)

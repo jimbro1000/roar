@@ -31,6 +31,7 @@
 
 extern struct module filereq_cocoa_module;
 extern struct module filereq_windows32_module;
+extern struct module filereq_gtk3_module;
 extern struct module filereq_gtk2_module;
 extern struct module filereq_cli_module;
 extern struct module filereq_null_module;
@@ -40,6 +41,9 @@ struct module * const default_filereq_module_list[] = {
 #endif
 #ifdef WINDOWS32
 	&filereq_windows32_module,
+#endif
+#ifdef HAVE_GTK3
+	&filereq_gtk3_module,
 #endif
 #ifdef HAVE_GTK2
 	&filereq_gtk2_module,
@@ -56,6 +60,7 @@ struct module *filereq_module = NULL;
 
 // UI modules
 
+extern struct ui_module ui_gtk3_module;
 extern struct ui_module ui_gtk2_module;
 extern struct ui_module ui_null_module;
 extern struct ui_module ui_windows32_module;
@@ -63,6 +68,9 @@ extern struct ui_module ui_wasm_module;
 extern struct ui_module ui_cocoa_module;
 extern struct ui_module ui_sdl_module;
 static struct ui_module * const default_ui_module_list[] = {
+#ifdef HAVE_GTK3
+	&ui_gtk3_module,
+#endif
 #ifdef HAVE_GTK2
 #ifdef HAVE_GTKGL
 	&ui_gtk2_module,
