@@ -2,7 +2,7 @@
  *
  *  \brief Generic OpenGL support for video output modules.
  *
- *  \copyright Copyright 2012-2023 Ciaran Anscomb
+ *  \copyright Copyright 2012-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -68,9 +68,8 @@ struct vo_opengl_interface {
 	_Bool scale_60hz;
 
 	int filter;
-
-	GLfloat vertices[4][2];
-	GLfloat tex_coords[4][2];
+	GLuint blit_fbo;
+	GLenum blit_filter;
 };
 
 // Allocate new opengl interface (potentially with room for extra data)
@@ -82,9 +81,9 @@ void *vo_opengl_new(size_t isize);
 void vo_opengl_free(void *sptr);
 
 // Configure parameters.  This finishes setting things up, including creating a
-// renderer.
+// renderer.  If required functions are not found, returns false.
 
-void vo_opengl_configure(struct vo_opengl_interface *, struct vo_cfg *cfg);
+_Bool vo_opengl_configure(struct vo_opengl_interface *, struct vo_cfg *cfg);
 
 // Set up OpenGL context for rendering
 //

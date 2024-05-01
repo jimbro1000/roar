@@ -2,7 +2,7 @@
  *
  *  \brief Generic OpenGL support for video output modules.
  *
- *  \copyright Copyright 2012-2023 Ciaran Anscomb
+ *  \copyright Copyright 2012-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -17,6 +17,9 @@
  *
  *  OpenGL code is common to several video modules.  All the stuff that's not
  *  toolkit-specific goes in here.
+ *
+ *  This code now uses OpenGL 3+ Framebuffer Objects (FBO), which simplifies
+ *  things a lot, but may make it harder to run on old machines.
  */
 
 #include "top-config.h"
@@ -27,15 +30,39 @@
 #include <string.h>
 #include <sys/types.h>
 
+// Defining GL_GLEXT_PROTOTYPES isn't the recommended way of getting access to
+// glGenFramebuffers() etc., but it's maybe[*] safe under Linux, which is the
+// only place this code has been tested anyway.
+//
+// [*] Debian at least is installing libopengl, a "Vendor neutral GL dispatch
+// library", which to me sounds like we shouldn't have to care about this, at
+// least under Linux/Unix.
+//
+// The "correct" way is to use arch-specific functions to get function
+// addresses by name, potentially having to dlopen() an external library and
+// retry on failure.
+//
+// And that isn't even all of it.  You end up getting valid-looking function
+// pointers back even if they aren't supported!  The _real_ "correct" way is to
+// do string parsing first and make sure the extension you're looking for is
+// contained in the result of some query.  Mad.
+//
+// You kinda understand why anything-but-OpenGL took off, really...
+
+#define GL_GLEXT_PROTOTYPES
+
+// Despite the note above about only testing under Linux, I'll leave this
+// macosx+ conditional here for those that want to mess about on that platform.
+// For reasons best known to themselves, Apple put OpenGL headers in a
+// completely non-standard directory.
+
 #if defined(__APPLE_CC__)
 # include <OpenGL/gl.h>
 #else
 # include <GL/gl.h>
 #endif
 
-#ifdef WINDOWS32
-#include <GL/glext.h>
-#endif
+// Rants over for now.
 
 #include "xalloc.h"
 
@@ -52,13 +79,9 @@
 // TEX_INT_PITCH is the pitch of the texture internally.  This used to be
 // best kept as a power of 2 - no idea how necessary that still is, but might
 // as well keep it that way.
-//
-// TEX_BUF_WIDTH is the width of the buffer transferred to the texture.
 
 #define TEX_INT_PITCH (1024)
 #define TEX_INT_HEIGHT (384)
-#define TEX_BUF_WIDTH (640)
-#define TEX_BUF_HEIGHT (240)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -76,10 +99,11 @@ void vo_opengl_free(void *sptr) {
 	struct vo_render *vr = vo->renderer;
 	vo_render_free(vr);
 	glDeleteTextures(1, &vogl->texture.num);
+	glDeleteFramebuffers(1, &vogl->blit_fbo);
 	free(vogl->texture.pixels);
 }
 
-void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
+_Bool vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 	struct vo_interface *vo = &vogl->vo;
 
 	vogl->texture.buf_format = GL_RGBA;
@@ -144,12 +168,15 @@ void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 	vo->draw = DELEGATE_AS0(void, vo_opengl_draw, vogl);
 
 	vogl->texture.pixels = xmalloc(MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vogl->texture.pixel_size);
+	memset(vogl->texture.pixels, 0, MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vogl->texture.pixel_size);
 	vo_render_set_buffer(vr, vogl->texture.pixels);
 
 	vogl->picture_area.x = vogl->picture_area.y = 0;
 	vogl->viewport.w = 640;
 	vogl->viewport.h = 240;
 	vogl->filter = cfg->gl_filter;
+
+	return 1;
 }
 
 static void update_viewport(struct vo_opengl_interface *vogl) {
@@ -175,32 +202,24 @@ static void update_viewport(struct vo_opengl_interface *vogl) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+	glDeleteFramebuffers(1, &vogl->blit_fbo);
+	glGenFramebuffers(1, &vogl->blit_fbo);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, vogl->blit_fbo);
+	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+			       GL_TEXTURE_2D, vogl->texture.num, 0);
+
 	// Set scaling method according to options and window dimensions
 	if (!vogl->scale_60hz && (vogl->filter == UI_GL_FILTER_NEAREST ||
 				  (vogl->filter == UI_GL_FILTER_AUTO &&
 				   (vogl->picture_area.w % hw) == 0 &&
 				   (vogl->picture_area.h % hh) == 0))) {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		vogl->blit_filter = GL_NEAREST;
 	} else {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		vogl->blit_filter = GL_LINEAR;
 	}
 
-	// Texture coordinates select a subset of the texture to update
-	vogl->tex_coords[0][0] = 0.0;
-	vogl->tex_coords[0][1] = 0.0;
-	vogl->tex_coords[1][0] = 0.0;
-	vogl->tex_coords[1][1] = (double)vp_h / (double)TEX_INT_HEIGHT;
-	vogl->tex_coords[2][0] = (double)vp_w / (double)TEX_INT_PITCH;
-	vogl->tex_coords[2][1] = 0.0;
-	vogl->tex_coords[3][0] = (double)vp_w / (double)TEX_INT_PITCH;
-	vogl->tex_coords[3][1] = (double)vp_h / (double)TEX_INT_HEIGHT;
-	glTexCoordPointer(2, GL_FLOAT, 0, vogl->tex_coords);
-
-	// OpenGL 4.4+ has glClearTexImage(), but for now let's just clear a
-	// line just to the right and just below the area in the texture we'll
-	// be updating.  This prevents weird fringing effects.
+	// We still need to clear to the right and underneath the bit of the
+	// texture we'll use, else GL_LINEAR will interpolate against junk.
 	memset(vogl->texture.pixels, 0, TEX_INT_PITCH * vogl->texture.pixel_size);
 	glTexSubImage2D(GL_TEXTURE_2D, 0,
 			vp_w, 0, 1, TEX_INT_HEIGHT,
@@ -242,48 +261,25 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, struct vo_draw_ar
 		vogl->picture_area.y = y + (h - vogl->picture_area.h)/2;
 	}
 
-	// Configure OpenGL
-	glDisable(GL_BLEND);
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(GL_FALSE);
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_TEXTURE_2D);
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-	glViewport(0, 0, w, h);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0, w, h , 0, -1.0, 1.0);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClearDepth(1.0f);
-
-	glColor4f(1.0, 1.0, 1.0, 1.0);
-
-	// The same vertex & texcoord lists will be used every draw,
-	// so configure them here rather than in vsync()
-
-	// Vertex array defines where in the window the texture will be rendered
-	vogl->vertices[0][0] = vogl->picture_area.x;
-	vogl->vertices[0][1] = vogl->picture_area.y;
-	vogl->vertices[1][0] = vogl->picture_area.x;
-	vogl->vertices[1][1] = h - vogl->picture_area.y;
-	vogl->vertices[2][0] = w - vogl->picture_area.x;
-	vogl->vertices[2][1] = vogl->picture_area.y;
-	vogl->vertices[3][0] = w - vogl->picture_area.x;
-	vogl->vertices[3][1] = h - vogl->picture_area.y;
-	glVertexPointer(2, GL_FLOAT, 0, vogl->vertices);
-
+	// Create textures, etc.
 	update_viewport(vogl);
 }
 
 void vo_opengl_draw(void *sptr) {
 	struct vo_opengl_interface *vogl = sptr;
 	struct vo_render *vr = vogl->vo.renderer;
+
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	glBindTexture(GL_TEXTURE_2D, vogl->texture.num);
 	glTexSubImage2D(GL_TEXTURE_2D, 0,
 			0, 0, vr->viewport.w, vr->viewport.h,
 			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, vogl->blit_fbo);
+	glBlitFramebuffer(0, vr->viewport.h, vr->viewport.w, 0,
+			  vogl->picture_area.x, vogl->picture_area.y,
+			  vogl->picture_area.w + vogl->picture_area.x,
+			  vogl->picture_area.h + vogl->picture_area.y,
+			  GL_COLOR_BUFFER_BIT, vogl->blit_filter);
 }

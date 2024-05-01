@@ -106,7 +106,10 @@ static void *new(void *sptr) {
 	uigtk2->public.vo_interface = vo;
 
 	struct vo_cfg *vo_cfg = &uigtk2->cfg->vo_cfg;
-	vo_opengl_configure(vogl, vo_cfg);
+	if (!vo_opengl_configure(vogl, vo_cfg)) {
+		free(vogtkgl);
+		return NULL;
+	}
 
 	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, uigtk2);
 	vo->draw = DELEGATE_AS0(void, draw, uigtk2);
