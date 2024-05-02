@@ -198,8 +198,7 @@ extern inline float filter_iir_apply(struct filter_iir *filter, float value);
 // rtfilter -- ... a library written in C implementing realtime digital
 // filtering functions ...
 
-// This is only being added to support experimental code, and for now we're
-// only interested in generating the list of coefficients.
+// For now we're only interested in generating the list of coefficients.
 
 struct filter_fir *filter_fir_lp_create(enum filter_window window, double fc, unsigned order) {
 	struct filter_fir *filter = xmalloc(sizeof(*filter));
