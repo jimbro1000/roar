@@ -104,6 +104,11 @@ enum ui_tag {
 	// Joysticks
 	ui_tag_joy_right,
 	ui_tag_joy_left,
+	// Printer
+	ui_tag_print_destination,  // 0=none, 1=file, 2=pipe
+	ui_tag_print_file,   // update print to file filename
+	ui_tag_print_pipe,   // update print to pipe command
+	ui_tag_print_count,  // chars printed since last flush
 	// Misc
 	ui_tag_about,
 };
