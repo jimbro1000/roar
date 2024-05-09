@@ -154,6 +154,8 @@ AC_ARG_ENABLE([becker],
 AC_ARG_ENABLE([gdb_target],
 	AS_HELP_STRING([--disable-gdb-target], [don't include GDB target (requires pthreads)]) )
 
+unset with_opengl
+
 #'
 
 ### Optional emulated hardware
@@ -245,6 +247,7 @@ AM_COND_IF([WASM], [
 		test -z "$with_x" && with_x=no
 		test -z "$no_x" && no_x=yes
 		test -z "$with_gtk2" && with_gtk2=no
+		test -z "$with_opengl" && with_opengl=no
 		test -z "$with_cocoa" && with_cocoa=no
 		test -z "$with_alsa" && with_alsa=no
 		test -z "$with_oss" && with_oss=no
@@ -276,6 +279,7 @@ AM_COND_IF([MINGW], [
 		AC_DEFINE([WINDOWS32], 1, [Windows])
 		MINGW_CFLAGS="-D__USE_MINGW_ANSI_STDIO=1"
 		MINGW_LIBS="-lmingw32 -lwinmm -mwindows -lws2_32 -lcomctl32"
+		test -z "$with_opengl" && with_opengl=no
 		])
 AC_SUBST(MINGW_CFLAGS)
 AC_SUBST(MINGW_LIBS)
@@ -548,25 +552,17 @@ AM_COND_IF([GTKGL], [AC_DEFINE([HAVE_GTKGL], 1, [Use GtkGLExt])])
 
 ### OpenGL
 
+unset have_opengl
 AS_IF([test -n "$have_gtkgl"], [
-		AM_CONDITIONAL([OPENGL], [true])
-	], [
-		AX_CHECK_GL
-		AS_IF([test -z "$GL_LIBS"], [
-				OLD_LIBS="$LIBS"
-				LIBS="$LIBS -framework OpenGL"
-				AC_MSG_CHECKING([if -framework OpenGL works instead])
-				AC_LINK_IFELSE([AC_LANG_SOURCE([
-		#include <OpenGL/gl.h>
-		int main(int argc, char **argv) { (void)argc; (void)argv; GLuint t; glGenTextures(1, &t); return 0; }
-						])], [
-					AC_MSG_RESULT([yes])
-					GL_LIBS="-framework OpenGL"
-					], [AC_MSG_RESULT([no])] )
-				LIBS="$OLD_LIBS"
+		have_opengl=1
+	], [AS_IF([test "x$with_opengl" != "xno"], [
+		AX_CHECK_GL([
+				have_opengl=1
 				])
-		AM_CONDITIONAL([OPENGL], [test -n "$GL_LIBS"])
+		])
 	])
+
+AM_CONDITIONAL([OPENGL], [test -n "$have_opengl"])
 
 ### Linux joysticks
 
