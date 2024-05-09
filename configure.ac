@@ -43,6 +43,8 @@ AC_TYPE_SSIZE_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
+AC_CHECK_SIZEOF([float])
+AC_CHECK_SIZEOF([double])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([getaddrinfo popen strnlen strsep])
