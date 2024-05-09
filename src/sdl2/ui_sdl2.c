@@ -90,6 +90,11 @@ void ui_sdl_init(struct ui_sdl2_interface *uisdl2, struct ui_cfg *ui_cfg) {
 
 	// Make available globally for other SDL2 code
 	global_uisdl2 = uisdl2;
+
+	// File requester.  TODO: move this to individual modules so they can
+	// refer to their own data.
+	struct module *fr_module = module_select_by_arg(default_filereq_module_list, ui_cfg->filereq);
+	ui->filereq_interface = module_init(fr_module, NULL);
 }
 
 void ui_sdl_free(void *sptr) {

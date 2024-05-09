@@ -163,9 +163,6 @@ struct private_cfg {
 
 	// User interface
 	char *ui_module;
-	struct {
-		char *filereq_module;
-	} ui;
 
 	// Video
 	struct {
@@ -306,8 +303,6 @@ struct xroar_state {
 static struct xroar_state xroar_state = {
 	.noratelimit_latch = 0,
 };
-
-static struct filereq_interface *xroar_filereq_interface;
 
 static struct cart_config *selected_cart_config;
 
@@ -909,12 +904,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		}
 	}
 	// Override other module lists if UI has an entry.
-	if (ui_module->filereq_module_list != NULL)
-		filereq_module_list = ui_module->filereq_module_list;
 	if (ui_module->ao_module_list != NULL)
 		ao_module_list = ui_module->ao_module_list;
-	// Select file requester, video & audio modules
-	struct module *filereq_module = (struct module *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.ui.filereq_module);
+	// Select audio module
 	struct module *ao_module = module_select_by_arg((struct module * const *)ao_module_list, private_cfg.ao_module);
 	ui_joystick_module_list = ui_module->joystick_module_list;
 
@@ -1005,18 +997,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		return NULL;
 	}
 	xroar.vo_interface = xroar.ui_interface->vo_interface;
-
-	// If UI interface flagged the selected filereq module as belonging to
-	// it, we can pass in the UI interface pointer for initialisation.
-	// Else pass NULL (file requester is to run standalone).
-	if (filereq_module == xroar.ui_interface->filereq_module) {
-		xroar_filereq_interface = module_init(filereq_module, xroar.ui_interface);
-	} else {
-		xroar_filereq_interface = module_init(filereq_module, NULL);
-	}
-	if (filereq_module == NULL && filereq_module_list != NULL) {
-		LOG_WARN("No file requester module initialised.\n");
-	}
 
 	if (!(xroar.ao_interface = module_init_from_list(ao_module_list, ao_module, NULL))) {
 		LOG_ERROR("No audio module initialised.\n");
@@ -1186,9 +1166,6 @@ void xroar_shutdown(void) {
 	}
 	if (xroar.vo_interface) {
 		DELEGATE_SAFE_CALL(xroar.vo_interface->free);
-	}
-	if (xroar_filereq_interface) {
-		DELEGATE_SAFE_CALL(xroar_filereq_interface->free);
 	}
 	romlist_shutdown();
 	crclist_shutdown();
@@ -1414,7 +1391,7 @@ void xroar_set_trace(int mode) {
 }
 
 void xroar_new_disk(int drive) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, "Create floppy image");
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->save_filename, "Create floppy image");
 	if (filename == NULL)
 		return;
 	int filetype = xroar_filetype_by_ext(filename);
@@ -1465,7 +1442,7 @@ void xroar_insert_disk(int drive) {
 	if (old_disk) {
 		vdisk_save(old_disk);
 	}
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, "Load floppy image");
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Load floppy image");
 	xroar_insert_disk_file(drive, filename);
 }
 
@@ -1726,12 +1703,12 @@ void xroar_set_menubar(int action) {
 }
 
 void xroar_load_file(void) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, "Load file");
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Load file");
 	xroar_load_file_by_type(filename, 0);
 }
 
 void xroar_run_file(void) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, "Run file");
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Run file");
 	xroar_load_file_by_type(filename, 1);
 }
 
@@ -2000,7 +1977,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 }
 
 void xroar_save_snapshot(void) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, "Save snapshot");
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->save_filename, "Save snapshot");
 	if (filename) {
 		write_snapshot(filename);
 	}
@@ -2013,7 +1990,7 @@ void xroar_insert_input_tape_file(const char *filename) {
 }
 
 void xroar_insert_input_tape(void) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, "Select input tape");
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Select input tape");
 	xroar_insert_input_tape_file(filename);
 }
 
@@ -2029,7 +2006,7 @@ void xroar_insert_output_tape_file(const char *filename) {
 }
 
 void xroar_insert_output_tape(void) {
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, "Select output tape");
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->save_filename, "Select output tape");
 	xroar_insert_output_tape_file(filename);
 }
 
@@ -2053,7 +2030,7 @@ void xroar_hard_reset(void) {
 #ifdef SCREENSHOT
 void xroar_screenshot(void) {
 #ifdef HAVE_PNG
-	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, "Save screenshot");
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->save_filename, "Save screenshot");
 	if (!filename)
 		return;
 
@@ -2689,7 +2666,7 @@ static struct xconfig_option const xroar_options[] = {
 	/* User interface: */
 	{ XC_SET_STRING("ui", &private_cfg.ui_module) },
 	/* Deliberately undocumented: */
-	{ XC_SET_STRING("filereq", &private_cfg.ui.filereq_module) },
+	{ XC_SET_STRING("filereq", &xroar_ui_cfg.filereq) },
 
 	/* Video: */
 	{ XC_SET_BOOL("fs", &xroar_ui_cfg.vo_cfg.fullscreen) },
@@ -3065,7 +3042,7 @@ static void config_print_all(FILE *f, _Bool all) {
 
 	fputs("# User interface\n", f);
 	xroar_cfg_print_string(f, all, "ui", private_cfg.ui_module, NULL);
-	xroar_cfg_print_string(f, all, "filereq", private_cfg.ui.filereq_module, NULL);
+	xroar_cfg_print_string(f, all, "filereq", xroar_ui_cfg.filereq, NULL);
 	fputs("\n", f);
 
 	fputs("# Video\n", f);

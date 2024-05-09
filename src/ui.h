@@ -33,6 +33,8 @@ struct joystick_module;
 #define UI_GL_FILTER_LINEAR  (1)
 
 struct ui_cfg {
+	// File requester
+	char *filereq;
 	// Video
 	char *vo;  // video output module
 	struct vo_cfg vo_cfg;
@@ -52,8 +54,10 @@ struct filereq_interface {
 	DELEGATE_T1(charp, charcp) save_filename;
 };
 
-extern struct module * const *filereq_module_list;
-extern struct filereq_interface *filereq_interface;
+//extern struct module * const *filereq_module_list;
+//extern struct filereq_interface *filereq_interface;
+
+extern struct module * const default_filereq_module_list[];
 
 /* To fit into the limits of the various UI toolkits in use, tag ids are 7
  * bits, and values are 16 bits wide. */
@@ -177,7 +181,7 @@ struct ui_interface {
 
 	/** \brief Interface to the file requester initialised by the UI.
 	 */
-	struct module *filereq_module;
+	struct filereq_interface *filereq_interface;
 
 	/** \brief Interface to the video module initialised by the UI.
 	 */

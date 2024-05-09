@@ -526,9 +526,6 @@ static void *ui_gtk2_new(void *cfg) {
 	ui->run = DELEGATE_AS0(void, ui_gtk2_run, uigtk2);
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_update_state, uigtk2);
 
-	// Flag which file requester belongs to this UI
-	ui->filereq_module = &filereq_gtk2_module;
-
 	/* Fetch top level window */
 	uigtk2->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, "top_window"));
 	g_signal_connect(uigtk2->top_window, "destroy", G_CALLBACK(ui_gtk2_destroy), (gpointer)(intptr_t)0);
@@ -626,6 +623,14 @@ static void *ui_gtk2_new(void *cfg) {
 		return NULL;
 	}
 
+	// File requester
+	struct module *fr_module = module_select_by_arg(gtk2_filereq_module_list, ui_cfg->filereq);
+	if (fr_module == &filereq_gtk2_module) {
+		ui->filereq_interface = module_init(fr_module, uigtk2);
+	} else {
+		ui->filereq_interface = module_init(fr_module, NULL);
+	}
+
 	gtk2_keyboard_init(ui_cfg);
 
 	// Connect relevant event signals
@@ -647,6 +652,7 @@ static void *ui_gtk2_new(void *cfg) {
 
 static void ui_gtk2_free(void *sptr) {
 	struct ui_gtk2_interface *uigtk2 = sptr;
+	DELEGATE_SAFE_CALL(uigtk2->public.filereq_interface->free);
 	g_object_unref(uigtk2->builder);
 	gtk_widget_destroy(uigtk2->drawing_area);
 	gtk_widget_destroy(uigtk2->top_window);

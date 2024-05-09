@@ -34,7 +34,7 @@ extern struct module filereq_windows32_module;
 extern struct module filereq_gtk2_module;
 extern struct module filereq_cli_module;
 extern struct module filereq_null_module;
-static struct module * const default_filereq_module_list[] = {
+struct module * const default_filereq_module_list[] = {
 #ifdef HAVE_COCOA
 	&filereq_cocoa_module,
 #endif
