@@ -323,6 +323,11 @@ static void vdg_hs_pal_coco(void *sptr, _Bool level);
 static void vdg_fs(void *sptr, _Bool level);
 static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void printer_ack(void *sptr, _Bool ack);
+static void coco_print_byte(void *);
+
+static struct machine_bp coco_print_breakpoint[] = {
+	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco_print_byte, NULL) ),
+};
 
 static inline void advance_clock(struct machine_dragon *md, int ncycles);
 static void dragon_cpu_cycle(struct machine_dragon *md, _Bool RnW,
@@ -780,8 +785,10 @@ static _Bool dragon_finish_common(struct machine_dragon *md) {
 	keyboard_set_keymap(md->keyboard.interface, m->keyboard.type);
 
 	// Printer interface
-	md->printer_interface = printer_interface_new(m);
-	md->printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, md);
+	md->printer_interface = printer_interface_new();
+	if (md->is_dragon) {
+		md->printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, md);
+	}
 
 #ifdef WANT_GDB_TARGET
 	// GDB
@@ -1075,6 +1082,8 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	mc6847_reset(md->VDG);
 	tape_reset(md->tape_interface);
 	printer_reset(md->printer_interface);
+	machine_bp_remove_list(m, coco_print_breakpoint);
+	machine_bp_add_list(m, coco_print_breakpoint, md);
 }
 
 static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
@@ -1714,10 +1723,22 @@ static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_
 
 /* Dragon parallel printer line delegate. */
 
-//ACK is active low
+// ACK is active low
 static void printer_ack(void *sptr, _Bool ack) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA1->a, !ack);
+}
+
+// CoCo serial printing ROM hook.
+
+static void coco_print_byte(void *sptr) {
+	struct machine_dragon *md = sptr;
+	if (!md->printer_interface)
+		return;
+	int byte = MC6809_REG_A(md->CPU);
+	printer_strobe(md->printer_interface, 0, byte);
+	printer_strobe(md->printer_interface, 1, byte);
+	md->CPU->reg_pc = 0xa2df;
 }
 
 /* Sound output can feed back into the single bit sound pin when it's

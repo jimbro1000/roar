@@ -195,9 +195,14 @@ static void *mc10_get_interface(struct machine *m, const char *ifname);
 static void mc10_set_frameskip(struct machine *m, unsigned fskip);
 static void mc10_set_ratelimit(struct machine *m, _Bool ratelimit);
 
+static void mc10_print_byte(void *);
 static void mc10_keyboard_update(void *sptr);
 static void mc10_update_tape_input(void *sptr, float value);
 static void mc10_mc6803_port2_postwrite(void *sptr);
+
+static struct machine_bp mc10_print_breakpoint[] = {
+	BP_MC10_ROM(.address = 0xf9d0, .handler = DELEGATE_INIT(mc10_print_byte, NULL) ),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -503,7 +508,7 @@ static _Bool mc10_finish(struct part *p) {
 	keyboard_set_keymap(mp->keyboard.interface, m->keyboard.type);
 
 	// Printer interface
-	mp->printer_interface = printer_interface_new(m);
+	mp->printer_interface = printer_interface_new();
 
 #ifdef WANT_GDB_TARGET
 	// GDB
@@ -625,6 +630,8 @@ static void mc10_reset(struct machine *m, _Bool hard) {
 	tape_reset(mp->tape_interface);
 	tape_set_motor(mp->tape_interface, 1);  // no motor control!
 	printer_reset(mp->printer_interface);
+	machine_bp_remove_list(m, mc10_print_breakpoint);
+	machine_bp_add_list(m, mc10_print_breakpoint, mp);
 	mp->video_attr = 0;
 }
 
@@ -946,6 +953,18 @@ static void mc10_set_ratelimit(struct machine *m, _Bool ratelimit) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// MC-10 serial printing ROM hook
+
+static void mc10_print_byte(void *sptr) {
+	struct machine_mc10 *mp = sptr;
+	if (!mp->printer_interface)
+		return;
+	int byte = MC6801_REG_A(mp->CPU);
+	printer_strobe(mp->printer_interface, 0, byte);
+	printer_strobe(mp->printer_interface, 1, byte);
+	mp->CPU->reg_pc = 0xf9f0;
+}
 
 static void mc10_keyboard_update(void *sptr) {
 	struct machine_mc10 *mp = sptr;

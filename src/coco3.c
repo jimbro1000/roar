@@ -311,6 +311,11 @@ static void gime_hs(void *sptr, _Bool level);
 // static void gime_hs_pal_coco(void *sptr, _Bool level);
 static void gime_fs(void *sptr, _Bool level);
 static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
+static void coco3_print_byte(void *);
+
+static struct machine_bp coco3_print_breakpoint[] = {
+	BP_COCO3_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco3_print_byte, NULL) ),
+};
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
@@ -663,7 +668,7 @@ static _Bool coco3_finish(struct part *p) {
 	keyboard_set_keymap(mcc3->keyboard.interface, m->keyboard.type);
 
 	// Printer interface
-	mcc3->printer_interface = printer_interface_new(m);
+	mcc3->printer_interface = printer_interface_new();
 
 #ifdef WANT_GDB_TARGET
 	// GDB
@@ -842,6 +847,8 @@ static void coco3_reset(struct machine *m, _Bool hard) {
 	mcc3->CPU->reset(mcc3->CPU);
 	tape_reset(mcc3->tape_interface);
 	printer_reset(mcc3->printer_interface);
+	machine_bp_remove_list(m, coco3_print_breakpoint);
+	machine_bp_add_list(m, coco3_print_breakpoint, mcc3);
 }
 
 static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
@@ -1376,6 +1383,18 @@ static void gime_fs(void *sptr, _Bool level) {
 static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
 	struct machine_coco3 *mcc3 = sptr;
 	DELEGATE_CALL(mcc3->vo->render_line, burst, npixels, data);
+}
+
+// CoCo serial printing ROM hook.
+
+static void coco3_print_byte(void *sptr) {
+	struct machine_coco3 *mcc3 = sptr;
+	if (!mcc3->printer_interface)
+		return;
+	int byte = MC6809_REG_A(mcc3->CPU);
+	printer_strobe(mcc3->printer_interface, 0, byte);
+	printer_strobe(mcc3->printer_interface, 1, byte);
+	mcc3->CPU->reg_pc = 0xa2df;
 }
 
 /* Sound output can feed back into the single bit sound pin when it's

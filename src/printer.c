@@ -2,7 +2,7 @@
  *
  *  \brief Printing to file or pipe
  *
- *  \copyright Copyright 2011-2022 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -28,14 +28,9 @@
 #include "sds.h"
 #include "xalloc.h"
 
-#include "breakpoint.h"
-#include "debug_cpu.h"
 #include "delegate.h"
 #include "events.h"
 #include "logging.h"
-#include "machine.h"
-#include "mc6801/mc6801.h"
-#include "mc6809/mc6809.h"
 #include "part.h"
 #include "path.h"
 #include "printer.h"
@@ -43,11 +38,6 @@
 
 struct printer_interface_private {
 	struct printer_interface public;
-
-	struct machine *machine;
-	struct debug_cpu *debug_cpu;
-	_Bool is_6809;
-	_Bool is_6803;
 
 	FILE *stream;
 	char *stream_dest;
@@ -60,21 +50,9 @@ struct printer_interface_private {
 static void do_ack_clear(void *);
 static void open_stream(struct printer_interface_private *pip);
 
-static void coco_print_byte(void *);
-
-static struct machine_bp coco_print_breakpoint[] = {
-	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco_print_byte, NULL) ),
-	BP_COCO3_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco_print_byte, NULL) ),
-	BP_MC10_ROM(.address = 0xf9d0, .handler = DELEGATE_INIT(coco_print_byte, NULL) ),
-};
-
-struct printer_interface *printer_interface_new(struct machine *m) {
+struct printer_interface *printer_interface_new(void) {
 	struct printer_interface_private *pip = xmalloc(sizeof(*pip));
 	*pip = (struct printer_interface_private){0};
-	pip->machine = m;
-	pip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a(&m->part, "CPU", "DEBUG-CPU");
-	pip->is_6809 = part_is_a(&pip->debug_cpu->part, "MC6809");
-	pip->is_6803 = part_is_a(&pip->debug_cpu->part, "MC6803");
 	pip->stream = NULL;
 	pip->stream_dest = NULL;
 	pip->is_pipe = 0;
@@ -94,8 +72,6 @@ void printer_interface_free(struct printer_interface *pi) {
 void printer_reset(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	pip->strobe_state = 1;
-	machine_bp_remove_list(pip->machine, coco_print_breakpoint);
-	machine_bp_add_list(pip->machine, coco_print_breakpoint, pip);
 }
 
 /* "Open" routines don't directly open the stream.  This way, a file or pipe
@@ -111,7 +87,6 @@ void printer_open_file(struct printer_interface *pi, const char *filename) {
 	pip->stream_dest = path_interp(filename);
 	pip->is_pipe = 0;
 	pip->busy = 0;
-	machine_bp_add_list(pip->machine, coco_print_breakpoint, pip);
 }
 
 void printer_open_pipe(struct printer_interface *pi, const char *command) {
@@ -123,7 +98,6 @@ void printer_open_pipe(struct printer_interface *pi, const char *command) {
 	pip->stream_dest = sdsnew(command);
 	pip->is_pipe = 1;
 	pip->busy = 0;
-	machine_bp_add_list(pip->machine, coco_print_breakpoint, pip);
 }
 
 void printer_close(struct printer_interface *pi) {
@@ -136,7 +110,6 @@ void printer_close(struct printer_interface *pi) {
 	pip->stream_dest = NULL;
 	pip->is_pipe = 0;
 	pip->busy = 1;
-	machine_bp_remove_list(pip->machine, coco_print_breakpoint);
 }
 
 /* close stream but leave stream_dest intact so it will be reopened */
@@ -171,27 +144,6 @@ void printer_strobe(struct printer_interface *pi, _Bool strobe, int data) {
 	DELEGATE_SAFE_CALL(pi->signal_ack, 1);
 	pip->ack_clear_event.at_tick = event_current_tick + EVENT_US(7);
 	event_queue(&MACHINE_EVENT_LIST, &pip->ack_clear_event);
-}
-
-static void coco_print_byte(void *sptr) {
-	struct printer_interface_private *pip = sptr;
-	int byte;
-	/* Open stream for output if it's not already */
-	if (!pip->stream_dest) return;
-	if (!pip->stream) open_stream(pip);
-	/* Print byte */
-	if (pip->is_6809) {
-		struct MC6809 *cpu = (struct MC6809 *)pip->debug_cpu;
-		byte = MC6809_REG_A(cpu);
-		cpu->reg_pc = 0xa2df;
-	} else {
-		struct MC6801 *cpu = (struct MC6801 *)pip->debug_cpu;
-		byte = MC6801_REG_A(cpu);
-		cpu->reg_pc = 0xf9f0;
-	}
-	if (pip->stream) {
-		fputc(byte, pip->stream);
-	}
 }
 
 static void open_stream(struct printer_interface_private *pip) {

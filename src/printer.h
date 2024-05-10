@@ -2,7 +2,7 @@
  *
  *  \brief Printing to file or pipe
  *
- *  \copyright Copyright 2011-2016 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,13 +21,11 @@
 
 #include "delegate.h"
 
-struct machine;
-
 struct printer_interface {
 	DELEGATE_T1(void, bool) signal_ack;
 };
 
-struct printer_interface *printer_interface_new(struct machine *m);
+struct printer_interface *printer_interface_new(void);
 void printer_interface_free(struct printer_interface *pi);
 void printer_reset(struct printer_interface *pi);
 
