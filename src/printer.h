@@ -21,6 +21,12 @@
 
 #include "delegate.h"
 
+enum {
+	PRINTER_DESTINATION_NONE,
+	PRINTER_DESTINATION_FILE,
+	PRINTER_DESTINATION_PIPE,
+};
+
 struct printer_interface {
 	DELEGATE_T1(void, bool) signal_ack;
 };
@@ -29,9 +35,12 @@ struct printer_interface *printer_interface_new(void);
 void printer_interface_free(struct printer_interface *pi);
 void printer_reset(struct printer_interface *pi);
 
-void printer_open_file(struct printer_interface *pi, const char *filename);
-void printer_open_pipe(struct printer_interface *pi, const char *command);
-void printer_close(struct printer_interface *pi);
+// Configure destinations
+void printer_set_file(struct printer_interface *pi, const char *filename);
+void printer_set_pipe(struct printer_interface *pi, const char *pipe);
+
+// Set print destination to one of PRINTER_DESTINATION_*
+void printer_set_destination(struct printer_interface *pi, int dest);
 
 void printer_flush(struct printer_interface *pi);
 void printer_strobe(struct printer_interface *pi, _Bool strobe, int data);

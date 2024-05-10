@@ -1712,6 +1712,41 @@ void xroar_run_file(void) {
 	xroar_load_file_by_type(filename, 1);
 }
 
+// Printer interface
+
+void xroar_set_printer_destination(_Bool notify, int dest) {
+	if (!xroar.printer_interface)
+		return;
+	printer_set_destination(xroar.printer_interface, dest);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_print_destination, dest, NULL);
+	}
+}
+
+void xroar_set_printer_file(_Bool notify, const char *filename) {
+	if (!xroar.printer_interface)
+		return;
+	printer_set_file(xroar.printer_interface, filename);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_print_file, 0, filename);
+	}
+}
+
+void xroar_set_printer_pipe(_Bool notify, const char *pipe) {
+	if (!xroar.printer_interface)
+		return;
+	printer_set_pipe(xroar.printer_interface, pipe);
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_print_pipe, 0, pipe);
+	}
+}
+
+void xroar_flush_printer(void) {
+	if (!xroar.printer_interface)
+		return;
+	printer_flush(xroar.printer_interface);
+}
+
 void xroar_set_keyboard_type(_Bool notify, int action) {
 	int type = xroar.machine_config->keymap;
 	if (xroar.machine->set_keyboard_type) {
@@ -1805,10 +1840,14 @@ void xroar_connect_machine(void) {
 
 	// Printing
 	xroar.printer_interface = xroar.machine->get_interface(xroar.machine, "printer");
+	xroar_set_printer_file(1, private_cfg.printer.file);
+	xroar_set_printer_pipe(1, private_cfg.printer.pipe);
 	if (private_cfg.printer.file) {
-		printer_open_file(xroar.printer_interface, private_cfg.printer.file);
+		xroar_set_printer_destination(1, PRINTER_DESTINATION_FILE);
 	} else if (private_cfg.printer.pipe) {
-		printer_open_pipe(xroar.printer_interface, private_cfg.printer.pipe);
+		xroar_set_printer_destination(1, PRINTER_DESTINATION_PIPE);
+	} else {
+		xroar_set_printer_destination(1, PRINTER_DESTINATION_NONE);
 	}
 
 	struct cart *c = (struct cart *)part_component_by_id(&xroar.machine->part, "cart");

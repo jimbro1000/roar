@@ -314,8 +314,9 @@ static void emulator_command(guint keyval, int shift) {
 		xroar_set_menubar(XROAR_NEXT);
 		break;
 	case GDK_KEY_p:
-		if (shift)
-			printer_flush(xroar.printer_interface);
+		if (shift) {
+			xroar_flush_printer();
+		}
 		break;
 	case GDK_KEY_w:
 		xroar_insert_output_tape();

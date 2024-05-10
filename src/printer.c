@@ -34,29 +34,41 @@
 #include "part.h"
 #include "path.h"
 #include "printer.h"
+#include "ui.h"
 #include "xroar.h"
 
 struct printer_interface_private {
 	struct printer_interface public;
 
+	int destination;
+	sds filename;  // for PRINTER_DESTINATION_FILE
+	sds pipe;      // for PRINTER_DESTINATION_PIPE
+
 	FILE *stream;
-	char *stream_dest;
-	int is_pipe;
 	struct event ack_clear_event;
 	_Bool strobe_state;
 	_Bool busy;
+
+	int chars_printed;
+	struct event update_chars_printed_event;
 };
 
-static void do_ack_clear(void *);
 static void open_stream(struct printer_interface_private *pip);
+static void close_stream(struct printer_interface_private *pip);
+static void do_ack_clear(void *);
+static void do_update_chars_printed(void *);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct printer_interface *printer_interface_new(void) {
 	struct printer_interface_private *pip = xmalloc(sizeof(*pip));
 	*pip = (struct printer_interface_private){0};
+	pip->destination = PRINTER_DESTINATION_NONE;
+	pip->filename = NULL;
+	pip->pipe = NULL;
 	pip->stream = NULL;
-	pip->stream_dest = NULL;
-	pip->is_pipe = 0;
 	event_init(&pip->ack_clear_event, DELEGATE_AS0(void, do_ack_clear, pip));
+	event_init(&pip->update_chars_printed_event, DELEGATE_AS0(void, do_update_chars_printed, pip));
 	pip->strobe_state = 1;
 	pip->busy = 0;
 	return &pip->public;
@@ -64,103 +76,139 @@ struct printer_interface *printer_interface_new(void) {
 
 void printer_interface_free(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	printer_close(pi);
+	close_stream(pip);
+	if (pip->filename)
+		sdsfree(pip->filename);
+	if (pip->pipe)
+		sdsfree(pip->pipe);
 	event_dequeue(&pip->ack_clear_event);
 	free(pip);
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void printer_reset(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	pip->strobe_state = 1;
 }
 
-/* "Open" routines don't directly open the stream.  This way, a file or pipe
- * can be specified in the config file, but we won't send anything unless
- * something is printed. */
-
-void printer_open_file(struct printer_interface *pi, const char *filename) {
+void printer_set_file(struct printer_interface *pi, const char *filename) {
+	if (!pi)
+		return;
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	printer_close(pi);
-	if (pip->stream_dest) {
-		sdsfree(pip->stream_dest);
+	if (pip->destination == PRINTER_DESTINATION_FILE)
+		close_stream(pip);
+	if (pip->filename)
+		sdsfree(pip->filename);
+	pip->filename = NULL;
+	if (filename) {
+		pip->filename = path_interp(filename);
 	}
-	pip->stream_dest = path_interp(filename);
-	pip->is_pipe = 0;
-	pip->busy = 0;
+	if (pip->destination == PRINTER_DESTINATION_FILE)
+		pip->busy = 0;
 }
 
-void printer_open_pipe(struct printer_interface *pi, const char *command) {
+void printer_set_pipe(struct printer_interface *pi, const char *pipe) {
+	if (!pi)
+		return;
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	printer_close(pi);
-	if (pip->stream_dest) {
-		sdsfree(pip->stream_dest);
+	if (pip->destination == PRINTER_DESTINATION_PIPE)
+		close_stream(pip);
+	if (pip->pipe)
+		sdsfree(pip->pipe);
+	pip->pipe = NULL;
+	if (pipe) {
+		pip->pipe = sdsnew(pipe);
 	}
-	pip->stream_dest = sdsnew(command);
-	pip->is_pipe = 1;
-	pip->busy = 0;
+	if (pip->destination == PRINTER_DESTINATION_PIPE)
+		pip->busy = 0;
 }
 
-void printer_close(struct printer_interface *pi) {
+void printer_set_destination(struct printer_interface *pi, int dest) {
+	if (!pi)
+		return;
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	/* flush stream, but destroy stream_dest so it won't be reopened */
+	if (dest != PRINTER_DESTINATION_FILE && dest != PRINTER_DESTINATION_PIPE)
+		dest = PRINTER_DESTINATION_NONE;
+	if (dest == pip->destination)
+		return;
 	printer_flush(pi);
-	if (pip->stream_dest) {
-		sdsfree(pip->stream_dest);
-	}
-	pip->stream_dest = NULL;
-	pip->is_pipe = 0;
-	pip->busy = 1;
+	pip->destination = dest;
+	pip->busy = 0;
 }
 
 /* close stream but leave stream_dest intact so it will be reopened */
 void printer_flush(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	if (!pip->stream) return;
-	if (pip->is_pipe) {
+	if (!pip->stream)
+		return;
+	if (pip->destination == PRINTER_DESTINATION_PIPE) {
 #ifdef HAVE_POPEN
 		pclose(pip->stream);
 #endif
-	} else {
+	}
+	if (pip->destination == PRINTER_DESTINATION_FILE) {
 		fclose(pip->stream);
 	}
 	pip->stream = NULL;
+	pip->chars_printed = 0;
+	if (!event_queued(&pip->update_chars_printed_event)) {
+		pip->update_chars_printed_event.at_tick = event_current_tick + EVENT_MS(500);
+		event_queue(&UI_EVENT_LIST, &pip->update_chars_printed_event);
+	}
 }
 
-/* Called when the PIA bus containing STROBE is changed */
+// Called when the PIA bus containing STROBE is changed
+
 void printer_strobe(struct printer_interface *pi, _Bool strobe, int data) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	/* Ignore if this is not a transition to high */
+	// Ignore if this is not a transition to high
 	if (strobe == pip->strobe_state) return;
 	pip->strobe_state = strobe;
 	if (!pip->strobe_state) return;
-	/* Open stream for output if it's not already */
-	if (!pip->stream_dest) return;
-	if (!pip->stream) open_stream(pip);
-	/* Print byte */
+	// Open stream for output if it's not already
+	if (!pip->stream)
+		open_stream(pip);
+	// Print byte
 	if (pip->stream) {
 		fputc(data, pip->stream);
+		// Schedule UI notify
+		pip->chars_printed++;
+		if (!event_queued(&pip->update_chars_printed_event)) {
+			pip->update_chars_printed_event.at_tick = event_current_tick + EVENT_MS(500);
+			event_queue(&UI_EVENT_LIST, &pip->update_chars_printed_event);
+		}
 	}
-	/* ACK, and schedule !ACK */
+	// ACK, and schedule !ACK
 	DELEGATE_SAFE_CALL(pi->signal_ack, 1);
 	pip->ack_clear_event.at_tick = event_current_tick + EVENT_US(7);
 	event_queue(&MACHINE_EVENT_LIST, &pip->ack_clear_event);
 }
 
+_Bool printer_busy(struct printer_interface *pi) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
+	return pip->busy;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 static void open_stream(struct printer_interface_private *pip) {
-	struct printer_interface *pi = &pip->public;
-	if (!pip->stream_dest) return;
-	if (pip->is_pipe) {
+	if (pip->destination == PRINTER_DESTINATION_PIPE && pip->pipe) {
 #ifdef HAVE_POPEN
-		pip->stream = popen(pip->stream_dest, "w");
+		pip->stream = popen(pip->pipe, "w");
 #endif
-	} else {
-		pip->stream = fopen(pip->stream_dest, "ab");
+	}
+	if (pip->destination == PRINTER_DESTINATION_FILE && pip->filename) {
+		pip->stream = fopen(pip->filename, "ab");
 	}
 	if (pip->stream) {
 		pip->busy = 0;
-	} else {
-		printer_close(pi);
 	}
+}
+
+static void close_stream(struct printer_interface_private *pip) {
+	printer_flush(&pip->public);
+	pip->busy = 1;
 }
 
 static void do_ack_clear(void *sptr) {
@@ -169,7 +217,9 @@ static void do_ack_clear(void *sptr) {
 	DELEGATE_SAFE_CALL(pi->signal_ack, 0);
 }
 
-_Bool printer_busy(struct printer_interface *pi) {
-	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	return pip->busy;
+static void do_update_chars_printed(void *sptr) {
+	struct printer_interface_private *pip = sptr;
+	if (xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_print_count, pip->chars_printed, NULL);
+	}
 }

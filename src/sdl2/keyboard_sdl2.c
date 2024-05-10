@@ -264,7 +264,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		return;
 	case 'p':
 		if (shift) {
-			printer_flush(xroar.printer_interface);
+			xroar_flush_printer();
 		}
 		return;
 	case 'q':
