@@ -109,6 +109,7 @@ enum ui_tag {
 	ui_tag_joy_right,
 	ui_tag_joy_left,
 	// Printer
+	ui_tag_print_dialog,  // print control dialog, if supported
 	ui_tag_print_destination,  // 0=none, 1=file, 2=pipe
 	ui_tag_print_file,   // update print to file filename
 	ui_tag_print_pipe,   // update print to pipe command
