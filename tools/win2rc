@@ -87,6 +87,7 @@ my %class = (
 	checkbox => '*content',
 	combobox => '*content',
 	listview => '*content',
+	radio => '*content',
 	scrollbar => '*content',
 	spinbox => '*content',
 	text => '*content',
@@ -97,12 +98,14 @@ my %text_to_eol = (
 	'*heading' => 1,
 	button => 1,
 	checkbox => 1,
+	radio => 1,
 	dialog => 1,
 	text => 1,
 );
 
 my %base_width = (
 	checkbox => 4,
+	radio => 4,
 );
 
 my %height = (
@@ -571,6 +574,8 @@ sub add_id {
 		$id = "IDC_STM_$id";
 	} elsif ($tag eq 'listview') {
 		$id = "IDC_LVS_$id";
+	} elsif ($tag eq 'radio') {
+		$id = "IDC_RB_$id";
 	} elsif ($tag eq 'scrollbar') {
 		$id = "IDC_SBM_$id";
 	} elsif ($tag eq 'spinbox') {
@@ -740,6 +745,12 @@ sub dump_rc {
 		$y = $pad_top;
 	} elsif ($tag eq 'listview') {
 		print "   CONTROL \"\", $id, WC_LISTVIEW, WS_CHILD | LVS_REPORT, $px, $py, $w, $h\n";
+	} elsif ($tag eq 'radio') {
+		my $style = ", BS_RADIOBUTTON | WS_TABSTOP";
+		if (exists $eattrs->{group}) {
+			$style .= " | WS_GROUP";
+		}
+		print "   RADIOBUTTON \"$text\", $id, $px, $py, $w, $h$style\n";
 	} elsif ($tag eq 'scrollbar') {
 		my $style = "SBS_HORZ";
 		if (exists $eattrs->{align}) {
