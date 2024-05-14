@@ -84,6 +84,7 @@ my %class = (
 	h3 => '*heading',
 
 	button => '*content',
+	hseparator => '*content',
 	checkbox => '*content',
 	combobox => '*content',
 	listview => '*content',
@@ -730,6 +731,8 @@ sub dump_rc {
 
 	if ($tag eq 'button') {
 		print "   CONTROL \"$text\", $id, \"BUTTON\", WS_CHILD | WS_VISIBLE | WS_TABSTOP, $px, $py, $w, $h\n";
+	} elsif ($tag eq 'hseparator') {
+		print "   CONTROL \"\", IDC_STATIC, \"STATIC\", WS_CHILD | WS_VISIBLE | WS_TABSTOP | SS_ETCHEDHORZ , $px, $py, $w, $h\n";
 	} elsif ($tag eq 'checkbox') {
 		print "   CHECKBOX \"$text\", $id, $px, $py, $w, $h\n";
 	} elsif ($tag eq 'combobox') {
