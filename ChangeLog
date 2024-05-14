@@ -4,6 +4,8 @@
  * 6309 DIVD timing fixed according to David Banks's behaviour notes
  * 6309 DIVQ behaviour & timing adjusted similarly, though untested
  * More accurate observed NTSC CoCo 3 GIME composite video behaviour
+ * New GTK+ 3 UI
+ * New printer control dialog (GTK+ 3, Windows) or menu options (Mac OS X+)
 
 Version 1.5.5, Sun 24 Mar 2024
 
