@@ -265,6 +265,8 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 	case 'p':
 		if (shift) {
 			xroar_flush_printer();
+		} else {
+			DELEGATE_CALL(ui->update_state, ui_tag_print_dialog, 0, NULL);
 		}
 		return;
 	case 'q':
