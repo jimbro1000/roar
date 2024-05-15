@@ -270,7 +270,7 @@ static void deluxecoco_config_complete(struct machine_config *mc) {
 // Called by dragon_has_interface()
 
 static _Bool deluxecoco_has_interface(struct part *p, const char *ifname) {
-	if (p && (0 == strcmp(ifname, "sound")))
+	if (0 == strcmp(ifname, "sound"))
 		return 1;
 	return dragon_has_interface(p, ifname);
 }
