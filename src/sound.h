@@ -52,7 +52,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 void sound_interface_free(struct sound_interface *sndp);
 
 // Two different approaches to controlling loudness
-void sound_set_gain(struct sound_interface *sndp, double db);  // -ve wrt 0dBFS
+void sound_set_gain(struct sound_interface *sndp, float db);  // -ve wrt 0dBFS
 void sound_set_volume(struct sound_interface *sndp, int v);  // linear 0-100
 
 void sound_update(struct sound_interface *sndp);

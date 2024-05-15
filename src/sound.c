@@ -524,7 +524,7 @@ void sound_set_ratelimit(struct sound_interface *sndp, _Bool ratelimit) {
 
 // Sets the overall gain applied after mixing sources.  Generally a negative
 // number relative to 0dBFS.
-void sound_set_gain(struct sound_interface *sndp, double db) {
+void sound_set_gain(struct sound_interface *sndp, float db) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	float v = powf(10., db / 20.);
 	snd->gain = v;
