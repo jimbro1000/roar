@@ -134,7 +134,8 @@ AC_ARG_WITH([joydev],
 	AS_HELP_STRING([--without-joydev], [don't test for Linux joystick interface]) )
 
 AC_ARG_WITH([sndfile],
-	AS_HELP_STRING([--without-sndfile], [don't test for libsndfile]) )
+	AS_HELP_STRING([--with-sndfile], [test for libsndfile]) )
+test "x$with_sndfile" = "xyes" && with_sndfile="no"
 
 AC_ARG_WITH([tre],
 	AS_HELP_STRING([--with-tre], [test for TRE]) )
