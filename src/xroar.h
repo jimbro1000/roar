@@ -38,7 +38,6 @@ struct vo_interface;
 struct xroar_timeout;
 
 // Convenient values for arguments to helper functions
-#define XROAR_QUERY (-4)  // query current setting
 #define XROAR_PREV  (-3)
 #define XROAR_NEXT  (-2)  // cycle or toggle setting
 #define XROAR_AUTO  (-1)  // default, possible based on other settings

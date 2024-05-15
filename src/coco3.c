@@ -939,8 +939,6 @@ static int coco3_set_keyboard_type(struct machine *m, int action) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	int type = m->keyboard.type;
 	switch (action) {
-	case XROAR_QUERY:
-		break;
 	case XROAR_NEXT:
 		if (type == m->config->keymap) {
 			switch (m->config->keymap) {
