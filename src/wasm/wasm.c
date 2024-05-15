@@ -96,12 +96,12 @@ static void *ui_wasm_new(void *cfg) {
 	ui->update_cartridge_menu = DELEGATE_AS0(void, wasm_update_cartridge_menu, uiwasm);
 
 	if (!sdl_vo_init(uisdl2)) {
-		free(uisdl2);
+		free(uiwasm);
 		return NULL;
 	}
 
-	wasm_update_machine_menu(uisdl2);
-	wasm_update_cartridge_menu(uisdl2);
+	wasm_update_machine_menu(uiwasm);
+	wasm_update_cartridge_menu(uiwasm);
 
 	return uiwasm;
 }
