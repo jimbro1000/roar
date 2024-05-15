@@ -55,12 +55,14 @@ int screenshot_write_png(const char *filename, struct vo_interface *vo) {
 
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (!png_ptr) {
+		fclose(f);
 		return -2;
 	}
 
 	png_infop info_ptr = png_create_info_struct(png_ptr);
 	if (!info_ptr) {
 		png_destroy_write_struct(&png_ptr, NULL);
+		fclose(f);
 		return -2;
 	}
 
