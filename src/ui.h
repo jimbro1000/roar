@@ -69,14 +69,14 @@ enum ui_tag {
 	ui_tag_machine,
 	ui_tag_cartridge,
 	// Tape
-	ui_tag_tape_control,  // tape control dialog, if supported
+	ui_tag_tape_dialog,  // tape control dialog, if supported
 	ui_tag_tape_flags,
 	ui_tag_tape_input_filename,  // .data = filename
 	ui_tag_tape_output_filename,  // .data = filename
 	ui_tag_tape_motor,  // automatic control
 	ui_tag_tape_playing,  // manual control (0 = paused)
 	// Disk
-	ui_tag_drive_control,  // drive control dialog, if supported
+	ui_tag_disk_dialog,  // drive control dialog, if supported
 	ui_tag_disk_new,
 	ui_tag_disk_insert,
 	ui_tag_disk_eject,
@@ -84,6 +84,7 @@ enum ui_tag {
 	ui_tag_disk_write_back,
 	ui_tag_disk_data,  // .data = struct vdisk
 	// Video
+	ui_tag_tv_dialog,  // tv control dialog, if supported
 	ui_tag_cmp_fs,
 	ui_tag_cmp_fsc,
 	ui_tag_cmp_system,
@@ -94,7 +95,6 @@ enum ui_tag {
 	ui_tag_tv_input,
 	ui_tag_fullscreen,
 	ui_tag_vdg_inverse,
-	ui_tag_tv_controls,  // tv control dialog, if supported
 	ui_tag_brightness,
 	ui_tag_contrast,
 	ui_tag_saturation,

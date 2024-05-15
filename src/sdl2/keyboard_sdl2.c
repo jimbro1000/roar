@@ -218,7 +218,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		if (shift) {
 			vdrive_flush(xroar.vdrive_interface);
 		} else {
-			DELEGATE_CALL(ui->update_state, ui_tag_drive_control, 0, NULL);
+			DELEGATE_CALL(ui->update_state, ui_tag_disk_dialog, 0, NULL);
 		}
 		return;
 	case 'e':
@@ -294,11 +294,11 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 #endif
 
 	case 't':
-		DELEGATE_CALL(ui->update_state, ui_tag_tape_control, 0, NULL);
+		DELEGATE_CALL(ui->update_state, ui_tag_tape_dialog, 0, NULL);
 		return;
 	case 'v':
 		if (shift) {
-			DELEGATE_CALL(ui->update_state, ui_tag_tv_controls, 0, NULL);
+			DELEGATE_CALL(ui->update_state, ui_tag_tv_dialog, 0, NULL);
 		} else {
 #ifdef TRACE
 			xroar_set_trace(XROAR_NEXT);

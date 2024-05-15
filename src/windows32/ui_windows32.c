@@ -168,10 +168,10 @@ static void setup_file_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_load), "&Load...");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_tape_control), "Cassette &tapes");
+	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_tape_dialog), "Cassette &tapes");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_drive_control), "Floppy &disks");
+	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_disk_dialog), "Floppy &disks");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save snapshot...");
@@ -205,7 +205,7 @@ static void setup_view_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_PARTIAL), "Partial NTSC");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_SIMULATED), "Simulated");
 
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_controls), "TV &controls");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_dialog), "TV &controls");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "&Inverse text");
@@ -434,7 +434,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		break;
 
 	// Cassettes:
-	case ui_tag_tape_control:
+	case ui_tag_tape_dialog:
 		windows32_tc_show_window((struct ui_windows32_interface *)global_uisdl2);
 		break;
 	case ui_tag_tape_flags:
@@ -442,7 +442,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		break;
 
 	// Disks:
-	case ui_tag_drive_control:
+	case ui_tag_disk_dialog:
 		windows32_dc_show_window((struct ui_windows32_interface *)global_uisdl2);
 		break;
 	case ui_tag_disk_insert:
@@ -464,7 +464,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 	// Video:
 
 	// TV controls:
-	case ui_tag_tv_controls:
+	case ui_tag_tv_dialog:
 		windows32_vo_show_window((struct ui_windows32_interface *)global_uisdl2);
 		break;
 
@@ -543,7 +543,7 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	// Tape
 
-	case ui_tag_tape_control:
+	case ui_tag_tape_dialog:
 		windows32_tc_show_window(uiw32);
 		break;
 
@@ -565,7 +565,7 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	// Disk
 
-	case ui_tag_drive_control:
+	case ui_tag_disk_dialog:
 		windows32_dc_show_window(uiw32);
 		break;
 
@@ -592,7 +592,7 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
-	case ui_tag_tv_controls:
+	case ui_tag_tv_dialog:
 		windows32_vo_show_window(uiw32);
 		break;
 
