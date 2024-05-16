@@ -2,7 +2,7 @@
  *
  *  \brief PulseAudio sound module.
  *
- *  \copyright Copyright 2010-2019 Ciaran Anscomb
+ *  \copyright Copyright 2010-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -132,7 +132,7 @@ static void *new(void *cfg) {
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_pulse_write_buffer, ao);
-	LOG_DEBUG(1, "\t%d frags * %d frames/frag = %d frames buffer (%dms)\n", nfragments, fragment_nframes, nfragments * fragment_nframes, (nfragments * fragment_nframes * 1000) / rate);
+	LOG_DEBUG(1, "\t%d frags * %d frames/frag = %d frames buffer (%ums)\n", nfragments, fragment_nframes, nfragments * fragment_nframes, (nfragments * fragment_nframes * 1000) / rate);
 	return aopulse;
 
 failed:

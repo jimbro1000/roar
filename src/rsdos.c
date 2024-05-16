@@ -2,7 +2,7 @@
  *
  *  \brief Tandy CoCo disk controller ("RS-DOS").
  *
- *  \copyright Copyright 2005-2022 Ciaran Anscomb
+ *  \copyright Copyright 2005-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -309,7 +309,7 @@ static void latch_write(struct rsdos *d, unsigned D) {
 			LOG_DEBUG(2, "PRECOMP %s, ", (D & 0x10)?"ON":"OFF");
 		}
 		if ((D ^ d->latch_old) & 0x40) {
-			LOG_DEBUG(2, "SIDE %d, ", (D & 0x40) >> 6);
+			LOG_DEBUG(2, "SIDE %u, ", (D & 0x40) >> 6);
 		}
 		if ((D ^ d->latch_old) & 0x80) {
 			LOG_DEBUG(2, "HALT %s, ", (D & 0x80)?"ENABLED":"DISABLED");

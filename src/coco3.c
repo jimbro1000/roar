@@ -503,7 +503,7 @@ static _Bool coco3_finish(struct part *p) {
 		unsigned nbanks = mcc3->RAM->nbanks;
 		unsigned bank_k = mcc3->RAM->bank_nelems / 1024;
 		unsigned total_k = nbanks * bank_k;
-		LOG_DEBUG(1, "\t%d banks * %dK = %dK total RAM\n", nbanks, bank_k, total_k);
+		LOG_DEBUG(1, "\t%u banks * %uK = %uK total RAM\n", nbanks, bank_k, total_k);
 	}
 
 	// Connect any cartridge part
@@ -716,7 +716,7 @@ static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 				return 0;
 			}
 			if (length != ((unsigned)mcc3->public.config->ram * 1024)) {
-				LOG_WARN("COCO3/DESERIALISE: RAM size mismatch %zd != %d\n", length, mcc3->public.config->ram * 1024);
+				LOG_WARN("COCO3/DESERIALISE: RAM size mismatch %zu != %d\n", length, mcc3->public.config->ram * 1024);
 				return 0;
 			}
 			part_free(part_component_by_id_is_a(p, "RAM", "ram"));
