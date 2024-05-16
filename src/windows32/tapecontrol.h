@@ -2,7 +2,7 @@
  *
  *  \brief Windows tape control window.
  *
- *  \copyright Copyright 2023 Ciaran Anscomb
+ *  \copyright Copyright 2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -22,11 +22,8 @@
 struct ui_windows32_interface;
 
 void windows32_tc_create_window(struct ui_windows32_interface *);
-void windows32_tc_show_window(struct ui_windows32_interface *);
 
-void windows32_tc_update_tape_state(struct ui_windows32_interface *, int flags);
-void windows32_tc_update_input_filename(struct ui_windows32_interface *, const char *filename);
-void windows32_tc_update_output_filename(struct ui_windows32_interface *, const char *filename);
-void windows32_tc_update_tape_playing(struct ui_windows32_interface *, int playing);
+void windows32_tc_update_state(struct ui_windows32_interface *,
+			       int tag, int value, const void *data);
 
 #endif

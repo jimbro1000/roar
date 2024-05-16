@@ -61,4 +61,9 @@ void windows32_shutdown(void);
 // Draw a control using DrawText() with DT_PATH_ELLIPSIS
 void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS);
 
+// Shortcut for finding handle of a control within a dialog and sending a
+// message to it.
+LRESULT windows32_send_message_dlg_item(HWND hDlg, int nIDDlgItem, UINT Msg,
+					WPARAM wParam, LPARAM lParam);
+
 #endif

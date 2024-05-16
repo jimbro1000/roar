@@ -65,29 +65,47 @@ void windows32_tc_create_window(struct ui_windows32_interface *uiw32) {
 	event_init(&ev_update_tape_counters, DELEGATE_AS0(void, update_tape_counters, uiw32));
 }
 
-void windows32_tc_show_window(struct ui_windows32_interface *uiw32) {
-	ShowWindow(uiw32->tape.window, SW_SHOW);
-	update_programlist(uiw32);
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Tape control - update values in UI
 
-void windows32_tc_update_tape_state(struct ui_windows32_interface *uiw32, int flags) {
-	HWND tc_bn_tape_fast = GetDlgItem(uiw32->tape.window, IDC_BN_TAPE_FAST);
-	HWND tc_bn_tape_pad_auto = GetDlgItem(uiw32->tape.window, IDC_BN_TAPE_PAD_AUTO);
-	HWND tc_bn_tape_rewrite = GetDlgItem(uiw32->tape.window, IDC_BN_TAPE_REWRITE);
-	SendMessage(tc_bn_tape_fast, BM_SETCHECK, (flags & TAPE_FAST) ? BST_CHECKED : BST_UNCHECKED, 0);
-	SendMessage(tc_bn_tape_pad_auto, BM_SETCHECK, (flags & TAPE_PAD_AUTO) ? BST_CHECKED : BST_UNCHECKED, 0);
-	SendMessage(tc_bn_tape_rewrite, BM_SETCHECK, (flags & TAPE_REWRITE) ? BST_CHECKED : BST_UNCHECKED, 0);
+static void windows32_tc_update_input_filename(struct ui_windows32_interface *, const char *filename);
+static void windows32_tc_update_tape_playing(struct ui_windows32_interface *, int playing);
+
+void windows32_tc_update_state(struct ui_windows32_interface *uiw32,
+			       int tag, int value, const void *data) {
+	switch (tag) {
+	case ui_tag_tape_dialog:
+		ShowWindow(uiw32->tape.window, SW_SHOW);
+		update_programlist(uiw32);
+		break;
+
+	case ui_tag_tape_flags:
+		windows32_send_message_dlg_item(uiw32->tape.window, IDC_BN_TAPE_FAST, BM_SETCHECK, (value & TAPE_FAST) ? BST_CHECKED : BST_UNCHECKED, 0);
+		windows32_send_message_dlg_item(uiw32->tape.window, IDC_BN_TAPE_PAD_AUTO, BM_SETCHECK, (value & TAPE_PAD_AUTO) ? BST_CHECKED : BST_UNCHECKED, 0);
+		windows32_send_message_dlg_item(uiw32->tape.window, IDC_BN_TAPE_REWRITE, BM_SETCHECK, (value & TAPE_REWRITE) ? BST_CHECKED : BST_UNCHECKED, 0);
+		break;
+
+	case ui_tag_tape_input_filename:
+		windows32_tc_update_input_filename(uiw32, (const char *)data);
+		break;
+
+	case ui_tag_tape_output_filename:
+		windows32_send_message_dlg_item(uiw32->tape.window, IDC_STM_OUTPUT_FILENAME, WM_SETTEXT, 0, (LPARAM)data);
+		break;
+
+	case ui_tag_tape_playing:
+		windows32_tc_update_tape_playing(uiw32, value);
+		break;
+
+	default:
+		break;
+	}
 }
 
-void windows32_tc_update_input_filename(struct ui_windows32_interface *uiw32, const char *filename) {
-	HWND tc_stm_input_filename = GetDlgItem(uiw32->tape.window, IDC_STM_INPUT_FILENAME);
-	HWND tc_lvs_input_programlist = GetDlgItem(uiw32->tape.window, IDC_LVS_INPUT_PROGRAMLIST);
-	SendMessage(tc_stm_input_filename, WM_SETTEXT, 0, (LPARAM)filename);
-	SendMessage(tc_lvs_input_programlist, LVM_DELETEALLITEMS, 0, 0);
+static void windows32_tc_update_input_filename(struct ui_windows32_interface *uiw32, const char *filename) {
+	windows32_send_message_dlg_item(uiw32->tape.window, IDC_STM_INPUT_FILENAME, WM_SETTEXT, 0, (LPARAM)filename);
+	windows32_send_message_dlg_item(uiw32->tape.window, IDC_LVS_INPUT_PROGRAMLIST, LVM_DELETEALLITEMS, 0, 0);
 	for (int i = 0; i < uiw32->tape.num_programs; i++) {
 		free(uiw32->tape.programs[i].filename);
 		free(uiw32->tape.programs[i].position);
@@ -99,12 +117,7 @@ void windows32_tc_update_input_filename(struct ui_windows32_interface *uiw32, co
 	}
 }
 
-void windows32_tc_update_output_filename(struct ui_windows32_interface *uiw32, const char *filename) {
-	HWND tc_stm_output_filename = GetDlgItem(uiw32->tape.window, IDC_STM_OUTPUT_FILENAME);
-	SendMessage(tc_stm_output_filename, WM_SETTEXT, 0, (LPARAM)filename);
-}
-
-void windows32_tc_update_tape_playing(struct ui_windows32_interface *uiw32, int playing) {
+static void windows32_tc_update_tape_playing(struct ui_windows32_interface *uiw32, int playing) {
 	HWND tc_bn_input_play = GetDlgItem(uiw32->tape.window, IDC_BN_INPUT_PLAY);
 	HWND tc_bn_input_pause = GetDlgItem(uiw32->tape.window, IDC_BN_INPUT_PAUSE);
 	HWND tc_bn_output_record = GetDlgItem(uiw32->tape.window, IDC_BN_OUTPUT_RECORD);

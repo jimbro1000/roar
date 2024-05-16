@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface common functions.
  *
- *  \copyright Copyright 2006-2017 Ciaran Anscomb
+ *  \copyright Copyright 2006-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -67,4 +67,10 @@ void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS) {
 	FillRect(pDIS->hDC, &pDIS->rcItem, (HBRUSH)(COLOR_WINDOW+1));
 	DrawText(pDIS->hDC, text, length, &pDIS->rcItem, DT_PATH_ELLIPSIS);
 	free(text);
+}
+
+LRESULT windows32_send_message_dlg_item(HWND hDlg, int nIDDlgItem, UINT Msg,
+					WPARAM wParam, LPARAM lParam) {
+	HWND hWnd = GetDlgItem(hDlg, nIDDlgItem);
+	return SendMessage(hWnd, Msg, wParam, lParam);
 }

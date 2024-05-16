@@ -440,7 +440,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Cassettes:
 	case ui_tag_tape_dialog:
-		windows32_tc_show_window((struct ui_windows32_interface *)global_uisdl2);
+		windows32_tc_update_state((struct ui_windows32_interface *)global_uisdl2, ui_tag_tape_dialog, 0, NULL);
 		break;
 	case ui_tag_tape_flags:
 		tape_select_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ tag_value);
@@ -448,7 +448,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Disks:
 	case ui_tag_disk_dialog:
-		windows32_dc_show_window((struct ui_windows32_interface *)global_uisdl2);
+		windows32_dc_update_state((struct ui_windows32_interface *)global_uisdl2, ui_tag_disk_dialog, 0, NULL);
 		break;
 	case ui_tag_disk_insert:
 		xroar_insert_disk(tag_value);
@@ -470,7 +470,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// TV controls:
 	case ui_tag_tv_dialog:
-		windows32_vo_show_window((struct ui_windows32_interface *)global_uisdl2);
+		windows32_vo_update_state((struct ui_windows32_interface *)global_uisdl2, ui_tag_tv_dialog, 0, NULL);
 		break;
 
 	case ui_tag_fullscreen:
@@ -554,48 +554,27 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 	// Tape
 
 	case ui_tag_tape_dialog:
-		windows32_tc_show_window(uiw32);
-		break;
-
 	case ui_tag_tape_flags:
-		windows32_tc_update_tape_state(uiw32, value);
-		break;
-
 	case ui_tag_tape_input_filename:
-		windows32_tc_update_input_filename(uiw32, (const char *)data);
-		break;
-
 	case ui_tag_tape_output_filename:
-		windows32_tc_update_output_filename(uiw32, (const char *)data);
-		break;
-
 	case ui_tag_tape_playing:
-		windows32_tc_update_tape_playing(uiw32, value);
+		windows32_tc_update_state(uiw32, tag, value, data);
 		break;
 
 	// Disk
 
 	case ui_tag_disk_dialog:
-		windows32_dc_show_window(uiw32);
-		break;
-
 	case ui_tag_disk_data:
-		windows32_dc_update_drive_disk(uiw32, value, (const struct vdisk *)data);
-		break;
-
 	case ui_tag_disk_write_enable:
-		windows32_dc_update_drive_write_enable(uiw32, value, (intptr_t)data);
-		break;
-
 	case ui_tag_disk_write_back:
-		windows32_dc_update_drive_write_back(uiw32, value, (intptr_t)data);
+		windows32_dc_update_state(uiw32, tag, value, data);
 		break;
 
 	// Video
 
 	case ui_tag_ccr:
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 4), TAGV(tag, value), MF_BYCOMMAND);
-		windows32_vo_update_cmp_renderer(uiw32, value);
+		windows32_vo_update_state(uiw32, tag, value, data);
 		break;
 
 	case ui_tag_tv_input:
@@ -603,57 +582,24 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		break;
 
 	case ui_tag_tv_dialog:
-		windows32_vo_show_window(uiw32);
-		break;
-
+	case ui_tag_gain:
 	case ui_tag_brightness:
-		windows32_vo_update_brightness(uiw32, value);
-		break;
-
 	case ui_tag_contrast:
-		windows32_vo_update_contrast(uiw32, value);
-		break;
-
 	case ui_tag_saturation:
-		windows32_vo_update_saturation(uiw32, value);
-		break;
-
 	case ui_tag_hue:
-		windows32_vo_update_hue(uiw32, value);
-		break;
-
 	case ui_tag_picture:
-		windows32_vo_update_picture(uiw32, value);
-		break;
-
 	case ui_tag_ntsc_scaling:
-		windows32_vo_update_ntsc_scaling(uiw32, value);
-		break;
-
 	case ui_tag_cmp_fs:
-		windows32_vo_update_cmp_fs(uiw32, value);
-		break;
-
 	case ui_tag_cmp_fsc:
-		windows32_vo_update_cmp_fsc(uiw32, value);
-		break;
-
 	case ui_tag_cmp_system:
-		windows32_vo_update_cmp_system(uiw32, value);
-		break;
-
 	case ui_tag_cmp_colour_killer:
-		windows32_vo_update_cmp_colour_killer(uiw32, value);
+		windows32_vo_update_state(uiw32, tag, value, data);
 		break;
 
 	// Audio
 
 	case ui_tag_ratelimit:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
-		break;
-
-	case ui_tag_gain:
-		windows32_vo_update_volume(uiw32, value);
 		break;
 
 	// Printer

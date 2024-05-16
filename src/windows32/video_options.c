@@ -86,85 +86,71 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	}
 }
 
-void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2) {
-	(void)uisdl2;
-	ShowWindow(vo_window, SW_SHOW);
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Video options - update values in UI
 
-void windows32_vo_update_volume(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND vo_volume = GetDlgItem(vo_window, IDC_SPIN_VOLUME);
-	SendMessage(vo_volume, UDM_SETPOS, 0, value);
-}
+void windows32_vo_update_state(struct ui_windows32_interface *uiw32,
+			       int tag, int value, const void *data) {
+	(void)uiw32;
+	(void)data;
 
-void windows32_vo_update_brightness(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND vo_brightness = GetDlgItem(vo_window, IDC_SPIN_BRIGHTNESS);
-	SendMessage(vo_brightness, UDM_SETPOS, 0, value);
-}
+	switch (tag) {
+	case ui_tag_tv_dialog:
+		ShowWindow(vo_window, SW_SHOW);
+		break;
 
-void windows32_vo_update_contrast(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND vo_contrast = GetDlgItem(vo_window, IDC_SPIN_CONTRAST);
-	SendMessage(vo_contrast, UDM_SETPOS, 0, value);
-}
+	case ui_tag_gain:
+		windows32_send_message_dlg_item(vo_window, IDC_SPIN_VOLUME, UDM_SETPOS, 0, value);
+		break;
 
-void windows32_vo_update_saturation(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND vo_saturation = GetDlgItem(vo_window, IDC_SPIN_SATURATION);
-	SendMessage(vo_saturation, UDM_SETPOS, 0, value);
-}
+	case ui_tag_brightness:
+		windows32_send_message_dlg_item(vo_window, IDC_SPIN_BRIGHTNESS, UDM_SETPOS, 0, value);
+		break;
 
-void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND vo_hue = GetDlgItem(vo_window, IDC_SPIN_HUE);
-	SendMessage(vo_hue, UDM_SETPOS, 0, value);
-}
+	case ui_tag_contrast:
+		windows32_send_message_dlg_item(vo_window, IDC_SPIN_CONTRAST, UDM_SETPOS, 0, value);
+		break;
 
-void windows32_vo_update_picture(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND cbt_picture = GetDlgItem(vo_window, IDC_CB_PICTURE);
-	SendMessage(cbt_picture, CB_SETCURSEL, value, 0);
-}
+	case ui_tag_saturation:
+		windows32_send_message_dlg_item(vo_window, IDC_SPIN_SATURATION, UDM_SETPOS, 0, value);
+		break;
 
-void windows32_vo_update_ntsc_scaling(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND tb_ntsc_scaling = GetDlgItem(vo_window, IDC_BN_NTSC_SCALING);
-	SendMessage(tb_ntsc_scaling, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
-}
+	case ui_tag_hue:
+		windows32_send_message_dlg_item(vo_window, IDC_SPIN_HUE, UDM_SETPOS, 0, value);
+		break;
 
-void windows32_vo_update_cmp_renderer(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND cbt_cmp_renderer = GetDlgItem(vo_window, IDC_CB_RENDERER);
-	SendMessage(cbt_cmp_renderer, CB_SETCURSEL, value, 0);
-}
+	case ui_tag_picture:
+		windows32_send_message_dlg_item(vo_window, IDC_CB_PICTURE, CB_SETCURSEL, value, 0);
+		break;
 
-void windows32_vo_update_cmp_fs(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
-	SendMessage(cbt_cmp_fs, CB_SETCURSEL, value, 0);
-}
+	case ui_tag_ntsc_scaling:
+		windows32_send_message_dlg_item(vo_window, IDC_BN_NTSC_SCALING, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
+		break;
 
-void windows32_vo_update_cmp_fsc(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND cbt_cmp_fsc = GetDlgItem(vo_window, IDC_CB_FSC);
-	SendMessage(cbt_cmp_fsc, CB_SETCURSEL, value, 0);
-}
+	case ui_tag_ccr:
+		windows32_send_message_dlg_item(vo_window, IDC_CB_RENDERER, CB_SETCURSEL, value, 0);
+		break;
 
-void windows32_vo_update_cmp_system(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND cbt_cmp_system = GetDlgItem(vo_window, IDC_CB_SYSTEM);
-	SendMessage(cbt_cmp_system, CB_SETCURSEL, value, 0);
-}
+	case ui_tag_cmp_fs:
+		windows32_send_message_dlg_item(vo_window, IDC_CB_FS, CB_SETCURSEL, value, 0);
+		break;
 
-void windows32_vo_update_cmp_colour_killer(struct ui_sdl2_interface *uisdl2, int value) {
-	(void)uisdl2;
-	HWND tb_cmp_colour_killer = GetDlgItem(vo_window, IDC_BN_COLOUR_KILLER);
-	SendMessage(tb_cmp_colour_killer, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
+	case ui_tag_cmp_fsc:
+		windows32_send_message_dlg_item(vo_window, IDC_CB_FSC, CB_SETCURSEL, value, 0);
+		break;
+
+	case ui_tag_cmp_system:
+		windows32_send_message_dlg_item(vo_window, IDC_CB_SYSTEM, CB_SETCURSEL, value, 0);
+		break;
+
+	case ui_tag_cmp_colour_killer:
+		windows32_send_message_dlg_item(vo_window, IDC_BN_COLOUR_KILLER, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
+		break;
+
+	default:
+		break;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

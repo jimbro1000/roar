@@ -2,7 +2,7 @@
  *
  *  \brief Windows drive control window.
  *
- *  \copyright Copyright 2023 Ciaran Anscomb
+ *  \copyright Copyright 2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -22,13 +22,8 @@
 struct ui_windows32_interface;
 
 void windows32_dc_create_window(struct ui_windows32_interface *);
-void windows32_dc_show_window(struct ui_windows32_interface *);
 
-void windows32_dc_update_drive_disk(struct ui_windows32_interface *,
-				    int drive, const struct vdisk *disk);
-void windows32_dc_update_drive_write_enable(struct ui_windows32_interface *,
-					    int drive, _Bool write_enable);
-void windows32_dc_update_drive_write_back(struct ui_windows32_interface *,
-					  int drive, _Bool write_back);
+void windows32_dc_update_state(struct ui_windows32_interface *,
+			       int tag, int value, const void *data);
 
 #endif

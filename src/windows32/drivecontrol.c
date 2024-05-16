@@ -49,16 +49,43 @@ void windows32_dc_create_window(struct ui_windows32_interface *uiw32) {
 	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uiw32);
 }
 
-void windows32_dc_show_window(struct ui_windows32_interface *uiw32) {
-	ShowWindow(uiw32->disk.window, SW_SHOW);
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Drive control - update values in UI
 
-void windows32_dc_update_drive_disk(struct ui_windows32_interface *uiw32,
-				    int drive, const struct vdisk *disk) {
+static void windows32_dc_update_drive_disk(struct ui_windows32_interface *,
+					   int drive, const struct vdisk *disk);
+static void windows32_dc_update_drive_write_enable(struct ui_windows32_interface *,
+						   int drive, _Bool write_enable);
+static void windows32_dc_update_drive_write_back(struct ui_windows32_interface *,
+						 int drive, _Bool write_back);
+
+void windows32_dc_update_state(struct ui_windows32_interface *uiw32,
+			       int tag, int value, const void *data) {
+	switch (tag) {
+	case ui_tag_disk_dialog:
+		ShowWindow(uiw32->disk.window, SW_SHOW);
+		break;
+
+	case ui_tag_disk_data:
+		windows32_dc_update_drive_disk(uiw32, value, (const struct vdisk *)data);
+		break;
+
+	case ui_tag_disk_write_enable:
+		windows32_dc_update_drive_write_enable(uiw32, value, (intptr_t)data);
+		break;
+
+	case ui_tag_disk_write_back:
+		windows32_dc_update_drive_write_back(uiw32, value, (intptr_t)data);
+		break;
+
+	default:
+		break;
+	}
+}
+
+static void windows32_dc_update_drive_disk(struct ui_windows32_interface *uiw32,
+					   int drive, const struct vdisk *disk) {
 	if (drive < 0 || drive > 3)
 		return;
 	char *filename = NULL;
@@ -76,16 +103,16 @@ void windows32_dc_update_drive_disk(struct ui_windows32_interface *uiw32,
 	SendMessage(dc_bn_drive_wb, BM_SETCHECK, wb ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
-void windows32_dc_update_drive_write_enable(struct ui_windows32_interface *uiw32,
-					    int drive, _Bool write_enable) {
+static void windows32_dc_update_drive_write_enable(struct ui_windows32_interface *uiw32,
+						   int drive, _Bool write_enable) {
 	if (drive >= 0 && drive <= 3) {
 		HWND dc_bn_drive_we = GetDlgItem(uiw32->disk.window, IDC_BN_DRIVE1_WE + drive);
 		SendMessage(dc_bn_drive_we, BM_SETCHECK, write_enable ? BST_CHECKED : BST_UNCHECKED, 0);
 	}
 }
 
-void windows32_dc_update_drive_write_back(struct ui_windows32_interface *uiw32,
-					  int drive, _Bool write_back) {
+static void windows32_dc_update_drive_write_back(struct ui_windows32_interface *uiw32,
+						 int drive, _Bool write_back) {
 	if (drive >= 0 && drive <= 3) {
 		HWND dc_bn_drive_wb = GetDlgItem(uiw32->disk.window, IDC_BN_DRIVE1_WB + drive);
 		SendMessage(dc_bn_drive_wb, BM_SETCHECK, write_back ? BST_CHECKED : BST_UNCHECKED, 0);

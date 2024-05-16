@@ -59,10 +59,7 @@ void windows32_pc_update_state(struct ui_windows32_interface *uiw32,
 		break;
 
 	case ui_tag_print_file:
-		{
-			HWND ctl_hwnd = GetDlgItem(uiw32->printer.window, IDC_STM_PRINT_FILENAME);
-			SendMessage(ctl_hwnd, WM_SETTEXT, 0, (LPARAM)data);
-		}
+		windows32_send_message_dlg_item(uiw32->printer.window, IDC_STM_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)data);
 		break;
 
 	case ui_tag_print_pipe:
@@ -89,8 +86,7 @@ void windows32_pc_update_state(struct ui_windows32_interface *uiw32,
 				unit = "G";
 			}
 			snprintf(buf, sizeof(buf), fmt, count, unit);
-			HWND ctl_hwnd = GetDlgItem(uiw32->printer.window, IDC_STM_PRINT_CHARS);
-			SendMessage(ctl_hwnd, WM_SETTEXT, 0, (LPARAM)buf);
+			windows32_send_message_dlg_item(uiw32->printer.window, IDC_STM_PRINT_CHARS, WM_SETTEXT, 0, (LPARAM)buf);
 		}
 		break;
 
