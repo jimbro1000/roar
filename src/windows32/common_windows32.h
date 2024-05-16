@@ -43,6 +43,11 @@ struct ui_windows32_interface {
 	struct {
 		HWND window;
 	} disk;
+
+	// Printer control dialog
+	struct {
+		HWND window;
+	} printer;
 };
 
 extern HWND windows32_main_hwnd;

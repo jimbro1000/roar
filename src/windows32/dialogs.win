@@ -231,3 +231,37 @@ pad=2 nop
 id=DRIVE_CYL_HEAD align=centre text Dr ? Tr ?? He ?
 
 xalign=right id=IDOK button &Close
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# Printer control dialog
+
+# predeclare IDs so that they're sequential for each control type
+
+id=NONE id radio
+id=FILE id radio
+
+pad=5 id=PRINTER_CONTROLS dialog XRoar · Printer control
+
+id=NONE group=DEST radio No printer
+
+pad_top=1 pad_bottom=1 height=1 hseparator
+
+id=FILE radio Print to file
+
+hexpand=1 table
+hexpand=1 tr td width=112 id=PRINT_FILENAME style=ownerdraw hexpand=1 text
+   td id=PRINT_ATTACH button Attach…
+end table
+
+pad_top=1 pad_bottom=1 height=1 hseparator
+
+hexpand=1 table
+hexpand=1 tr td width=58 text Characters printed:
+   hexpand=1 td id=PRINT_CHARS text 0
+   td id=PRINT_FLUSH button Flush
+end table
+
+pad_top=1 pad_bottom=1 height=1 hseparator
+
+pad_top=5 xalign=right id=IDOK button &Close

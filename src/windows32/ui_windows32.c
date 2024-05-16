@@ -53,6 +53,7 @@
 #include "windows32/common_windows32.h"
 #include "windows32/dialogs.h"
 #include "windows32/drivecontrol.h"
+#include "windows32/printercontrol.h"
 #include "windows32/tapecontrol.h"
 #include "windows32/video_options.h"
 
@@ -155,6 +156,7 @@ static void windows32_create_menus(struct ui_windows32_interface *uiw32) {
 	windows32_dc_create_window(uiw32);
 	windows32_tc_create_window(uiw32);
 	windows32_vo_create_window(uiw32);
+	windows32_pc_create_window(uiw32);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -172,6 +174,9 @@ static void setup_file_menu(struct ui_windows32_interface *uiw32) {
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_disk_dialog), "Floppy &disks");
+
+	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_print_dialog), "&Printer control");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save snapshot...");
@@ -487,6 +492,11 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		xroar_set_ratelimit_latch(1, XROAR_NEXT);
 		break;
 
+	// Printer
+	case ui_tag_print_dialog:
+		windows32_pc_update_state((struct ui_windows32_interface *)global_uisdl2, ui_tag_print_dialog, 0, NULL);
+		break;
+
 	// Keyboard:
 	case ui_tag_keymap:
 		xroar_set_keyboard_type(1, tag_value);
@@ -644,6 +654,16 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	case ui_tag_gain:
 		windows32_vo_update_volume(uiw32, value);
+		break;
+
+	// Printer
+
+	case ui_tag_print_dialog:
+	case ui_tag_print_destination:
+	case ui_tag_print_file:
+	case ui_tag_print_pipe:
+	case ui_tag_print_count:
+		windows32_pc_update_state(uiw32, tag, value, data);
 		break;
 
 	// Keyboard
