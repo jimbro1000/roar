@@ -126,7 +126,7 @@ void spi65_add_device(struct spi65 *spi65, struct spi65_device *device, unsigned
 	if (slot >= SPI_NDEVICES)
 		return;
 	spi65_remove_device(spi65, slot);
-	snprintf(id, sizeof(id), "slot%d", slot);
+	snprintf(id, sizeof(id), "slot%u", slot);
 	part_add_component(&spi65->part, &device->part, id);
 	spi65_finish(&spi65p->public.part);
 }
