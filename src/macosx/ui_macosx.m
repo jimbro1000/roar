@@ -42,6 +42,7 @@
 #include "keyboard.h"
 #include "machine.h"
 #include "module.h"
+#include "printer.h"
 #include "tape.h"
 #include "ui.h"
 #include "vdisk.h"
@@ -88,6 +89,8 @@
 #define TAG_JOY_RIGHT (14 << 24)
 #define TAG_JOY_LEFT (15 << 24)
 
+#define TAG_PRINT (26 << 24)
+
 enum {
 	TAG_QUIT,
 	TAG_RESET_SOFT,
@@ -99,6 +102,7 @@ enum {
 	TAG_TAPE_INPUT,
 	TAG_TAPE_OUTPUT,
 	TAG_TAPE_INPUT_REWIND,
+	TAG_PRINT_FLUSH,
 	TAG_ZOOM_IN,
 	TAG_ZOOM_OUT,
 	TAG_JOY_SWAP,
@@ -146,6 +150,7 @@ static int vdg_inverted = 0;
 static int is_kbd_translate = 0;
 static _Bool disk_write_enable[4] = { 1, 1, 1, 1 };
 static _Bool disk_write_back[4] = { 0, 0, 0, 0 };
+static int print_destination = 0;
 
 static struct {
 	const char *name;
@@ -259,6 +264,9 @@ int cocoa_super_all_keys = 0;
 				tape_seek(xroar.tape_interface->tape_input, 0, SEEK_SET);
 			}
 			break;
+		case TAG_PRINT_FLUSH:
+			xroar_flush_printer();
+			break;
 		case TAG_ZOOM_IN:
 			sdl_zoom_in(global_uisdl2);
 			break;
@@ -315,6 +323,17 @@ int cocoa_super_all_keys = 0;
 		break;
 	case TAG_EJECT_DISK:
 		xroar_eject_disk(tag_value);
+		break;
+
+	// Printers:
+	case TAG_PRINT:
+		if (tag_value == PRINTER_DESTINATION_FILE) {
+			char *filename = DELEGATE_CALL(global_uisdl2->ui_interface.filereq_interface->save_filename, "Print to file");
+			if (filename) {
+				xroar_set_printer_file(1, filename);
+			}
+		}
+		xroar_set_printer_destination(1, tag_value);
 		break;
 
 	/* Video: */
@@ -414,6 +433,10 @@ int cocoa_super_all_keys = 0;
 		break;
 	case TAG_WRITE_BACK:
 		[item setState:(disk_write_back[tag_value] ? NSOnState : NSOffState)];
+		break;
+
+	case TAG_PRINT:
+		[item setState:((tag_value == print_destination) ? NSOnState : NSOffState)];
 		break;
 
 	case TAG_FULLSCREEN:
@@ -663,6 +686,39 @@ static void setup_file_menu(void) {
 		[key1 release];
 		[title release];
 	}
+
+	[file_menu addItem:[NSMenuItem separatorItem]];
+
+	submenu = [[NSMenu alloc] initWithTitle:@"Printer"];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"No printer" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_PRINT | PRINTER_DESTINATION_NONE)];
+	[submenu addItem:item];
+	[item release];
+
+	tmp = [NSString stringWithFormat:@"Print to file%C", 0x2026];
+	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_PRINT | PRINTER_DESTINATION_FILE)];
+	[submenu addItem:item];
+	[item release];
+	[tmp release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Print to pipe" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_PRINT | PRINTER_DESTINATION_PIPE)];
+	[submenu addItem:item];
+	[item release];
+
+	[submenu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Flush" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_SIMPLE_ACTION | TAG_PRINT_FLUSH)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Printer" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[file_menu addItem:item];
+	[item release];
 
 	[file_menu addItem:[NSMenuItem separatorItem]];
 
@@ -1350,6 +1406,12 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 
 	case ui_tag_disk_write_back:
 		disk_write_back[value] = data ? 1 : 0;
+		break;
+
+	// Printer
+
+	case ui_tag_print_destination:
+		print_destination = value;
 		break;
 
 	/* Video */
