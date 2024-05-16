@@ -2,7 +2,7 @@
  *
  *  \brief Command-line and file-based configuration options.
  *
- *  \copyright Copyright 2009-2022 Ciaran Anscomb
+ *  \copyright Copyright 2009-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -96,7 +96,7 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 		// A non-NULL struct pointer must have been passed if we are to
 		// use offset-based options.
 		assert(sptr != NULL);
-		object = sptr + option->dest.object_offset;
+		object = (char *)sptr + option->dest.object_offset;
 	} else {
 		object = option->dest.object;
 	}
@@ -225,7 +225,7 @@ static _Bool unset_option(struct xconfig_option const *option, void *sptr) {
 		// A non-NULL struct pointer must have been passed if we are to
 		// use offset-based options.
 		assert(sptr != NULL);
-		object = sptr + option->dest.object_offset;
+		object = (char *)sptr + option->dest.object_offset;
 	} else {
 		object = option->dest.object;
 	}

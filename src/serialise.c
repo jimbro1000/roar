@@ -610,7 +610,7 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 		int tag = ss[i].tag;
 		enum ser_type type = ss[i].type;
 		SER_DEBUG("ser_write_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
-		void *ptr = s + ss[i].offset;
+		void *ptr = (char *)s + ss[i].offset;
 
 		if (ss[i].alength > 0) {
 			// write array
@@ -765,7 +765,7 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 		}
 
 		enum ser_type type = ss[i].type;
-		void *ptr = s + ss[i].offset;
+		void *ptr = (char *)s + ss[i].offset;
 		SER_DEBUG("ser_read_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
 
 		if (ss[i].alength > 0) {

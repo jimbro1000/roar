@@ -1466,7 +1466,7 @@ static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest
 	uint16_t attr = (PIA_VALUE_B(md->PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
 		int n = mc6883_vdg_bytes(md->SAM, nbytes);
-		uint8_t *Vp = ram_a8(md->RAM, 0, md->SAM->Vrow, md->SAM->Vcol);
+		const uint8_t *Vp = ram_a8(md->RAM, 0, md->SAM->Vrow, md->SAM->Vcol);
 		if (dest && Vp) {
 			for (int i = n; i; i--) {
 				uint16_t D = *(Vp++) | attr;
@@ -1491,7 +1491,7 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 	uint16_t Aram7 = EnI ? 0x80 : 0;
 	while (nbytes > 0) {
 		int n = mc6883_vdg_bytes(md->SAM, nbytes);
-		uint8_t *Vp = ram_a8(md->RAM, 0, md->SAM->Vrow, md->SAM->Vcol);
+		const uint8_t *Vp = ram_a8(md->RAM, 0, md->SAM->Vrow, md->SAM->Vcol);
 		if (dest && Vp) {
 			for (int i = n; i; i--) {
 				uint16_t Dram = *(Vp++);
