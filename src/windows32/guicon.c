@@ -2,7 +2,7 @@
  *
  *  \brief Windows console redirection.
  *
- *  \copyright Copyright 2017 Ciaran Anscomb
+ *  \copyright Copyright 2017-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -31,8 +31,12 @@ void redirect_io_to_console(int max_lines) {
 	CONSOLE_SCREEN_BUFFER_INFO coninfo;
 	FILE *fp;
 
-	// allocate a console for this app
-	AllocConsole();
+	// Allocate a console for this app if attaching to the parent fails.
+	// Thanks to Mysoft for the heads up that we _can_ actually output to a
+	// parent console window.
+	if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+		AllocConsole();
+	}
 
 	// set the screen buffer to be big enough to let us scroll text
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
@@ -59,5 +63,4 @@ void redirect_io_to_console(int max_lines) {
 	fp = _fdopen(hConHandle, "w");
 	*stderr = *fp;
 	setvbuf(stderr, NULL, _IONBF, 0);
-
 }
