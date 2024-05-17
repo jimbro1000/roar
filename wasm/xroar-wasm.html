@@ -44,7 +44,7 @@ be a better way to make this usable...
 <h3>Online software:</h3>
 
 <!-- List of online software is dynamically populated -->
-<table id='software' class='vheader' style='width:100%'>
+<table id='software' class='vheader centre-vertically' style='width:100%'>
 </table>
 
 </div>
@@ -76,16 +76,42 @@ be a better way to make this usable...
 <span class='button' onclick='download_snapshot()'>Save snapshot...</span>
 
 <!-- File tab, no columns -->
-<table class='vheader'>
+<table class='vheader centre-vertically'>
 
-<tr><th>Drive 1:</td><td><span title="Eject disk in drive 1" class='button' onclick='wasm_eject_disk(0)'>&#x23cf;</span> <label title="Use local disk image file in drive 1" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,0)'><span id='disk0'>Insert...</span></label></td></tr>
-<tr><th>Drive 2:</td><td><span title="Eject disk in drive 2" class='button' onclick='wasm_eject_disk(1)'>&#x23cf;</span> <label title="Use local disk image file in drive 2" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,1)'><span id='disk1'>Insert...</span></label></td></tr>
-<tr><th>Drive 3:</td><td><span title="Eject disk in drive 3" class='button' onclick='wasm_eject_disk(2)'>&#x23cf;</span> <label title="Use local disk image file in drive 3" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,2)'><span id='disk2'>Insert...</span></label></td></tr>
-<tr><th>Drive 4:</td><td><span title="Eject disk in drive 4" class='button' onclick='wasm_eject_disk(3)'>&#x23cf;</span> <label title="Use local disk image file in drive 4" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,3)'><span id='disk3'>Insert...</span></label></td></tr>
+<tr><th>Drive 1:</th>
+    <td></td>
+    <td><span title="Eject disk in drive 1" class='button' onclick='wasm_eject_disk(0)'>&#x23cf;</span></td>
+    <td><label title="Use local disk image file in drive 1" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,0)'>Insert...</label></td>
+    <td><span id='disk0' class='filename'></span></td>
+</tr>
 
-<tr><td colspan="2"></td></tr>
+<tr><th>Drive 2:</th>
+    <td></td>
+    <td><span title="Eject disk in drive 2" class='button' onclick='wasm_eject_disk(1)'>&#x23cf;</span></td>
+    <td><label title="Use local disk image file in drive 2" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,1)'>Insert...</label></td>
+    <td><span id='disk1' class='filename'></span></td>
+</tr>
 
-<tr><th>Tape:</td><td><span id='tape_play' title="Play (unpause)" class='button' onclick='wasm_set_tape_playing(true,true)'>&#x23f5;</span><span id='tape_pause' title="Pause" class='button' onclick='wasm_set_tape_playing(true,false)' style='display:none'>&#x23f8;</span> <span title="Eject tape" class='button' onclick='wasm_eject_tape()'>&#x23cf;</span> <label title="Use local tape image file" class='button'><input type='file' onchange='file_input_onload(this,load_type.tape,0)'><span id='tape'>Insert...</span></label></td></tr>
+<tr><th>Drive 3:</th>
+    <td></td>
+    <td><span title="Eject disk in drive 3" class='button' onclick='wasm_eject_disk(2)'>&#x23cf;</span></td>
+    <td><label title="Use local disk image file in drive 3" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,2)'>Insert...</label></td>
+    <td><span id='disk2' class='filename'></span></td>
+</tr>
+
+<tr><th>Drive 4:</th>
+    <td></td>
+    <td><span title="Eject disk in drive 4" class='button' onclick='wasm_eject_disk(3)'>&#x23cf;</span></td>
+    <td><label title="Use local disk image file in drive 4" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,3)'>Insert...</label></td>
+    <td><span id='disk3' class='filename'></span></td>
+</tr>
+
+<tr><th>Tape:</th>
+    <td><span id='tape_play' title="Play (unpause)" class='button' onclick='wasm_set_tape_playing(true,true)'>&#x23f5;</span><span id='tape_pause' title="Pause" class='button' onclick='wasm_set_tape_playing(true,false)' style='display:none'>&#x23f8;</span></td>
+    <td><span title="Eject tape" class='button' onclick='wasm_eject_tape()'>&#x23cf;</span></td>
+    <td><label title="Use local tape image file" class='button'><input type='file' onchange='file_input_onload(this,load_type.tape,0)'>Insert...</label></td>
+    <td><span id='tape' class='filename'></span></td>
+</tr>
 
 </table>
 
@@ -98,7 +124,7 @@ be a better way to make this usable...
 <div class="tab-content">
 
 <!-- View tab, no columns -->
-<table class='vheader'>
+<table class='vheader centre-vertically'>
 
 <tr title="TV Input"><th>Input:</td><td><select id='tv-input' onchange='wasm_set_tv_input(false, this.options[this.selectedIndex].value)'>
 	<option value='0'>S-Video (no cross-colour)</option>
@@ -129,7 +155,7 @@ be a better way to make this usable...
 <div class="tab-content">
 
 <!-- Hardware tab, no columns -->
-<table class='vheader'>
+<table class='vheader centre-vertically'>
 
 <!-- Machine and cartridge selections are dynamically populated -->
 
@@ -278,6 +304,7 @@ be a better way to make this usable...
 		tape: 2,  // attach tape
 		disk: 3,  // attach disk
 		text: 4,  // type BASIC from file
+		hd:   5,  // attach HD image
 	};
 
 	// Generic file upload handler.  Creates a file within the MEMFS with
@@ -314,6 +341,25 @@ be a better way to make this usable...
 	}
 
 	function start_program(program) {
+
+		if ('tape' in program) {
+			wasm_load_file(program.tape, 2, 0);
+		}
+
+		for (let i = 0; i < 4; i++) {
+			let disk = 'disk'+i;
+			if (disk in program) {
+				wasm_load_file(program[disk], 3, i);
+			}
+		}
+
+		for (let i = 0; i < 2; i++) {
+			let hd = 'hd'+i;
+			if (hd in program) {
+				wasm_load_file(program[hd], 5, i);
+			}
+		}
+
 		Module.ccall('wasm_set_machine_cart', null, [ 'string', 'string', 'string', 'string' ], [ program.machine, program.cart, program.cart_rom, program.cart_rom2 ]);
 
 		var ljoy = ('joy_left' in program) ? program.joy_left : '';
@@ -352,19 +398,8 @@ be a better way to make this usable...
 			}
 		}
 
-		if ('tape' in program) {
-			wasm_load_file(program.tape, 2, 0);
-		}
-
 		if ('type' in program) {
 			wasm_load_file(program.text, 4, 0);
-		}
-
-		for (let i = 0; i < 4; i++) {
-			let disk = 'disk'+i;
-			if (disk in program) {
-				wasm_load_file(program[disk], 3, i);
-			}
 		}
 
 		if ('basic' in program) {

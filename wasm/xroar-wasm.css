@@ -27,6 +27,18 @@ input[type="file"] { display: none; }
 }
 .button:hover,select:hover { background-color: #ffffff; }
 
+/* Miscallaneous */
+
+.filename {
+	font-family: monospace;
+}
+
+table.centre-vertically th,td {
+	padding-top: 0;
+	padding-bottom: 0;
+	vertical-align: middle;
+}
+
 /* Tables with headers on the left */
 
 table.vheader th {
