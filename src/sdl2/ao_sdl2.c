@@ -68,7 +68,9 @@ struct ao_sdl2_interface {
 
 static void ao_sdl2_free(void *sptr);
 static void *ao_sdl2_write_buffer(void *sptr, void *buffer);
+#ifndef HAVE_WASM
 static void *ao_sdl2_write_silence(void *sptr, void *buffer);
+#endif
 
 static void *new(void *cfg) {
 	(void)cfg;
@@ -310,6 +312,7 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 
 }
 
+#ifndef HAVE_WASM
 static void *ao_sdl2_write_silence(void *sptr, void *buffer) {
 	struct ao_sdl2_interface *aosdl = sptr;
 	(void)buffer;
@@ -320,3 +323,4 @@ static void *ao_sdl2_write_silence(void *sptr, void *buffer) {
 	}
 	return aosdl->fragment_buffer;
 }
+#endif
