@@ -160,15 +160,20 @@ id=DRIVE2_WB id checkbox
 id=DRIVE3_WB id checkbox
 id=DRIVE4_WB id checkbox
 
-id=DRIVE1_EJECT id button
-id=DRIVE2_EJECT id button
-id=DRIVE3_EJECT id button
-id=DRIVE4_EJECT id button
-
 id=DRIVE1_INSERT id button
 id=DRIVE2_INSERT id button
 id=DRIVE3_INSERT id button
 id=DRIVE4_INSERT id button
+
+id=DRIVE1_NEW id button
+id=DRIVE2_NEW id button
+id=DRIVE3_NEW id button
+id=DRIVE4_NEW id button
+
+id=DRIVE1_EJECT id button
+id=DRIVE2_EJECT id button
+id=DRIVE3_EJECT id button
+id=DRIVE4_EJECT id button
 
 pad=5 id=DRIVE_CONTROLS dialog XRoar · Floppy disks
 
@@ -179,9 +184,10 @@ end table
 
 table
 tr td id=DRIVE1_WE checkbox Write enable
-   width=84 td id=DRIVE1_WB checkbox Write back
-   td id=DRIVE1_EJECT button Eject
+   width=76 td id=DRIVE1_WB checkbox Write back
    td id=DRIVE1_INSERT button Insert…
+   td id=DRIVE1_NEW width=24 button New…
+   td id=DRIVE1_EJECT button Eject
 end table
 
 pad=2 nop
@@ -193,9 +199,10 @@ end table
 
 table
 tr td id=DRIVE2_WE checkbox Write enable
-   width=84 td id=DRIVE2_WB checkbox Write back
-   td id=DRIVE2_EJECT button Eject
+   width=76 td id=DRIVE2_WB checkbox Write back
    td id=DRIVE2_INSERT button Insert…
+   td id=DRIVE2_NEW width=24 button New…
+   td id=DRIVE2_EJECT button Eject
 end table
 
 pad=2 nop
@@ -207,9 +214,10 @@ end table
 
 table
 tr td id=DRIVE3_WE checkbox Write enable
-   width=84 td id=DRIVE3_WB checkbox Write back
-   td id=DRIVE3_EJECT button Eject
+   width=76 td id=DRIVE3_WB checkbox Write back
    td id=DRIVE3_INSERT button Insert…
+   td id=DRIVE3_NEW width=24 button New…
+   td id=DRIVE3_EJECT button Eject
 end table
 
 pad=2 nop
@@ -221,9 +229,10 @@ end table
 
 table
 tr td id=DRIVE4_WE checkbox Write enable
-   width=84 td id=DRIVE4_WB checkbox Write back
-   td id=DRIVE4_EJECT button Eject
+   width=76 td id=DRIVE4_WB checkbox Write back
    td id=DRIVE4_INSERT button Insert…
+   td id=DRIVE4_NEW width=24 button New…
+   td id=DRIVE4_EJECT button Eject
 end table
 
 pad=2 nop

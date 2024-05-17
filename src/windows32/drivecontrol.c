@@ -168,13 +168,17 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 				int set = (SendMessage(dc_bn_drive_wb, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : 1;
 				xroar_set_write_back(1, drive, set);
 
-			} else if (id >= IDC_BN_DRIVE1_EJECT && id <= IDC_BN_DRIVE4_EJECT) {
-				int drive = id - IDC_BN_DRIVE1_EJECT;
-				xroar_eject_disk(drive);
-
 			} else if (id >= IDC_BN_DRIVE1_INSERT && id <= IDC_BN_DRIVE4_INSERT) {
 				int drive = id - IDC_BN_DRIVE1_INSERT;
 				xroar_insert_disk(drive);
+
+			} else if (id >= IDC_BN_DRIVE1_NEW && id <= IDC_BN_DRIVE4_NEW) {
+				int drive = id - IDC_BN_DRIVE1_NEW;
+				xroar_new_disk(drive);
+
+			} else if (id >= IDC_BN_DRIVE1_EJECT && id <= IDC_BN_DRIVE4_EJECT) {
+				int drive = id - IDC_BN_DRIVE1_EJECT;
+				xroar_eject_disk(drive);
 
 			} else switch (id) {
 
