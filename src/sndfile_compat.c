@@ -18,6 +18,9 @@
 
 #include "top-config.h"
 
+// Comment this out for debugging
+#define SF_DEBUG(...)
+
 #define _POSIX_C_SOURCE 200112L
 
 #include <assert.h>
@@ -35,6 +38,10 @@
 #include "fs.h"
 #include "logging.h"
 #include "sndfile_compat.h"
+
+#ifndef SF_DEBUG
+#define SF_DEBUG(...) LOG_PRINT(__VA_ARGS__)
+#endif
 
 #ifndef HAVE_SNDFILE
 
@@ -178,6 +185,7 @@ static _Bool wav_scan(SNDFILE *sf) {
 				uint32_t dwSamplesPerSec = 0;
 				uint32_t tmp32;
 				uint16_t wBitsPerSample = 0;
+				SF_DEBUG("SF/WAV: 'fmt ' chunk\n");
 
 				// common-fields
 				if (chunk_length < 16) {
@@ -193,15 +201,29 @@ static _Bool wav_scan(SNDFILE *sf) {
 				error = error || !read_uint16(sf, &wBitsPerSample);
 				chunk_length -= 16;
 
+				if (error) {
+					SF_DEBUG("\terror reading chunk data\n");
+					break;
+				}
+
+				SF_DEBUG("\twFormatTag=");
+				if (wFormatTag == 0x0001) { SF_DEBUG("WAVE_FORMAT_PCM\n"); }
+				else if (wFormatTag == 0x0003) { SF_DEBUG("WAVE_FORMAT_IEEE_FLOAT\n"); }
+				else { SF_DEBUG("unknown\n"); }
+				SF_DEBUG("\twBitsPerSample=%u\n", wBitsPerSample);
+
 				if (wFormatTag == 0x0001) {
 					// WAVE_FORMAT_PCM
 					if (wBitsPerSample == 8) {
 						sf->bytes_per_sample = 1;
 						sf->fmt |= SF_FORMAT_PCM_U8;
+						SF_DEBUG("\tunsigned 8-bit\n");
 					} else if (wBitsPerSample == 16) {
 						sf->bytes_per_sample = 2;
 						sf->fmt |= SF_FORMAT_PCM_16;
+						SF_DEBUG("\tsigned 16-bi6\n");
 					} else {
+						SF_DEBUG("\tunsupported encoding\n");
 						set_error(sf, SF_ERR_UNSUPPORTED_ENCODING);
 						error = 1;
 					}
@@ -217,18 +239,22 @@ static _Bool wav_scan(SNDFILE *sf) {
 					if (wBitsPerSample == 32) {
 						sf->bytes_per_sample = 4;
 						sf->fmt |= SF_FORMAT_FLOAT;
+						SF_DEBUG("\tfloat\n");
 #ifdef SUPPORT_DOUBLE
 					} else if (wBitsPerSample == 64) {
 						sf->bytes_per_sample = 8;
 						sf->fmt |= SF_FORMAT_DOUBLE;
+						SF_DEBUG("\tdouble\n");
 #endif
 					} else {
+						SF_DEBUG("unsupported encoding\n");
 						set_error(sf, SF_ERR_UNSUPPORTED_ENCODING);
 						error = 1;
 						break;
 					}
 #endif  /* SUPPORT_FLOAT */
 				} else {
+					SF_DEBUG("SF/WAV: unknown wFormatTag\n");
 					set_error(sf, SF_ERR_UNSUPPORTED_ENCODING);
 					error = 1;
 					break;
@@ -237,14 +263,21 @@ static _Bool wav_scan(SNDFILE *sf) {
 				sf->bytes_per_frame = sf->bytes_per_sample * wChannels;
 				sf->nchannels = wChannels;
 				sf->framerate = dwSamplesPerSec;
+				SF_DEBUG("\twChannels=%d\n\tdwSamplesPerSec=%d\n", wChannels, dwSamplesPerSec);
 			}
 			break;
 
 		case 0x66616374:
 			// "fact"
 			{
+				SF_DEBUG("SF/WAV: 'fact' chunk\n");
 				error = error || !read_uint32(sf, &dwFileSize);
 				have_dwFileSize = 1;
+				if (error) {
+					SF_DEBUG("\terror reading chunk data\n");
+					break;
+				}
+				SF_DEBUG("\tdwFileSize=%08x\n", dwFileSize);
 				chunk_length -= 4;
 			}
 			break;
