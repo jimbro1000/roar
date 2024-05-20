@@ -40,8 +40,8 @@
 #define CLR_NVC   ( REG_CC &= ~(CC_N|CC_V|CC_C) )
 #define CLR_ZC    ( REG_CC &= ~(CC_Z|CC_C) )
 
-#define SET_Z8(r)         ( (!((r)&0xff)) ? (REG_CC |= CC_Z) : 0 )
-#define SET_Z16(r)        ( (!((r)&0xffff)) ? (REG_CC |= CC_Z) : 0 )
+#define SET_Z8(r)         ( REG_CC |= (0 == ((r)&0xff)) ? CC_Z : 0 )
+#define SET_Z16(r)        ( REG_CC |= (0 == ((r)&0xffff)) ? CC_Z : 0 )
 #define SET_N8(r)         ( REG_CC |= (((r) >> 4) & CC_N) )
 #define SET_N16(r)        ( REG_CC |= (((r) >> 12) & CC_N) )
 #define SET_H(a,b,r)      ( REG_CC |= ((((a)^(b)^(r))<<1) & CC_H) )
