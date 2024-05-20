@@ -155,6 +155,10 @@ static _Bool wav_scan(SNDFILE *sf) {
 	_Bool have_dwFileSize = 0;
 	uint32_t dwFileSize = 0;
 
+	// wFormatTag in the 'fmt ' chunk.  Declare here so that we can
+	// disregard the contents of a 'fact' chunk if it's PCM.
+	uint16_t wFormatTag = 0;
+
 	while (!error) {
 		if (riff_length < 8) {
 			// not enough bytes left in RIFF to be any more
@@ -180,7 +184,6 @@ static _Bool wav_scan(SNDFILE *sf) {
 		case 0x666d7420:
 			// "fmt "
 			{
-				uint16_t wFormatTag = 0;
 				uint16_t wChannels = 0;
 				uint32_t dwSamplesPerSec = 0;
 				uint32_t tmp32;
@@ -272,12 +275,17 @@ static _Bool wav_scan(SNDFILE *sf) {
 			{
 				SF_DEBUG("SF/WAV: 'fact' chunk\n");
 				error = error || !read_uint32(sf, &dwFileSize);
-				have_dwFileSize = 1;
 				if (error) {
 					SF_DEBUG("\terror reading chunk data\n");
 					break;
 				}
 				SF_DEBUG("\tdwFileSize=%08x\n", dwFileSize);
+				if (wFormatTag == 0x0001) {
+					// WAVE_FORMAT_PCM
+					SF_DEBUG("\tdisregarding for WAVE_FORMAT_PCM\n");
+				} else {
+					have_dwFileSize = 1;
+				}
 				chunk_length -= 4;
 			}
 			break;
