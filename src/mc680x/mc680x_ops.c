@@ -226,6 +226,17 @@ static uint8_t op_dec(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
+// This covers the illegal instructions on the 6801/3 that decrement and also
+// set the carry flag (sense inverted!).
+static uint8_t op_dec_nc(STRUCT_CPU *cpu, uint8_t in) {
+	unsigned out = in - 1;
+	CLR_NZVC;
+	SET_NZ8(out);
+	if (out == 0x7f) REG_CC |= CC_V;
+	REG_CC |= ((~out >> 8) & CC_C);  // inverted carry test
+	return out;
+}
+
 static uint8_t op_inc(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = in + 1;
 	CLR_NZV;

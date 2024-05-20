@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6801/6803 CPUs.
  *
- *  \copyright Copyright 2021-2022 Ciaran Anscomb
+ *  \copyright Copyright 2021-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -862,8 +862,8 @@ static void mc6801_run(struct MC6801 *cpu) {
 				case 0x7: tmp1 = op_asr_v(cpu, tmp1); break; // ASR, ASRA, ASRB
 				case 0x8: tmp1 = op_asl(cpu, tmp1); break; // ASL, ASLA, ASLB
 				case 0x9: tmp1 = op_rol(cpu, tmp1); break; // ROL, ROLA, ROLB
-				case 0xb: // DEC illegal  XXX wrong flags
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
+				case 0xb: tmp1 = op_dec_nc(cpu, tmp1); break; // DC*, DCA*, DCB*
 				case 0xc: tmp1 = op_inc(cpu, tmp1); break; // INC, INCA, INCB
 				case 0xd: tmp1 = op_tst_c(cpu, tmp1); break; // TST, TSTA, TSTB
 				case 0xf: tmp1 = op_clr(cpu, tmp1); break; // CLR, CLRA, CLRB
@@ -959,7 +959,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 				case 0x4: tmp1 = op_and(cpu, tmp1, tmp2); break; // ANDA, ANDB
 				case 0x5: (void)op_and(cpu, tmp1, tmp2); break; // BITA, BITB
 				case 0x6: tmp1 = op_ld(cpu, 0, tmp2); break; // LDAA, LDAB
-				case 0x7: break;  // XXX illegal op 0x87, 0xc7
+				case 0x7: tmp1 = op_ld(cpu, 0xff, 0xff); break;  // I87*, IC7*
 				case 0x8: tmp1 = op_eor(cpu, tmp1, tmp2); break; // EORA, EORB
 				case 0x9: tmp1 = op_adc(cpu, tmp1, tmp2); break; // ADCA, ADCB
 				case 0xa: tmp1 = op_or(cpu, tmp1, tmp2); break; // ORA, ORB
