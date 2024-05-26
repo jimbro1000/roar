@@ -596,10 +596,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 
 			// 0x16 LBRA relative
-			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			// 0x1016, 0x1116 - page 2/3 fallthrough, illegal
+			// 0x108d, 0x118d - LBRA observed by darrena on discord
 			case 0x16:
-			case 0x0216:
-			case 0x0316: {
+			case 0x0216: case 0x028d:
+			case 0x0316: case 0x038d: {
 				uint16_t ea = long_relative(cpu);
 				REG_PC += ea;
 				NVMA_CYCLE;
@@ -1203,8 +1204,8 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0x9d, 0xad, 0xbd JSR
 			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x8d: case 0x9d: case 0xad: case 0xbd:
-			case 0x028d: case 0x029d: case 0x02ad: case 0x02bd:
-			case 0x038d: case 0x039d: case 0x03ad: case 0x03bd: {
+			case 0x029d: case 0x02ad: case 0x02bd:
+			case 0x039d: case 0x03ad: case 0x03bd: {
 				unsigned ea;
 				switch ((op >> 4) & 3) {
 				case 0: ea = short_relative(cpu); ea += REG_PC; NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
