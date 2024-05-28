@@ -29,6 +29,7 @@
 #include "top-config.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "sds.h"
 #include "xalloc.h"
