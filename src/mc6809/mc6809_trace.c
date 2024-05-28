@@ -190,7 +190,7 @@ static struct {
 		{ "ANDA", IMMEDIATE },
 		{ "BITA", IMMEDIATE },
 		{ "LDA", IMMEDIATE },
-		{ "DISCRD*", IMMEDIATE },
+		{ "DSCA*", IMMEDIATE },
 		{ "EORA", IMMEDIATE },
 		{ "ADCA", IMMEDIATE },
 		{ "ORA", IMMEDIATE },
@@ -198,7 +198,7 @@ static struct {
 		{ "CMPX", WORD_IMMEDIATE },
 		{ "BSR", RELATIVE },
 		{ "LDX", WORD_IMMEDIATE },
-		{ "STXIMM*", IMMEDIATE },
+		{ "STXI*", IMMEDIATE },
 		// 0x90 - 0x9F
 		{ "SUBA", DIRECT },
 		{ "CMPA", DIRECT },
@@ -258,7 +258,7 @@ static struct {
 		{ "ANDB", IMMEDIATE },
 		{ "BITB", IMMEDIATE },
 		{ "LDB", IMMEDIATE },
-		{ "DISCRD*", IMMEDIATE },
+		{ "DSCB*", IMMEDIATE },
 		{ "EORB", IMMEDIATE },
 		{ "ADCB", IMMEDIATE },
 		{ "ORB", IMMEDIATE },
@@ -266,7 +266,7 @@ static struct {
 		{ "LDD", WORD_IMMEDIATE },
 		{ "HCF*", INHERENT },
 		{ "LDU", WORD_IMMEDIATE },
-		{ "STUIMM*", IMMEDIATE },
+		{ "STUI*", IMMEDIATE },
 		// 0xD0 - 0xDF
 		{ "SUBB", DIRECT },
 		{ "CMPB", DIRECT },
@@ -1282,6 +1282,6 @@ static void trace_print_short(struct mc6809_trace *tracer) {
 	for (int i = 0; i < tracer->bytes_count; i++) {
 		snprintf(bytes_string + i*2, 3, "%02x", tracer->bytes_buf[i]);
 	}
-	printf("%04x| %-12s%-8s%-20s", tracer->instr_pc, bytes_string, tracer->mnemonic, tracer->operand_text);
+	printf("%04x| %-12s%-6s%-20s", tracer->instr_pc, bytes_string, tracer->mnemonic, tracer->operand_text);
 	reset_state(tracer);
 }
