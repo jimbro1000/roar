@@ -24,6 +24,7 @@
 #include "delegate.h"
 
 #include "events.h"
+#include "part.h"
 
 struct log_handle;
 struct ser_handle;

@@ -23,6 +23,7 @@
 #define XROAR_BECKER_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #define BECKER_IP_DEFAULT "127.0.0.1"
 #define BECKER_PORT_DEFAULT "65504"
