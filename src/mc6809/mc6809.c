@@ -57,7 +57,14 @@
 #include "serialise.h"
 
 #ifdef TRACE
+// Tracing supported:
 #include "mc6809_trace.h"
+#define MC6809_TRACE_VECTOR(c) if (logging.trace_cpu) { mc6809_trace_vector((c)->tracer); }
+#define MC6809_TRACE_INSTRUCTION(c) if (logging.trace_cpu) { mc6809_trace_instruction((c)->tracer); }
+#else
+// Tracing not supported - no-op macros:
+#define MC6809_TRACE_VECTOR(c)
+#define MC6809_TRACE_INSTRUCTION(c)
 #endif
 
 static const struct ser_struct ser_struct_mc6809[] = {
@@ -286,6 +293,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			cpu->firq_active = 0;
 			cpu->irq_active = 0;
 			cpu->state = mc6809_state_reset_check_halt;
+			MC6809_TRACE_VECTOR(cpu);
 			// fall through
 
 		case mc6809_state_reset_check_halt:
@@ -308,21 +316,25 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 		case mc6809_state_label_b:
 			if (cpu->nmi_active) {
+				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
+				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_firq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
+				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 			} else {
+				MC6809_TRACE_INSTRUCTION(cpu);
 				cpu->state = mc6809_state_next_instruction;
 				cpu->page = 0;
 				// Instruction fetch hook called here so that machine
@@ -379,10 +391,10 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 		case mc6809_state_next_instruction: {
 			unsigned op;
-			cpu->state = mc6809_state_label_a;
 			// Fetch op-code and process
 			op = byte_immediate(cpu);
 			op |= cpu->page;
+			cpu->state = mc6809_state_label_a;
 			switch (op) {
 
 			// 0x00 - 0x0f direct mode ops
@@ -1375,6 +1387,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 static void mc6809_set_pc(void *sptr, unsigned pc) {
 	struct MC6809 *cpu = sptr;
+	MC6809_TRACE_INSTRUCTION(cpu);
 	REG_PC = pc;
 	cpu->state = mc6809_state_next_instruction;
 }
@@ -1512,22 +1525,13 @@ static void stack_firq_registers(struct MC6809 *cpu) {
 static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	REG_CC |= mask;
 	NVMA_CYCLE;
-#ifdef TRACE
-	if (logging.trace_cpu) {
-		mc6809_trace_irq(cpu->tracer, vec);
-	}
-#endif
+	cpu->state = mc6809_state_irq_reset_vector;
 	REG_PC = fetch_word(cpu, vec);
 	cpu->state = mc6809_state_label_a;
 	NVMA_CYCLE;
 }
 
 static void instruction_posthook(struct MC6809 *cpu) {
-#ifdef TRACE
-	if (logging.trace_cpu) {
-		mc6809_trace_print(cpu->tracer);
-	}
-#endif
 	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);
 }
 

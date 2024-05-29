@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6809 CPU.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -63,7 +63,8 @@ enum mc6809_state {
 	mc6809_state_cwai_check_halt,
 	mc6809_state_sync_check_halt,
 	mc6809_state_done_instruction = MC6809_COMPAT_STATE_DONE_INSTRUCTION,
-	mc6809_state_hcf          = MC6809_COMPAT_STATE_HCF
+	mc6809_state_hcf          = MC6809_COMPAT_STATE_HCF,
+	mc6809_state_irq_reset_vector,  // BA=0, BS=1
 };
 
 /* Interface shared with all 6809-compatible CPUs */
