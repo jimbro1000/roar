@@ -286,21 +286,14 @@ static void mc6809_run(struct MC6809 *cpu) {
 			cpu->firq_active = 0;
 			cpu->irq_active = 0;
 			cpu->state = mc6809_state_reset_check_halt;
-#ifdef TRACE
-			if (logging.trace_cpu) {
-				mc6809_trace_irq(cpu->tracer, MC6809_INT_VEC_RESET);
-			}
-#endif
 			// fall through
 
 		case mc6809_state_reset_check_halt:
-			if (cpu->halt) {
+			if (!cpu->halt) {
+				take_interrupt(cpu, 0, MC6809_INT_VEC_RESET);
+			} else {
 				NVMA_CYCLE;
-				continue;
 			}
-			REG_PC = fetch_word(cpu, MC6809_INT_VEC_RESET);
-			NVMA_CYCLE;
-			cpu->state = mc6809_state_label_a;
 			continue;
 
 		// done_instruction case for backwards-compatibility
@@ -319,47 +312,36 @@ static void mc6809_run(struct MC6809 *cpu) {
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
-				continue;
-			}
-			if (!(REG_CC & CC_F) && cpu->firq_active) {
+			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_firq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
-				continue;
-			}
-			if (!(REG_CC & CC_I) && cpu->irq_active) {
+			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
-				continue;
+			} else {
+				cpu->state = mc6809_state_next_instruction;
+				cpu->page = 0;
+				// Instruction fetch hook called here so that machine
+				// can be stopped beforehand.
+				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
 			}
-			cpu->state = mc6809_state_next_instruction;
-			cpu->page = 0;
-			// Instruction fetch hook called here so that machine
-			// can be stopped beforehand.
-			DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
 			continue;
 
 		case mc6809_state_dispatch_irq:
 			if (cpu->nmi_active) {
 				cpu->nmi_active = cpu->nmi = cpu->nmi_latch = 0;
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_NMI);
-				cpu->state = mc6809_state_label_a;
-				continue;
-			}
-			if (!(REG_CC & CC_F) && cpu->firq_active) {
+			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_FIRQ);
-				cpu->state = mc6809_state_label_a;
-				continue;
-			}
-			if (!(REG_CC & CC_I) && cpu->irq_active) {
+			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
 				take_interrupt(cpu, CC_I, MC6809_INT_VEC_IRQ);
-				cpu->state = mc6809_state_label_a;
-				continue;
+			} else {
+				cpu->state = mc6809_state_cwai_check_halt;
 			}
-			cpu->state = mc6809_state_cwai_check_halt;
 			continue;
 
 		case mc6809_state_cwai_check_halt:
@@ -367,10 +349,9 @@ static void mc6809_run(struct MC6809 *cpu) {
 			cpu->firq_active = cpu->firq_latch;
 			cpu->irq_active = cpu->irq_latch;
 			NVMA_CYCLE;
-			if (cpu->halt) {
-				continue;
+			if (!cpu->halt) {
+				cpu->state = mc6809_state_dispatch_irq;
 			}
-			cpu->state = mc6809_state_dispatch_irq;
 			continue;
 
 		case mc6809_state_sync:
@@ -384,8 +365,9 @@ static void mc6809_run(struct MC6809 *cpu) {
 			cpu->firq_active = cpu->firq_latch;
 			cpu->irq_active = cpu->irq_latch;
 			NVMA_CYCLE;
-			if (cpu->halt)
+			if (cpu->halt) {
 				cpu->state = mc6809_state_sync_check_halt;
+			}
 			continue;
 
 		case mc6809_state_sync_check_halt:
@@ -998,7 +980,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				push_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_RESET);
-				cpu->state = mc6809_state_label_a;
 				continue;
 
 			// 0x3f SWI inherent
@@ -1007,7 +988,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_SWI);
-				cpu->state = mc6809_state_label_a;
 				continue;
 
 			// 0x80 - 0xbf A register arithmetic ops
@@ -1337,7 +1317,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				push_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI2);
-				cpu->state = mc6809_state_label_a;
 				continue;
 
 			// 0x103f SWI2 inherent
@@ -1346,7 +1325,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI2);
-				cpu->state = mc6809_state_label_a;
 				continue;
 
 			// 0x113e FIRQ inherent, illegal [hoglet67]
@@ -1355,7 +1333,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				push_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_FIRQ);
-				cpu->state = mc6809_state_label_a;
 				continue;
 
 			// 0x113f SWI3 inherent
@@ -1364,7 +1341,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI3);
-				cpu->state = mc6809_state_label_a;
 				continue;
 
 			// Illegal instruction
@@ -1542,6 +1518,7 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	}
 #endif
 	REG_PC = fetch_word(cpu, vec);
+	cpu->state = mc6809_state_label_a;
 	NVMA_CYCLE;
 }
 
