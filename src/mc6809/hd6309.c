@@ -53,7 +53,14 @@
 #include "serialise.h"
 
 #ifdef TRACE
+// Tracing supported:
 #include "hd6309_trace.h"
+#define HD6309_TRACE_VECTOR(c) if (logging.trace_cpu) { hd6309_trace_vector((c)->tracer); }
+#define HD6309_TRACE_INSTRUCTION(c) if (logging.trace_cpu) { hd6309_trace_instruction((c)->tracer); }
+#else
+// Tracing not supported - no-op macros:
+#define HD6309_TRACE_VECTOR(c)
+#define HD6309_TRACE_INSTRUCTION(c)
 #endif
 
 #define HD6309_SER_TFM_SRC  (6)
@@ -352,6 +359,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->firq_active = 0;
 			cpu->irq_active = 0;
 			hcpu->state = hd6309_state_reset_check_halt;
+			HD6309_TRACE_VECTOR(hcpu);
 			// fall through
 
 		case hd6309_state_reset_check_halt:
@@ -374,21 +382,25 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 		case hd6309_state_label_b:
 			if (cpu->nmi_active) {
+				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
 				hcpu->state = hd6309_state_dispatch_irq;
 			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
+				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, FIRQ_STACK_ALL);
 				hcpu->state = hd6309_state_dispatch_irq;
 			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
+				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
 				hcpu->state = hd6309_state_dispatch_irq;
 			} else {
+				HD6309_TRACE_INSTRUCTION(hcpu);
 				hcpu->state = hd6309_state_next_instruction;
 				cpu->page = 0;
 				// Instruction fetch hook called here so that machine
@@ -479,9 +491,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 			{
 			unsigned op;
 			// Fetch op-code and process
-			hcpu->state = hd6309_state_label_a;
 			op = byte_immediate(cpu);
 			op |= cpu->page;
+			hcpu->state = hd6309_state_label_a;
 			switch (op) {
 
 			// 0x00 - 0x0f direct mode ops
@@ -2022,6 +2034,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 static void hd6309_set_pc(void *sptr, unsigned pc) {
 	struct HD6309 *hcpu = sptr;
 	struct MC6809 *cpu = &hcpu->mc6809;
+	HD6309_TRACE_INSTRUCTION(hcpu);
 	REG_PC = pc;
 	hcpu->state = hd6309_state_next_instruction;
 }
@@ -2194,22 +2207,12 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
 	REG_CC |= mask;
 	NVMA_CYCLE;
-#ifdef TRACE
-	if (logging.trace_cpu) {
-		hd6309_trace_irq(hcpu->tracer, vec);
-	}
-#endif
+	hcpu->state = hd6309_state_irq_reset_vector;
 	REG_PC = fetch_word(cpu, vec);
 	hcpu->state = hd6309_state_label_a;
 	NVMA_CYCLE;
 }
 
 static void instruction_posthook(struct MC6809 *cpu) {
-#ifdef TRACE
-	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (logging.trace_cpu) {
-		hd6309_trace_print(hcpu->tracer);
-	}
-#endif
 	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);
 }

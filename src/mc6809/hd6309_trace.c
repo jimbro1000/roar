@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU tracing.
  *
- *  \copyright Copyright 2012-2017 Ciaran Anscomb
+ *  \copyright Copyright 2012-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -871,24 +871,24 @@ static struct {
 	}
 };
 
-/* The next byte is expected to be one of these, with special exceptions:
- * WANT_PRINT - expecting trace_print to be called
- * WANT_NOTHING - expecting a byte that is to be ignored */
+/* The next byte is expected to be one of these, with the special exception of
+ * WANT_PRINT, which indicates a trace line is complete. */
 
 enum {
 	WANT_INSTRUCTION,
+	WANT_INSTRUCTION2,
 	WANT_IRQ_VECTOR,
+	WANT_IRQ_VECTOR2,
 	WANT_IDX_POSTBYTE,
 	WANT_MEMBIT_POSTBYTE,
 	WANT_VALUE,
 	WANT_IM_VALUE,
 	WANT_PRINT,
-	WANT_NOTHING
 };
 
 /* Sequences of expected bytes */
 
-static int const state_list_irq[] = { WANT_VALUE, WANT_PRINT };
+static int const state_list_irq[] = { WANT_IRQ_VECTOR2, WANT_PRINT };
 static int const state_list_inherent[] = { WANT_PRINT };
 static int const state_list_idx[] = { WANT_IDX_POSTBYTE };
 static int const state_list_imm8[] = { WANT_VALUE, WANT_PRINT };
@@ -986,7 +986,7 @@ static char const * const irq_names[8] = {
 
 /* Current state */
 
-#define BYTES_BUF_SIZE 5
+#define MAX_NBYTES 5
 
 struct hd6309_trace {
 	struct HD6309 *hcpu;
@@ -994,8 +994,8 @@ struct hd6309_trace {
 	int state;
 	int page;
 	uint16_t instr_pc;
-	int bytes_count;
-	uint8_t bytes_buf[BYTES_BUF_SIZE];
+	unsigned nbytes;
+	uint8_t bytes[MAX_NBYTES];
 
 	const char *mnemonic;
 	char operand_text[30];  // too large, but avoids gcc8 warnings
@@ -1014,12 +1014,12 @@ struct hd6309_trace {
 	const char *tfm_fmt;
 };
 
-static void reset_state(struct hd6309_trace *tracer);
-static void trace_print_short(struct hd6309_trace *tracer);
+static void reset_state(struct hd6309_trace *);
+static void print_record(struct hd6309_trace *);
 
-#define STACK_PRINT(t,r) do { \
-		if (not_first) { strcat((t)->operand_text, "," r); } \
-		else { strcat((t)->operand_text, r); not_first = 1; } \
+#define STACK_PRINT(t,r,c) do { \
+		if (c) { strcat((t)->operand_text, r ","); } \
+		else { strcat((t)->operand_text, r); } \
 	} while (0)
 
 #define sex5(v) ((int)((v) & 0x0f) - (int)((v) & 0x10))
@@ -1039,50 +1039,50 @@ void hd6309_trace_free(struct hd6309_trace *tracer) {
 	free(tracer);
 }
 
-void hd6309_trace_reset(struct hd6309_trace *tracer) {
-	reset_state(tracer);
-	hd6309_trace_irq(tracer, 0xfffe);
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void reset_state(struct hd6309_trace *tracer) {
-	tracer->state = WANT_INSTRUCTION;
-	tracer->page = PAGE0;
-	tracer->bytes_count = 0;
-	tracer->mnemonic = "*";
-	strcpy(tracer->operand_text, "*");
+// Called at each timing checkpoint
 
-	tracer->ins_type = PAGE0;
-	tracer->state_list = NULL;
-	tracer->idx_mode = 0;
-	tracer->idx_reg = "";
-	tracer->idx_indirect = 0;
-	tracer->membit_reg = "";
-	tracer->membit_sbit = 0;
-	tracer->membit_dbit = 0;
-	tracer->tfm_fmt = "";
+void hd6309_trace_vector(struct hd6309_trace *tracer) {
+	print_record(tracer);
+	tracer->state = WANT_IRQ_VECTOR;
+}
+
+void hd6309_trace_instruction(struct hd6309_trace *tracer) {
+	print_record(tracer);
+	tracer->state = WANT_INSTRUCTION;
 }
 
 /* Called for each memory read */
 
 void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
+	struct HD6309 *hcpu = tracer->hcpu;
 
-	// Record PC of instruction
-	if (tracer->bytes_count == 0) {
+	// New trace record?
+	if (hcpu->state == hd6309_state_next_instruction && tracer->state == WANT_INSTRUCTION) {
+		tracer->instr_pc = pc;
+	} else if (hcpu->state == hd6309_state_irq_reset_vector && tracer->state == WANT_IRQ_VECTOR) {
+		tracer->mnemonic = irq_names[(pc & 15) >> 1];
 		tracer->instr_pc = pc;
 	}
 
-	// Record byte if considered part of instruction
-	if (tracer->bytes_count < BYTES_BUF_SIZE && tracer->state != WANT_PRINT && tracer->state != WANT_NOTHING) {
-		tracer->bytes_buf[tracer->bytes_count++] = byte;
+	if (tracer->state == WANT_PRINT) {
+		return;
+	}
+
+	// Record byte if it follows current PC.  Note: nbytes not
+	// incremented here: individual states will bump it if necessary.
+	if (pc == (tracer->instr_pc + tracer->nbytes)) {
+		if (tracer->nbytes < MAX_NBYTES) {
+			tracer->bytes[tracer->nbytes] = byte;
+		}
 	}
 
 	switch (tracer->state) {
 
 		// Instruction fetch
-		default:
 		case WANT_INSTRUCTION:
+		case WANT_INSTRUCTION2:
 			tracer->value = 0;
 			tracer->im_value = 0;
 			tracer->state_list = NULL;
@@ -1091,6 +1091,7 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 			switch (tracer->ins_type) {
 				// Change page, stay in WANT_INSTRUCTION state
 				case PAGE2: case PAGE3:
+					tracer->state = WANT_INSTRUCTION2;
 					tracer->page = tracer->ins_type;
 					break;
 				// Otherwise use an appropriate state list:
@@ -1128,6 +1129,7 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 					tracer->state_list = state_list_inmem16;
 					break;
 			}
+			tracer->nbytes++;
 			break;
 
 		// First byte of an IRQ vector
@@ -1135,11 +1137,14 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 			tracer->value = byte;
 			tracer->ins_type = IRQVECTOR;
 			tracer->state_list = state_list_irq;
+			tracer->nbytes++;
 			break;
 
 		// Building a value byte by byte
 		case WANT_VALUE:
+		case WANT_IRQ_VECTOR2:
 			tracer->value = (tracer->value << 8) | byte;
+			tracer->nbytes++;
 			break;
 
 		// Indexed postbyte - record relevant details
@@ -1165,6 +1170,7 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 				tracer->idx_mode = IDX_PD2;
 			}
 			tracer->state_list = idx_state_lists[tracer->idx_mode];
+			tracer->nbytes++;
 			break;
 
 		// Postbyte for "memory with bit" instructions
@@ -1172,29 +1178,27 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 			tracer->membit_reg = membit_regs[(byte>>6) & 3];
 			tracer->membit_sbit = (byte>>3) & 7;
 			tracer->membit_dbit = byte & 7;
+			tracer->nbytes++;
 			break;
 
 		// Separate immediate value for "in memory" instructions
 		case WANT_IM_VALUE:
 			tracer->im_value = (tracer->im_value << 8) | byte;
+			tracer->nbytes++;
 			break;
 
-		// Expecting CPU code to call trace_print
-		case WANT_PRINT:
-			tracer->state_list = NULL;
-			return;
-
-		// This byte is to be ignored (used following IRQ vector fetch)
-		case WANT_NOTHING:
+		default:
 			break;
 	}
 
 	// Get next state from state list
-	if (tracer->state_list)
+	if (tracer->state_list) {
 		tracer->state = *(tracer->state_list++);
+	}
 
-	if (tracer->state != WANT_PRINT)
+	if (tracer->state != WANT_PRINT) {
 		return;
+	}
 
 	// If the next state is WANT_PRINT, we're done with the instruction, so
 	// prep the operand text for printing.
@@ -1223,27 +1227,27 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 			break;
 
 		case STACKS: {
-			_Bool not_first = 0;
-			if (tracer->value & 0x01) { STACK_PRINT(tracer, "CC"); }
-			if (tracer->value & 0x02) { STACK_PRINT(tracer, "A"); }
-			if (tracer->value & 0x04) { STACK_PRINT(tracer, "B"); }
-			if (tracer->value & 0x08) { STACK_PRINT(tracer, "DP"); }
-			if (tracer->value & 0x10) { STACK_PRINT(tracer, "X"); }
-			if (tracer->value & 0x20) { STACK_PRINT(tracer, "Y"); }
-			if (tracer->value & 0x40) { STACK_PRINT(tracer, "U"); }
-			if (tracer->value & 0x80) { STACK_PRINT(tracer, "PC"); }
+			unsigned postbyte = tracer->value;
+			if (postbyte & 0x01) { STACK_PRINT(tracer, "CC", postbyte & 0xfe); }
+			if (postbyte & 0x02) { STACK_PRINT(tracer, "A",  postbyte & 0xfc); }
+			if (postbyte & 0x04) { STACK_PRINT(tracer, "B",  postbyte & 0xf8); }
+			if (postbyte & 0x08) { STACK_PRINT(tracer, "DP", postbyte & 0xf0); }
+			if (postbyte & 0x10) { STACK_PRINT(tracer, "X",  postbyte & 0xe0); }
+			if (postbyte & 0x20) { STACK_PRINT(tracer, "Y",  postbyte & 0xc0); }
+			if (postbyte & 0x40) { STACK_PRINT(tracer, "U",  postbyte & 0x80); }
+			if (postbyte & 0x80) { STACK_PRINT(tracer, "PC", 0); }
 		} break;
 
 		case STACKU: {
-			_Bool not_first = 0;
-			if (tracer->value & 0x01) { STACK_PRINT(tracer, "CC"); }
-			if (tracer->value & 0x02) { STACK_PRINT(tracer, "A"); }
-			if (tracer->value & 0x04) { STACK_PRINT(tracer, "B"); }
-			if (tracer->value & 0x08) { STACK_PRINT(tracer, "DP"); }
-			if (tracer->value & 0x10) { STACK_PRINT(tracer, "X"); }
-			if (tracer->value & 0x20) { STACK_PRINT(tracer, "Y"); }
-			if (tracer->value & 0x40) { STACK_PRINT(tracer, "S"); }
-			if (tracer->value & 0x80) { STACK_PRINT(tracer, "PC"); }
+			unsigned postbyte = tracer->value;
+			if (postbyte & 0x01) { STACK_PRINT(tracer, "CC", postbyte & 0xfe); }
+			if (postbyte & 0x02) { STACK_PRINT(tracer, "A",  postbyte & 0xfc); }
+			if (postbyte & 0x04) { STACK_PRINT(tracer, "B",  postbyte & 0xf8); }
+			if (postbyte & 0x08) { STACK_PRINT(tracer, "DP", postbyte & 0xf0); }
+			if (postbyte & 0x10) { STACK_PRINT(tracer, "X",  postbyte & 0xe0); }
+			if (postbyte & 0x20) { STACK_PRINT(tracer, "Y",  postbyte & 0xc0); }
+			if (postbyte & 0x40) { STACK_PRINT(tracer, "S",  postbyte & 0x80); }
+			if (postbyte & 0x80) { STACK_PRINT(tracer, "PC", 0); }
 		} break;
 
 		case REGISTER:
@@ -1303,15 +1307,7 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "$%04x", pc);
 			break;
 
-		// CPU code will not call trace_print after IRQ vector fetch
-		// and before the next instruction, therefore the state list
-		// for IRQ vectors skips an expected dummy byte, and this
-		// prints the trace line early.
-
 		case IRQVECTOR:
-			trace_print_short(tracer);
-			printf("\n");
-			fflush(stdout);
 			break;
 
 		case QUAD_IMMEDIATE:
@@ -1344,38 +1340,56 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 	}
 }
 
-/* Called just before an IRQ vector fetch */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void hd6309_trace_irq(struct hd6309_trace *tracer, int vector) {
-	reset_state(tracer);
-	tracer->state = WANT_IRQ_VECTOR;
-	tracer->bytes_count = 0;
-	tracer->mnemonic = irq_names[(vector & 15) >> 1];
+static void reset_state(struct hd6309_trace *tracer) {
+	tracer->state = WANT_PRINT;
+	tracer->page = PAGE0;
+	tracer->instr_pc = 0;
+	tracer->nbytes = 0;
+	tracer->mnemonic = "*";
+	strcpy(tracer->operand_text, "*");
+
+	tracer->ins_type = PAGE0;
+	tracer->state_list = NULL;
+	tracer->idx_mode = 0;
+	tracer->idx_reg = "";
+	tracer->idx_indirect = 0;
+	tracer->membit_reg = "";
+	tracer->membit_sbit = 0;
+	tracer->membit_dbit = 0;
+	tracer->tfm_fmt = "";
 }
 
 /* Called after each instruction */
 
-void hd6309_trace_print(struct hd6309_trace *tracer) {
+static void print_record(struct hd6309_trace *tracer) {
 	struct HD6309 *hcpu = tracer->hcpu;
 	struct MC6809 *cpu = &hcpu->mc6809;
-	if (tracer->state != WANT_PRINT) return;
-	trace_print_short(tracer);
-	printf("cc=%02x a=%02x b=%02x e=%02x "
-	       "f=%02x dp=%02x x=%04x y=%04x "
-	       "u=%04x s=%04x v=%04x\n",
-	       cpu->reg_cc, MC6809_REG_A(cpu), MC6809_REG_B(cpu), HD6309_REG_E(hcpu),
-	       HD6309_REG_F(hcpu), cpu->reg_dp, cpu->reg_x, cpu->reg_y,
-	       cpu->reg_u, cpu->reg_s, hcpu->reg_v);
-	fflush(stdout);
-	reset_state(tracer);
-}
 
-static void trace_print_short(struct hd6309_trace *tracer) {
-	char bytes_string[(BYTES_BUF_SIZE*2)+1];
-	if (tracer->bytes_count == 0) return;
-	for (int i = 0; i < tracer->bytes_count; i++) {
-		snprintf(bytes_string + i*2, 3, "%02x", tracer->bytes_buf[i]);
+	if (tracer->nbytes == 0) {
+		// Nothing to print.
+		return;
 	}
-	printf("%04x| %-12s%-8s%-20s", tracer->instr_pc, bytes_string, tracer->mnemonic, tracer->operand_text);
+
+	char bytes_string[(MAX_NBYTES*2)+1];
+	for (unsigned i = 0; i < tracer->nbytes; i++) {
+		snprintf(bytes_string + i*2, 3, "%02x", tracer->bytes[i]);
+	}
+
+	if (tracer->ins_type == IRQVECTOR) {
+		printf("%04x| %-12s%-24s", tracer->instr_pc, bytes_string, tracer->mnemonic);
+	} else {
+		printf("%04x| %-12s%-6s%-18s", tracer->instr_pc, bytes_string, tracer->mnemonic, tracer->operand_text);
+		printf("  cc=%02x a=%02x b=%02x e=%02x "
+		       "f=%02x dp=%02x x=%04x y=%04x "
+		       "u=%04x s=%04x v=%04x",
+		       cpu->reg_cc, MC6809_REG_A(cpu), MC6809_REG_B(cpu), HD6309_REG_E(hcpu),
+		       HD6309_REG_F(hcpu), cpu->reg_dp, cpu->reg_x, cpu->reg_y,
+		       cpu->reg_u, cpu->reg_s, hcpu->reg_v);
+	}
+
+	printf("\n");
+	fflush(stdout);
 	reset_state(tracer);
 }

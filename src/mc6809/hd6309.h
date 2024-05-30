@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU.
  *
- *  \copyright Copyright 2012-2021 Ciaran Anscomb
+ *  \copyright Copyright 2012-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -48,7 +48,8 @@ enum hd6309_state {
 	hd6309_state_sync_check_halt,
 	hd6309_state_done_instruction,
 	hd6309_state_tfm,
-	hd6309_state_tfm_write
+	hd6309_state_tfm_write,
+	hd6309_state_irq_reset_vector,  // BA=0, BS=1
 };
 
 struct HD6309 {
