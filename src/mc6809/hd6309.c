@@ -352,21 +352,14 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->firq_active = 0;
 			cpu->irq_active = 0;
 			hcpu->state = hd6309_state_reset_check_halt;
-#ifdef TRACE
-			if (logging.trace_cpu) {
-				hd6309_trace_irq(hcpu->tracer, MC6809_INT_VEC_RESET);
-			}
-#endif
 			// fall through
 
 		case hd6309_state_reset_check_halt:
-			if (cpu->halt) {
+			if (!cpu->halt) {
+				take_interrupt(cpu, 0, MC6809_INT_VEC_RESET);
+			} else {
 				NVMA_CYCLE;
-				continue;
 			}
-			REG_PC = fetch_word(cpu, MC6809_INT_VEC_RESET);
-			NVMA_CYCLE;
-			hcpu->state = hd6309_state_label_a;
 			continue;
 
 		// done_instruction case for backwards-compatibility
@@ -385,47 +378,36 @@ static void hd6309_run(struct MC6809 *cpu) {
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
 				hcpu->state = hd6309_state_dispatch_irq;
-				continue;
-			}
-			if (!(REG_CC & CC_F) && cpu->firq_active) {
+			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, FIRQ_STACK_ALL);
 				hcpu->state = hd6309_state_dispatch_irq;
-				continue;
-			}
-			if (!(REG_CC & CC_I) && cpu->irq_active) {
+			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
 				hcpu->state = hd6309_state_dispatch_irq;
-				continue;
+			} else {
+				hcpu->state = hd6309_state_next_instruction;
+				cpu->page = 0;
+				// Instruction fetch hook called here so that machine
+				// can be stopped beforehand.
+				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
 			}
-			hcpu->state = hd6309_state_next_instruction;
-			cpu->page = 0;
-			// Instruction fetch hook called here so that machine
-			// can be stopped beforehand.
-			DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
 			continue;
 
 		case hd6309_state_dispatch_irq:
 			if (cpu->nmi_active) {
 				cpu->nmi_active = cpu->nmi = cpu->nmi_latch = 0;
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_NMI);
-				hcpu->state = hd6309_state_label_a;
-				continue;
-			}
-			if (!(REG_CC & CC_F) && cpu->firq_active) {
+			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_FIRQ);
-				hcpu->state = hd6309_state_label_a;
-				continue;
-			}
-			if (!(REG_CC & CC_I) && cpu->irq_active) {
+			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
 				take_interrupt(cpu, CC_I, MC6809_INT_VEC_IRQ);
-				hcpu->state = hd6309_state_label_a;
-				continue;
+			} else {
+				hcpu->state = hd6309_state_cwai_check_halt;
 			}
-			hcpu->state = hd6309_state_cwai_check_halt;
 			continue;
 
 		case hd6309_state_cwai_check_halt:
@@ -433,10 +415,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->firq_active = cpu->firq_latch;
 			cpu->irq_active = cpu->irq_latch;
 			NVMA_CYCLE;
-			if (cpu->halt) {
-				continue;
+			if (!cpu->halt) {
+				hcpu->state = hd6309_state_dispatch_irq;
 			}
-			hcpu->state = hd6309_state_dispatch_irq;
 			continue;
 
 		case hd6309_state_sync:
@@ -450,8 +431,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->firq_active = cpu->firq_latch;
 			cpu->irq_active = cpu->irq_latch;
 			NVMA_CYCLE;
-			if (cpu->halt)
+			if (cpu->halt) {
 				hcpu->state = hd6309_state_sync_check_halt;
+			}
 			continue;
 
 		case hd6309_state_sync_check_halt:
@@ -477,24 +459,20 @@ static void hd6309_run(struct MC6809 *cpu) {
 		case hd6309_state_tfm_write:
 			if (cpu->nmi_active) {
 				hcpu->state = hd6309_state_label_b;
-				continue;
-			}
-			if (!(REG_CC & CC_F) && cpu->firq_active) {
+			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
 				hcpu->state = hd6309_state_label_b;
-				continue;
-			}
-			if (!(REG_CC & CC_I) && cpu->irq_active) {
+			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
 				hcpu->state = hd6309_state_label_b;
-				continue;
+			} else {
+				store_byte(cpu, *hcpu->tfm_dest, REG_M);
+				*hcpu->tfm_src += hcpu->tfm_src_mod;
+				*hcpu->tfm_dest += hcpu->tfm_dest_mod;
+				REG_W--;
+				cpu->nmi_active = cpu->nmi_latch;
+				cpu->firq_active = cpu->firq_latch;
+				cpu->irq_active = cpu->irq_latch;
+				hcpu->state = hd6309_state_tfm;
 			}
-			store_byte(cpu, *hcpu->tfm_dest, REG_M);
-			*hcpu->tfm_src += hcpu->tfm_src_mod;
-			*hcpu->tfm_dest += hcpu->tfm_dest_mod;
-			REG_W--;
-			cpu->nmi_active = cpu->nmi_latch;
-			cpu->firq_active = cpu->firq_latch;
-			cpu->irq_active = cpu->irq_latch;
-			hcpu->state = hd6309_state_tfm;
 			continue;
 
 		case hd6309_state_next_instruction:
@@ -1051,7 +1029,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_SWI);
-				hcpu->state = hd6309_state_label_a;
 				continue;
 
 			// 0x80 - 0xbf A register arithmetic ops
@@ -1461,7 +1438,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI2);
-				hcpu->state = hd6309_state_label_a;
 				continue;
 
 			// XXX to test: is there really no NEGW, ASRW or ASLW?
@@ -1704,7 +1680,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 					stack_irq_registers(cpu, 1);
 					instruction_posthook(cpu);
 					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
-					hcpu->state = hd6309_state_label_a;
 					continue;
 				}
 				REG_PC -= 3;
@@ -1740,7 +1715,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI3);
-				hcpu->state = hd6309_state_label_a;
 				continue;
 
 			// 0x1140 - 0x114f E register inherent ops
@@ -1832,7 +1806,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 					REG_CC |= CC_Z;  // [hoglet67]
 					stack_irq_registers(cpu, 1);
 					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
-					hcpu->state = hd6309_state_label_a;
 					continue;
 				}
 				_Bool nsign = 0;  // dividend sign
@@ -1920,7 +1893,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 					REG_CC |= CC_Z;  // [hoglet67]
 					stack_irq_registers(cpu, 1);
 					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
-					hcpu->state = hd6309_state_label_a;
 					continue;
 				}
 				_Bool nsign = 0;  // dividend sign
@@ -2024,7 +1996,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
-				hcpu->state = hd6309_state_label_a;
 				continue;
 			}
 
@@ -2220,15 +2191,16 @@ static void stack_irq_registers(struct MC6809 *cpu, _Bool entire) {
 }
 
 static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
+	struct HD6309 *hcpu = (struct HD6309 *)cpu;
 	REG_CC |= mask;
 	NVMA_CYCLE;
 #ifdef TRACE
-	struct HD6309 *hcpu = (struct HD6309 *)cpu;
 	if (logging.trace_cpu) {
 		hd6309_trace_irq(hcpu->tracer, vec);
 	}
 #endif
 	REG_PC = fetch_word(cpu, vec);
+	hcpu->state = hd6309_state_label_a;
 	NVMA_CYCLE;
 }
 
