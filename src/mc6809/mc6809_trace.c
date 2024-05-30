@@ -25,6 +25,8 @@
 
 #include "xalloc.h"
 
+#include "events.h"
+#include "logging.h"
 #include "mc6809.h"
 #include "mc6809_trace.h"
 
@@ -975,6 +977,7 @@ struct mc6809_trace {
 	struct MC6809 *cpu;
 
 	int state;
+	event_ticks start_tick;
 	int page;
 	uint16_t instr_pc;
 	unsigned nbytes;
@@ -1008,6 +1011,7 @@ struct mc6809_trace *mc6809_trace_new(struct MC6809 *cpu) {
 	struct mc6809_trace *tracer = xmalloc(sizeof(*tracer));
 	*tracer = (struct mc6809_trace){0};
 	tracer->cpu = cpu;
+	tracer->start_tick = event_current_tick;
 	reset_state(tracer);
 	return tracer;
 }
@@ -1281,6 +1285,12 @@ static void print_record(struct mc6809_trace *tracer) {
 		return;
 	}
 
+	// XXX currently no way to reset start_tick when turning trace mode
+	// on/off, so first instruction after switching on will have crazy dt.
+
+	int dt = event_tick_delta(event_current_tick, tracer->start_tick);
+	tracer->start_tick = event_current_tick;
+
 	char bytes_string[(MAX_NBYTES*2)+1];
 	for (unsigned i = 0; i < tracer->nbytes; i++) {
 		snprintf(bytes_string + i*2, 3, "%02x", tracer->bytes[i]);
@@ -1294,6 +1304,10 @@ static void print_record(struct mc6809_trace *tracer) {
 		       "x=%04x y=%04x u=%04x s=%04x",
 		       cpu->reg_cc, MC6809_REG_A(cpu), MC6809_REG_B(cpu), cpu->reg_dp,
 		       cpu->reg_x, cpu->reg_y, cpu->reg_u, cpu->reg_s);
+	}
+
+	if (logging.trace_cpu_timing) {
+		printf("  dt=%d", dt);
 	}
 
 	printf("\n");

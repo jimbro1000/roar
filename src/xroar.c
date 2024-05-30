@@ -2779,6 +2779,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("gdb-ip", &xroar.cfg.debug.gdb_ip) },
 	{ XC_SET_STRING("gdb-port", &xroar.cfg.debug.gdb_port) },
 	{ XC_SET_INT1("trace", &logging.trace_cpu) },
+	{ XC_SET_BOOL("trace-timing", &logging.trace_cpu_timing) },
 
 	/* Other options: */
 #ifndef HAVE_WASM
@@ -2964,6 +2965,7 @@ static void helptext(void) {
 "  -no-ratelimit         run cpu as fast as possible\n"
 #ifdef TRACE
 "  -trace                start with trace mode on\n"
+"  -trace-timing         print timings in trace mode\n"
 #endif
 "  -debug-fdc FLAGS      FDC debugging (see manual, or -1 for all)\n"
 "  -debug-file FLAGS     file debugging (see manual, or -1 for all)\n"
@@ -3145,6 +3147,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "gdb-port", xroar.cfg.debug.gdb_port, GDB_PORT_DEFAULT);
 	xroar_cfg_print_bool(f, all, "ratelimit", private_cfg.debug.ratelimit, 1);
 	xroar_cfg_print_bool(f, all, "trace", logging.trace_cpu, 0);
+	xroar_cfg_print_bool(f, all, "trace-timing", logging.trace_cpu_timing, 0);
 	xroar_cfg_print_flags(f, all, "debug-fdc", logging.debug_fdc);
 	xroar_cfg_print_flags(f, all, "debug-file", logging.debug_file);
 	xroar_cfg_print_flags(f, all, "debug-gdb", logging.debug_gdb);
