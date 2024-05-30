@@ -2778,7 +2778,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("gdb", &xroar.cfg.debug.gdb) },
 	{ XC_SET_STRING("gdb-ip", &xroar.cfg.debug.gdb_ip) },
 	{ XC_SET_STRING("gdb-port", &xroar.cfg.debug.gdb_port) },
-	{ XC_SET_INT1("trace", &logging.trace_cpu) },
+	{ XC_SET_BOOL("trace", &logging.trace_cpu) },
 	{ XC_SET_BOOL("trace-timing", &logging.trace_cpu_timing) },
 
 	/* Other options: */
