@@ -258,6 +258,7 @@ EXTRA_DIST += \
 	gtk3/gtk3.gresource.xml \
 	gtk3/keyboard_gtk3_mappings.c
 
+if GLIB_COMPILE_RESOURCES
 .INTERMEDIATE: gtk3/gtk3.gresource.tmp
 
 gtk3/gtk3.gresource.tmp: $(GTK3_RESOURCES)
@@ -268,6 +269,7 @@ gtk3/gtk3.gresource.tmp: gtk3/gtk3.gresource.xml
 gtk3/gtk3.gresource.c: gtk3/gtk3.gresource.tmp
 	echo "#include \"top-config.h\"" > $@
 	cat $< >> $@
+endif
 
 # GTK+ 2.0 user interface
 
@@ -309,6 +311,7 @@ EXTRA_DIST += \
 	gtk2/gtk2.gresource.xml \
 	gtk2/keyboard_gtk2_mappings.c
 
+if GLIB_COMPILE_RESOURCES
 .INTERMEDIATE: gtk2/gtk2.gresource.tmp
 
 gtk2/gtk2.gresource.tmp: $(GTK2_RESOURCES)
@@ -319,6 +322,7 @@ gtk2/gtk2.gresource.tmp: gtk2/gtk2.gresource.xml
 gtk2/gtk2.gresource.c: gtk2/gtk2.gresource.tmp
 	echo "#include \"top-config.h\"" > $@
 	cat $< >> $@
+endif
 
 # SDL2 user interface
 

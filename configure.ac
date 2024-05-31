@@ -22,6 +22,7 @@ AC_PROG_OBJC
 #AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_RANLIB
+AC_PATH_PROG([BUILD_PKG_CONFIG], [pkg-config])
 
 AC_SYS_LARGEFILE
 
@@ -557,8 +558,12 @@ int main(int argc, char **argv) { gtk_init(&argc, &argv); return 0; }
 AM_CONDITIONAL([GTK2], [test -n "$have_gtk2"])
 AM_COND_IF([GTK2], [AC_DEFINE([HAVE_GTK2], 1, [Use GTK+ 2])])
 
-GLIB_COMPILE_RESOURCES=`$PKG_CONFIG --variable glib_compile_resources gio-2.0`
+unset GLIB_COMPILE_RESOURCES
+if test -n "$BUILD_PKG_CONFIG"; then
+	GLIB_COMPILE_RESOURCES=`$BUILD_PKG_CONFIG --variable glib_compile_resources gio-2.0`
+fi
 AC_SUBST(GLIB_COMPILE_RESOURCES)
+AM_CONDITIONAL([GLIB_COMPILE_RESOURCES], [test -n "$GLIB_COMPILE_RESOURCES"])
 
 ### GtkGLExt
 
