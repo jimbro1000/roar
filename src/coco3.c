@@ -681,6 +681,8 @@ static _Bool coco3_finish(struct part *p) {
 	update_sound_mux_source(mcc3);
 	sound_set_mux_enabled(mcc3->snd, PIA_VALUE_CB2(mcc3->PIA1));
 
+	mcc3->dat.readable = 1;
+
 	tcc1014_notify_mode(mcc3->GIME);
 
 	return 1;
@@ -1082,7 +1084,7 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 		}
 		// Optional DAT board can optionally be read from
 		if (A == 0xff9b) {
-			mcc3->CPU->D = (mcc3->CPU->D & ~0x03) | (mcc3->dat.vram_bank >> 13);
+			mcc3->CPU->D = (mcc3->CPU->D & ~0x03) | (mcc3->dat.vram_bank >> 6);
 		} else if (A >= 0xffa0 && A < 0xffb0) {
 			mcc3->CPU->D = (mcc3->CPU->D & ~0xc0) | mcc3->dat.mmu_bank[A & 15];
 		}
