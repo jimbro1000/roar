@@ -57,6 +57,7 @@
 #include "xroar.h"
 
 #ifndef GIME_DEBUG
+#define HAVE_GIME_DEBUG
 #define GIME_DEBUG(...) LOG_PRINT(__VA_ARGS__)
 #endif
 
@@ -727,6 +728,9 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 	if (gime->frame == 0 && gime->vstate == tcc1014_vstate_active_area) {
 		render_scanline(gime);
 	}
+#ifdef HAVE_GIME_DEBUG
+	unsigned l_dt = event_current_tick - gime->scanline_start;
+#endif
 	reg &= 15;
 	gime->registers[reg] = val;
 	switch (reg) {
@@ -737,7 +741,7 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		gime->MC2 = val & 0x04;
 		gime->MC1 = val & 0x02;
 		gime->MC0 = val & 0x01;
-		GIME_DEBUG("GIME INIT0: COCO=%d MMUEN=%d IEN=%d FEN=%d MC3=%d MC2=%d MC1/0=%d\n", (val>>7)&1, (val>>6)&1, (val>>5)&1, (val>>4)&1, (val>>3)&1,(val>>2)&1,val&3);
+		GIME_DEBUG("GIME INIT0 (%-3u+%-3u): COCO=%d MMUEN=%d IEN=%d FEN=%d MC3=%d MC2=%d MC1/0=%d\n", gime->scanline, l_dt, (val>>7)&1, (val>>6)&1, (val>>5)&1, (val>>4)&1, (val>>3)&1,(val>>2)&1,val&3);
 		tcc1014_update_graphics_mode(gime);
 		break;
 
@@ -745,18 +749,18 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		update_timer(gime);
 		gime->TINS = val & 0x20;
 		gime->TR = (val & 0x01) ? 8 : 0;
-		GIME_DEBUG("GIME INIT1: MTYP=%d TINS=%d TR=%d\n", (val>>6)&1, (val>>5)&1, val&1);
+		GIME_DEBUG("GIME INIT1 (%-3u+%-3u): MTYP=%d TINS=%d TR=%d\n", gime->scanline, l_dt, (val>>6)&1, (val>>5)&1, val&1);
 		schedule_timer(gime);
 		break;
 
 	case 2:
-		GIME_DEBUG("GIME IRQ:   TMR=%d HBORD=%d VBORD=%d SER=%d KBD=%d CART=%d\n", (val>>5)&1, (val>>4)&1, (val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
+		GIME_DEBUG("GIME IRQ   (%-3u+%-3u): TMR=%d HBORD=%d VBORD=%d SER=%d KBD=%d CART=%d\n", gime->scanline, l_dt, (val>>5)&1, (val>>4)&1, (val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
 		gime->irq_state &= ~val;
 		gime->public.IRQ &= ~val;
 		break;
 
 	case 3:
-		GIME_DEBUG("GIME FIRQ:  TMR=%d HBORD=%d VBORD=%d SER=%d KBD=%d CART=%d\n", (val>>5)&1, (val>>4)&1, (val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
+		GIME_DEBUG("GIME FIRQ  (%-3u+%-3u): TMR=%d HBORD=%d VBORD=%d SER=%d KBD=%d CART=%d\n", gime->scanline, l_dt, (val>>5)&1, (val>>4)&1, (val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
 		gime->firq_state &= ~val;
 		gime->public.FIRQ &= ~val;
 		break;
@@ -771,12 +775,12 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 			}
 			schedule_timer(gime);
 		}
-		GIME_DEBUG("GIME TMRH:  TIMER=%d\n", (val<<8)|gime->registers[5]);
+		GIME_DEBUG("GIME TMRH  (%-3u+%-3u): TIMER=%d\n", gime->scanline, l_dt, (val<<8)|gime->registers[5]);
 		break;
 
 	case 5:
 		// Timer LSB
-		GIME_DEBUG("GIME TMRL:  TIMER=%d\n", (gime->registers[4]<<8)|val);
+		GIME_DEBUG("GIME TMRL  (%-3u+%-3u): TIMER=%d\n", gime->scanline, l_dt, (gime->registers[4]<<8)|val);
 		break;
 
 	case 8:
@@ -787,7 +791,7 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		gime->LPR = val & 7;
 		gime->field_duration = gime->H50 ? 312 : 262;
 		gime->lTB = VRES_LPF_lTB[gime->H50][gime->LPF];
-		GIME_DEBUG("GIME VMODE: BP=%d BPI=%d MOCH=%d H50=%d (l=%d) LPR=%d (%d)\n", (val&0x80)?1:0, (val&0x20)?1:0, (val&0x10)?1:0, (val&8)?1:0, gime->field_duration, val&7, LPR_nLPR[gime->LPR]);
+		GIME_DEBUG("GIME VMODE (%-3u+%-3u): BP=%d BPI=%d MOCH=%d H50=%d (l=%d) LPR=%d (%d)\n", gime->scanline, l_dt, (val&0x80)?1:0, (val&0x20)?1:0, (val&0x10)?1:0, (val&8)?1:0, gime->field_duration, val&7, LPR_nLPR[gime->LPR]);
 		tcc1014_update_graphics_mode(gime);
 		break;
 
@@ -808,36 +812,36 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		} else {
 			gime->post_vblank_vstate = tcc1014_vstate_top_border;
 		}
-		GIME_DEBUG("GIME VRES:  LPF=%d (lTB=%d lAA=%d) HRES=%d CRES=%d\n", (val>>5)&3, gime->lTB, gime->lAA, (val>>2)&7, val&3);
+		GIME_DEBUG("GIME VRES  (%-3u+%-3u): LPF=%d (lTB=%d lAA=%d) HRES=%d CRES=%d\n", gime->scanline, l_dt, (val>>5)&3, gime->lTB, gime->lAA, (val>>2)&7, val&3);
 		tcc1014_update_graphics_mode(gime);
 		break;
 
 	case 0xa:
 		gime->BRDR = val & 0x3f;
-		GIME_DEBUG("GIME BRDR:  BRDR=%d\n", gime->BRDR);
+		GIME_DEBUG("GIME BRDR  (%-3u+%-3u): BRDR=%d\n", gime->scanline, l_dt, gime->BRDR);
 		tcc1014_update_graphics_mode(gime);
 		break;
 
 	case 0xc:
 		gime->VSC = val & 15;
-		GIME_DEBUG("GIME VSC:   VSC=%d\n", val&15);
+		GIME_DEBUG("GIME VSC   (%-3u+%-3u): VSC=%d\n", gime->scanline, l_dt, val&15);
 		tcc1014_update_graphics_mode(gime);
 		break;
 
 	case 0xd:
 		gime->Y = (val << 11) | (gime->registers[0xe] << 3);
-		GIME_DEBUG("GIME VOFFh: VOFF=%05x\n", (val<<11)|(gime->registers[0xe]<<3));
+		GIME_DEBUG("GIME VOFFh (%-3u+%-3u): VOFF=%05x\n", gime->scanline, l_dt, (val<<11)|(gime->registers[0xe]<<3));
 		break;
 
 	case 0xe:
 		gime->Y = (gime->registers[0xd] << 11) | (val << 3);
-		GIME_DEBUG("GIME VOFFl: VOFF=%05x\n", (gime->registers[0xd]<<11)|(val<<3));
+		GIME_DEBUG("GIME VOFFl (%-3u+%-3u): VOFF=%05x\n", gime->scanline, l_dt, (gime->registers[0xd]<<11)|(val<<3));
 		break;
 
 	case 0xf:
 		gime->HVEN = val & 0x80;
 		gime->X = (val & 0x7f) << 1;
-		GIME_DEBUG("GIME HOFF:  HVEN=%d X=%d\n", gime->HVEN, gime->X);
+		GIME_DEBUG("GIME HOFF  (%-3u+%-3u): HVEN=%d X=%d\n", gime->scanline, l_dt, gime->HVEN, gime->X);
 		tcc1014_update_graphics_mode(gime);
 		break;
 	}
