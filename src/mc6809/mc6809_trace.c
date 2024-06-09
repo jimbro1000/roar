@@ -920,8 +920,8 @@ static char const * const idx_fmts[17] = {
 	"%s$%04x,%s%s",
 	"%s*%s",
 	"%sD,%s%s",
-	"%s%s$%02x,PCR%s",
-	"%s$%04x,PCR%s",
+	"%s<$%04x,PCR%s",
+	"%s>$%04x,PCR%s",
 	"%s*%s",
 	"%s$%04X%s",
 	"%s%d,%s%s",
@@ -1229,10 +1229,10 @@ void mc6809_trace_byte(struct mc6809_trace *tracer, uint8_t byte, uint16_t pc) {
 				snprintf(tracer->operand_text, sizeof(tracer->operand_text), idx_fmts[tracer->idx_mode], pre, tracer->value, tracer->idx_reg, post);
 				break;
 			case IDX_PCR8:
-				snprintf(tracer->operand_text, sizeof(tracer->operand_text), idx_fmts[tracer->idx_mode], pre, (value8<0)?"-":"", (value8<0)?-value8:value8, post);
+				snprintf(tracer->operand_text, sizeof(tracer->operand_text), idx_fmts[tracer->idx_mode], pre, (uint16_t)(tracer->instr_pc + tracer->nbytes + value8), post);
 				break;
 			case IDX_PCR16: case IDX_EXT16:
-				snprintf(tracer->operand_text, sizeof(tracer->operand_text), idx_fmts[tracer->idx_mode], pre, tracer->value, post);
+				snprintf(tracer->operand_text, sizeof(tracer->operand_text), idx_fmts[tracer->idx_mode], pre, (uint16_t)(tracer->instr_pc + tracer->nbytes + tracer->value), post);
 				break;
 			case IDX_ILL_A: case IDX_ILL_E:
 				snprintf(tracer->operand_text, sizeof(tracer->operand_text), idx_fmts[tracer->idx_mode], pre, post);
