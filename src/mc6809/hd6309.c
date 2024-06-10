@@ -456,7 +456,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 			continue;
 
 		case hd6309_state_tfm:
-			// order is read, NVMA, write
+			// Order is read, NVMA, write.  XXX but is it?  Should
+			// check that and flag this as verified, because it
+			// would make more sense to do read, write, then NVMA
+			// (while it updates pointers which are all
+			// post-applied).  For sure though, the instruction is
+			// interruptable between the read and the write.
 			if (REG_W == 0) {
 				REG_PC += 3;
 				REG_CC |= CC_Z; // [hoglet67]
@@ -464,7 +469,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				break;
 			}
 			REG_M = fetch_byte_notrace(cpu, *hcpu->tfm_src);
-			NVMA_CYCLE;
 			hcpu->state = hd6309_state_tfm_write;
 			continue;
 
@@ -476,6 +480,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
 				hcpu->state = hd6309_state_label_b;
 			} else {
+				NVMA_CYCLE;
 				store_byte(cpu, *hcpu->tfm_dest, REG_M);
 				*hcpu->tfm_src += hcpu->tfm_src_mod;
 				*hcpu->tfm_dest += hcpu->tfm_dest_mod;
