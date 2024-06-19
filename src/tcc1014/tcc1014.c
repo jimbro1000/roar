@@ -444,7 +444,8 @@ static struct part *tcc1014_allocate(void) {
 
 static void tcc1014_initialise(struct part *p, void *options) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)p;
-	gime->is_1986 = options && (strcmp((char *)options, "TCC1014-1986") == 0);
+	(void)options;
+	gime->is_1986 = (strcmp(p->partdb->name, "TCC1014-1986") == 0);
 }
 
 static _Bool tcc1014_finish(struct part *p) {
