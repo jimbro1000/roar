@@ -388,6 +388,13 @@ static void update_timer(void *);
 static void render_scanline(struct TCC1014_private *gime);
 static void tcc1014_update_graphics_mode(struct TCC1014_private *gime);
 
+#define INT_TMR   (0x20)
+#define INT_HBORD (0x10)
+#define INT_VBORD (0x08)
+#define INT_EI2   (0x04)
+#define INT_EI1   (0x02)
+#define INT_EI0   (0x01)
+
 #define SET_INTERRUPT(g,v) do { \
 		(g)->irq_state |= ((v) & (g)->registers[2]); \
 		(g)->firq_state |= ((v) & (g)->registers[3]); \
@@ -641,13 +648,13 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 				*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->irq_state;
 				gime->irq_state = 0;
 				if (gime->timer_counter == 0) {
-					SET_INTERRUPT(gime, 0x20);
+					SET_INTERRUPT(gime, INT_TMR);
 				}
 			} else if (A == 0xff93) {
 				*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->firq_state;
 				gime->firq_state = 0;
 				if (gime->timer_counter == 0) {
-					SET_INTERRUPT(gime, 0x20);
+					SET_INTERRUPT(gime, INT_TMR);
 				}
 			} else if (A == 0xff94 || A == 0xff95) {
 				*gimep->CPUD = 0;
@@ -691,7 +698,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 	// Interrupts based on external inputs.  This also updates IRQ/FIRQ
 	// outputs based on enable registers which may have been changed.
-	unsigned set_int = (gimep->IL1 ? 0x02 : 0) | (gimep->IL0 ? 0x01 : 0);
+	unsigned set_int = (gimep->IL1 ? INT_EI1 : 0) | (gimep->IL0 ? INT_EI0 : 0);
 	SET_INTERRUPT(gime, set_int);
 
 	int ncycles = gime->R1 ? 8 : 16;
@@ -721,7 +728,7 @@ static void update_timer(void *sptr) {
 		unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
 		gime->timer_counter = timer_reset ? (timer_reset + gime->timer_offset) : 0;
 		schedule_timer(gime);
-		SET_INTERRUPT(gime, 0x20);
+		SET_INTERRUPT(gime, INT_TMR);
 	}
 }
 
@@ -772,7 +779,7 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 			unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
 			gime->timer_counter = timer_reset ? (timer_reset + gime->timer_offset) : 0;
 			if (gime->timer_counter == 0) {
-				SET_INTERRUPT(gime, 0x20);
+				SET_INTERRUPT(gime, INT_TMR);
 			}
 			schedule_timer(gime);
 		}
@@ -972,7 +979,7 @@ static void do_hs_rise(void *sptr) {
 static void do_hs_border(void *sptr) {
 	struct TCC1014_private *gime = sptr;
 	// Horizontal border.
-	SET_INTERRUPT(gime, 0x10);
+	SET_INTERRUPT(gime, INT_HBORD);
 	if (!gime->TINS && gime->timer_counter > 0) {
 		// TINS=0: 15.7kHz
 		gime->timer_counter--;
@@ -981,7 +988,7 @@ static void do_hs_border(void *sptr) {
 		}
 	}
 	if (gime->vstate == tcc1014_vstate_active_area && gime->lcount == gime->nAA-1) {
-		SET_INTERRUPT(gime, 0x08);
+		SET_INTERRUPT(gime, INT_VBORD);
 	}
 }
 
