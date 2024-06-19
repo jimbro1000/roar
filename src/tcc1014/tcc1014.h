@@ -2,7 +2,7 @@
  *
  *  \brief TCC1014 (GIME) support.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2019-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -23,32 +23,13 @@
 
 #include "delegate.h"
 
-// Horizontal timing, all measured in pixels
+// Virtually all timings vary by GIME model selected, however the line length
+// remains constant (measured in pixels (1/14.31818µs);
 
-#define TCC1014_tFP   (28)
-#define TCC1014_tWHS  (80)  // measured
-#define TCC1014_tBP   (60)  // measured
-#define TCC1014_tHBNK (TCC1014_tFP + TCC1014_tWHS + TCC1014_tBP)
-#define TCC1014_tAV   (512)
-#define TCC1014_tRB   (112)
-#define TCC1014_tAVB  (TCC1014_tLB + TCC1014_tAV + TCC1014_tRB)
-#define TCC1014_tHST  (TCC1014_tHBNK + TCC1014_tAVB)
-// tHCD = time from start of back porch to beginning of colour burst
-#define TCC1014_tHCD  (14)
-// tCB = duration of colour burst
-#define TCC1014_tCB   (40)
+#define TCC1014_tSL      (912)
 
-/* All horizontal timings shall remain relative to the HS pulse falling edge */
-#define TCC1014_HS_FALLING_EDGE    (0)
-#define TCC1014_HS_RISING_EDGE     (TCC1014_HS_FALLING_EDGE + TCC1014_tWHS)
-#define TCC1014_LEFT_BORDER_START  (TCC1014_HS_FALLING_EDGE + TCC1014_tWHS + TCC1014_tBP)
-#define TCC1014_LINE_DURATION      (912)
-#define TCC1014_RIGHT_BORDER_END   (TCC1014_LINE_DURATION - TCC1014_tFP)
-
-#define TCC1014_VBLANK_START       (0)
-#define TCC1014_TOP_BORDER_START   (TCC1014_VBLANK_START + 3)
-
-// GIME palette indices
+// GIME palette indices.  These names reflect the usual use of the palette
+// entry in VDG compatibility mode.
 
 enum tcc1014_colour {
 	TCC1014_GREEN, TCC1014_YELLOW, TCC1014_BLUE, TCC1014_RED,
@@ -98,14 +79,6 @@ struct TCC1014 {
 
 	DELEGATE_T3(void, unsigned, unsigned, uint8cp) render_line;
 };
-
-/* Fetched data is a buffer of uint16_t, with bits:
- *
- *     10   ¬INT/EXT
- *      9   ¬A/S
- *      8   INV
- *  7...0   DD7..DD0
- */
 
 void tcc1014_reset(struct TCC1014 *gimep);
 void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
