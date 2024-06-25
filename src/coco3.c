@@ -525,7 +525,7 @@ static _Bool coco3_finish(struct part *p) {
 	vo_set_cmp_system(mcc3->vo, 1, VO_RENDER_SYSTEM_NTSC);
 
 	// Bodge factor to bring centred active area in line with chroma
-	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase_offset, 90);
+	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase_offset, 0);
 
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_lead_lag, 0., 100.);
 	// Very slight tweak to the phase
