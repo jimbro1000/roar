@@ -662,7 +662,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x1d:
 			case 0x021d:
 			case 0x031d:
-				REG_A = (REG_B & 0x80) ? 0xff : 0;
+				REG_D = sex8(REG_B);
 				CLR_NZ;
 				SET_NZ16(REG_D);
 				peek_byte(cpu, REG_PC);

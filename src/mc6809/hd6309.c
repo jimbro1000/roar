@@ -729,7 +729,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x1d SEX inherent
 			case 0x1d:
-				REG_A = (REG_B & 0x80) ? 0xff : 0;
+				REG_D = sex8(REG_B);
 				CLR_NZ;
 				SET_NZ16(REG_D);
 				if (!NATIVE_MODE)
