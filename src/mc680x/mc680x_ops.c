@@ -152,7 +152,7 @@ static uint8_t op_com(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of LSR used in 6809
+// This version of LSR used in 6809
 static uint8_t op_lsr(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = (in >> 1) | ((in & 1) << 8);
 	CLR_NZC;
@@ -160,7 +160,7 @@ static uint8_t op_lsr(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of LSR used in 6801/6803
+// This version of LSR used in 6801/6803
 static uint8_t op_lsr_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = (in >> 1) | ((in & 1) << 8);
 	CLR_NZVC;
@@ -168,7 +168,7 @@ static uint8_t op_lsr_v(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of ROR used in 6809
+// This version of ROR used in 6809
 static uint8_t op_ror(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned inx = in | ((REG_CC & 1) << 8);
 	unsigned out = (inx >> 1) | ((inx & 1) << 8);
@@ -177,7 +177,7 @@ static uint8_t op_ror(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of ROR used in 6801/6803
+// This version of ROR used in 6801/6803
 static uint8_t op_ror_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned inx = in | ((REG_CC & 1) << 8);
 	unsigned out = (inx >> 1) | ((inx & 1) << 8);
@@ -186,7 +186,7 @@ static uint8_t op_ror_v(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of ASR used in 6809
+// This version of ASR used in 6809
 static uint8_t op_asr(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned inx = in | ((in & 0x80) << 1);
 	unsigned out = (inx >> 1) | ((inx & 1) << 8);
@@ -195,7 +195,7 @@ static uint8_t op_asr(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of ASR used in 6801/6803
+// This version of ASR used in 6801/6803
 static uint8_t op_asr_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned inx = in | ((in & 0x80) << 1);
 	unsigned out = (inx >> 1) | ((inx & 1) << 8);
@@ -381,7 +381,7 @@ static uint16_t op_com16(STRUCT_CPU *cpu, uint16_t in) {
 	return out;
 }
 
-// This vesion of LSR16 used in 6309
+// This version of LSR16 used in 6309
 static uint16_t op_lsr16(STRUCT_CPU *cpu, uint16_t in) {
 	unsigned out = (in >> 1) | ((in & 1) << 16);
 	CLR_NZC;
@@ -389,7 +389,7 @@ static uint16_t op_lsr16(STRUCT_CPU *cpu, uint16_t in) {
 	return out;
 }
 
-// This vesion of LSR16 used in 6801/6803
+// This version of LSR16 used in 6801/6803
 static uint16_t op_lsr16_v(STRUCT_CPU *cpu, uint16_t in) {
 	unsigned out = (in >> 1) | ((in & 1) << 16);
 	CLR_NZVC;
