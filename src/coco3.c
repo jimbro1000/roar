@@ -517,10 +517,13 @@ static _Bool coco3_finish(struct part *p) {
 	// GIME reports changes in active area
 	mcc3->GIME->set_active_area = mcc3->vo->set_active_area;
 
+	// PAL CoCo 3s only emit the RGB palette, even over composite.  At the
+	// moment, there's no special handling for PAL composite.  If we decide
+	// to implement it properly, it's worth noting that the GIME crystal in
+	// PAL machines is 28.475MHz (2 * 14.2373MHz).
+
 	// Actual GIME clock is 2× this, but we treat it the same as a SAM
 	vo_set_cmp_fs(mcc3->vo, 1, VO_RENDER_FS_14_31818);
-	// PAL CoCo 3s only emit RGB, so don't bother tuning the composite
-	// for anything other than NTSC
 	vo_set_cmp_fsc(mcc3->vo, 1, VO_RENDER_FSC_3_579545);
 	vo_set_cmp_system(mcc3->vo, 1, VO_RENDER_SYSTEM_NTSC);
 
