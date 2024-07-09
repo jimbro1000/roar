@@ -43,6 +43,7 @@ struct MC6883 {
 
 void mc6883_reset(struct MC6883 *);
 void mc6883_mem_cycle(void *, _Bool RnW, uint16_t A);
+unsigned mc6883_decode(struct MC6883 *, _Bool RnW, uint16_t A);
 void mc6883_vdg_hsync(struct MC6883 *, _Bool level);
 void mc6883_vdg_fsync(struct MC6883 *, _Bool level);
 int mc6883_vdg_bytes(struct MC6883 *, int nbytes);

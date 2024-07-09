@@ -83,6 +83,7 @@ struct TCC1014 {
 void tcc1014_reset(struct TCC1014 *gimep);
 void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 
+unsigned tcc1014_decode(struct TCC1014 *, uint16_t A);
 void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val);
 
 void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool);

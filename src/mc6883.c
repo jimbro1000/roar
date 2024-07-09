@@ -482,6 +482,20 @@ void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 }
 
+// Just the address decode from mc6883_mem_cycle().  Used to verify that a
+// breakpoint refers to ROM.
+
+unsigned mc6883_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
+	if ((A >> 8) == 0xff) {
+		// I/O area
+		return io_S[(A >> 5) & 7];
+	} else if ((A & 0x8000) && !sam->TY) {
+		return data_S[A >> 13];
+	}
+	return RnW ? 0 : data_S[A >> 13];
+}
+
 static void vcounter_set(struct MC6883_private *sam, int i, int val);
 
 static void vcounter_update(struct MC6883_private *sam, int i) {

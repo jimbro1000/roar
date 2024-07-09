@@ -801,6 +801,45 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	DELEGATE_CALL(gimep->cpu_cycle, ncycles, RnW, A);
 }
 
+// Just the address decode from tcc1014_mem_cycle().  Used to verify that a
+// breakpoint refers to ROM.  Unlike SAM equivalent, RnW doesn't affect the
+// result.
+
+unsigned tcc1014_decode(struct TCC1014 *gimep, uint16_t A) {
+	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
+	if (A < 0xff00) {
+		_Bool use_mmu = gime->MMUEN;
+
+		if (A >= 0xfe00) {
+			if (gime->MC3) {
+				use_mmu = 0;
+			}
+		}
+
+		unsigned bank = use_mmu ? gime->mmu_bank[gime->TR | (A >> 13)]
+		                        : (0x38 | (A >> 13));
+
+		if (!gime->TY && bank >= 0x3c) {
+			if (!gime->MC1) {
+				return (bank >= 0x3e) ? 1 : 0;
+			} else {
+				return gime->MC0 ? 1 : 0;
+			}
+		}
+	} else if (A < 0xff40) {
+		if ((A & 0x10) == 0) {
+			return 2;
+		}
+	} else if (A < 0xff60) {
+		if (gime->MC2 || A >= 0xff50) {
+			return 6;
+		}
+	} else if (A >= 0xffe0) {
+		return 0;
+	}
+	return 7;
+}
+
 void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 	gime->SAM_register = val;
