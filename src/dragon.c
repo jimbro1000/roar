@@ -1731,8 +1731,13 @@ static void printer_ack(void *sptr, _Bool ack) {
 
 static void coco_print_byte(void *sptr) {
 	struct machine_dragon *md = sptr;
-	if (!md->printer_interface)
+	if (!md->printer_interface) {
 		return;
+	}
+	// Not ROM?
+	if (mc6883_decode(md->SAM, 1, md->CPU->reg_pc) != 2) {
+		return;
+	}
 	int byte = MC6809_REG_A(md->CPU);
 	printer_strobe(md->printer_interface, 0, byte);
 	printer_strobe(md->printer_interface, 1, byte);

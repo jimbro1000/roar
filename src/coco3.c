@@ -1392,8 +1392,13 @@ static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8
 
 static void coco3_print_byte(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
-	if (!mcc3->printer_interface)
+	if (!mcc3->printer_interface) {
 		return;
+	}
+	// Not ROM?
+	if (tcc1014_decode(mcc3->GIME, mcc3->CPU->reg_pc) != 0) {
+		return;
+	}
 	int byte = MC6809_REG_A(mcc3->CPU);
 	printer_strobe(mcc3->printer_interface, 0, byte);
 	printer_strobe(mcc3->printer_interface, 1, byte);
