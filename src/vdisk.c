@@ -947,7 +947,7 @@ static void write_bytes(struct vdisk_ctx *ctx, unsigned repeat, uint8_t data) {
 			if (ctx->head_pos >= ctx->disk->track_length)
 				ctx->head_pos = 128;
 		}
-		ctx->crc = crc16_byte(ctx->crc, data);
+		ctx->crc = crc16_ccitt_byte(ctx->crc, data);
 	}
 }
 
@@ -969,7 +969,7 @@ static uint8_t read_byte(struct vdisk_ctx *ctx) {
 	assert(ctx->head_pos < ctx->disk->track_length);
 	int nbytes = ctx->dden ? 1 : 2;
 	uint8_t data = ctx->track_data[ctx->head_pos];
-	ctx->crc = crc16_byte(ctx->crc, data);
+	ctx->crc = crc16_ccitt_byte(ctx->crc, data);
 	for (int i = 0; i < nbytes; i++) {
 		ctx->head_pos++;
 		if (ctx->head_pos >= ctx->disk->track_length)
@@ -1026,7 +1026,7 @@ _Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
 		for (unsigned sector = 0; sector < nsectors; sector++) {
 			int sect = sector_id[sector];
 			write_bytes(ctx, 6, 0x00);
-			ctx->crc = CRC16_RESET;
+			ctx->crc = CRC16_CCITT_RESET;
 			ctx->idam_data[idam++] = ctx->head_pos | VDISK_SINGLE_DENSITY;
 			write_bytes(ctx, 1, 0xfe);
 			write_bytes(ctx, 1, cyl);
@@ -1036,7 +1036,7 @@ _Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
 			write_crc(ctx);
 			write_bytes(ctx, 11, 0xff);
 			write_bytes(ctx, 6, 0x00);
-			ctx->crc = CRC16_RESET;
+			ctx->crc = CRC16_CCITT_RESET;
 			write_bytes(ctx, 1, 0xfb);
 			write_bytes(ctx, ssize, 0xe5);
 			write_crc(ctx);
@@ -1064,7 +1064,7 @@ _Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
 		for (unsigned sector = 0; sector < nsectors; sector++) {
 			int sect = sector_id[sector];
 			write_bytes(ctx, 8, 0x00);
-			ctx->crc = CRC16_RESET;
+			ctx->crc = CRC16_CCITT_RESET;
 			write_bytes(ctx, 3, 0xa1);
 			ctx->idam_data[idam++] = ctx->head_pos | VDISK_DOUBLE_DENSITY;
 			write_bytes(ctx, 1, 0xfe);
@@ -1075,7 +1075,7 @@ _Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
 			write_crc(ctx);
 			write_bytes(ctx, gap2, 0x4e);
 			write_bytes(ctx, 12, 0x00);
-			ctx->crc = CRC16_RESET;
+			ctx->crc = CRC16_CCITT_RESET;
 			write_bytes(ctx, 3, 0xa1);
 			write_bytes(ctx, 1, 0xfb);
 			write_bytes(ctx, ssize, 0xe5);
@@ -1131,13 +1131,13 @@ _Bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 				for (unsigned j = 0; j < 22; j++)
 					(void)read_byte(ctx);
 				write_bytes(ctx, 12, 0);
-				ctx->crc = CRC16_RESET;
+				ctx->crc = CRC16_CCITT_RESET;
 				write_bytes(ctx, 3, 0xa1);
 			} else {
 				for (unsigned j = 0; j < 11; j++)
 					(void)read_byte(ctx);
 				write_bytes(ctx, 6, 0);
-				ctx->crc = CRC16_RESET;
+				ctx->crc = CRC16_CCITT_RESET;
 			}
 			write_bytes(ctx, 1, 0xfb);
 			unsigned vseclen = 128 << vidam.ssize_code;
@@ -1230,11 +1230,11 @@ _Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 	ctx->head_pos = head_pos;
 
 	(void)read_byte(ctx);  // skip idam byte
-	ctx->crc = CRC16_RESET;
+	ctx->crc = CRC16_CCITT_RESET;
 	if (ctx->dden) {
-		ctx->crc = crc16_byte(ctx->crc, 0xa1);
-		ctx->crc = crc16_byte(ctx->crc, 0xa1);
-		ctx->crc = crc16_byte(ctx->crc, 0xa1);
+		ctx->crc = crc16_ccitt_byte(ctx->crc, 0xa1);
+		ctx->crc = crc16_ccitt_byte(ctx->crc, 0xa1);
+		ctx->crc = crc16_ccitt_byte(ctx->crc, 0xa1);
 	}
 	vidam->valid = 1;
 	vidam->cyl = read_byte(ctx);

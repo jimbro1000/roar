@@ -249,13 +249,13 @@ static _Bool wd279x_is_a(struct part *p, const char *name) {
 
 static uint8_t _vdrive_read(struct WD279X *fdc) {
 	uint8_t b = DELEGATE_CALL(fdc->read);
-	fdc->crc = crc16_byte(fdc->crc, b);
+	fdc->crc = crc16_ccitt_byte(fdc->crc, b);
 	return b;
 }
 
 static void _vdrive_write(struct WD279X *fdc, uint8_t b) {
 	DELEGATE_CALL(fdc->write, b);
-	fdc->crc = crc16_byte(fdc->crc, b);
+	fdc->crc = crc16_ccitt_byte(fdc->crc, b);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -604,11 +604,11 @@ static void state_machine(void *sptr) {
 				NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
-			fdc->crc = CRC16_RESET;
+			fdc->crc = CRC16_CCITT_RESET;
 			if (IS_DOUBLE_DENSITY) {
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
 			}
 			(void)_vdrive_read(fdc);  // Include IDAM in CRC
 			if (fdc->track_register != _vdrive_read(fdc)) {
@@ -654,11 +654,11 @@ static void state_machine(void *sptr) {
 				NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
-			fdc->crc = CRC16_RESET;
+			fdc->crc = CRC16_CCITT_RESET;
 			if (IS_DOUBLE_DENSITY) {
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
 			}
 			(void)_vdrive_read(fdc);  // Include IDAM in CRC
 			if (fdc->track_register != _vdrive_read(fdc)) {
@@ -702,11 +702,11 @@ static void state_machine(void *sptr) {
 				j = 0;
 				fdc->dam = 0;
 				do {
-					fdc->crc = CRC16_RESET;
+					fdc->crc = CRC16_CCITT_RESET;
 					if (IS_DOUBLE_DENSITY) {
-						fdc->crc = crc16_byte(fdc->crc, 0xa1);
-						fdc->crc = crc16_byte(fdc->crc, 0xa1);
-						fdc->crc = crc16_byte(fdc->crc, 0xa1);
+						fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+						fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+						fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
 					}
 					int tmp = _vdrive_read(fdc);
 					if (tmp == 0xfb || tmp == 0xf8)
@@ -819,7 +819,7 @@ static void state_machine(void *sptr) {
 
 
 		case WD279X_state_write_sector_4:
-			fdc->crc = CRC16_RESET;
+			fdc->crc = CRC16_CCITT_RESET;
 			if (IS_DOUBLE_DENSITY) {
 				_vdrive_write(fdc, 0xa1);
 				_vdrive_write(fdc, 0xa1);
@@ -901,11 +901,11 @@ static void state_machine(void *sptr) {
 				NEXT_STATE(WD279X_state_read_address_1, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
-			fdc->crc = CRC16_RESET;
+			fdc->crc = CRC16_CCITT_RESET;
 			if (IS_DOUBLE_DENSITY) {
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
 			}
 			(void)_vdrive_read(fdc);
 			NEXT_STATE(WD279X_state_read_address_2, DELEGATE_CALL(fdc->time_to_next_byte));
@@ -1010,15 +1010,15 @@ static void state_machine(void *sptr) {
 					return;
 				}
 				if (data >= 0xf8 && data <= 0xfb) {
-					fdc->crc = CRC16_RESET;
+					fdc->crc = CRC16_CCITT_RESET;
 					_vdrive_write(fdc, data);
 					NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL(fdc->time_to_next_byte));
 					return;
 				}
 				if (data == 0xfe) {
-					fdc->crc = CRC16_RESET;
+					fdc->crc = CRC16_CCITT_RESET;
 					DELEGATE_CALL(fdc->write_idam);
-					fdc->crc = crc16_byte(fdc->crc, 0xfe);
+					fdc->crc = crc16_ccitt_byte(fdc->crc, 0xfe);
 					NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL(fdc->time_to_next_byte));
 					return;
 				}
@@ -1034,14 +1034,14 @@ static void state_machine(void *sptr) {
 			}
 			if (data == 0xfe) {
 				DELEGATE_CALL(fdc->write_idam);
-				fdc->crc = crc16_byte(fdc->crc, 0xfe);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xfe);
 				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL(fdc->time_to_next_byte));
 				return;
 			}
 			if (data == 0xf5) {
-				fdc->crc = CRC16_RESET;
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
+				fdc->crc = CRC16_CCITT_RESET;
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
+				fdc->crc = crc16_ccitt_byte(fdc->crc, 0xa1);
 				_vdrive_write(fdc, 0xa1);
 				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL(fdc->time_to_next_byte));
 				return;

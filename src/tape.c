@@ -467,7 +467,7 @@ struct tape_file *tape_file_next(struct tape *t, int skip_bad) {
 		f->load_address = (block[15] << 8) | block[16];
 		f->checksum_error = sum ? 1 : 0;
 		f->fnblock_size = block[1];
-		f->fnblock_crc = crc16_block(CRC16_RESET, block + 2, f->fnblock_size);
+		f->fnblock_crc = crc16_ccitt_block(CRC16_CCITT_RESET, block + 2, f->fnblock_size);
 		return f;
 	}
 }
