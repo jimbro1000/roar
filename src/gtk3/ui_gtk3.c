@@ -26,12 +26,16 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #include <gtk/gtk.h>
+#ifdef HAVE_X11
+#include <gdk/gdkx.h>
+#endif
 
 #include "pl-string.h"
 #include "slist.h"
 
 #include "cart.h"
 #include "events.h"
+#include "hkbd.h"
 #include "joystick.h"
 #include "keyboard.h"
 #include "logging.h"
@@ -47,6 +51,8 @@
 #include "gtk3/printercontrol.h"
 #include "gtk3/tapecontrol.h"
 #include "gtk3/video_options.h"
+
+#include "x11/hkbd_x11.h"
 
 static void *ui_gtk3_new(void *cfg);
 static void ui_gtk3_free(void *);
@@ -505,6 +511,11 @@ static void *ui_gtk3_new(void *cfg) {
 	gtk_init(NULL, NULL);
 
 	g_set_application_name("XRoar");
+
+#ifdef HAVE_X11
+	Display *display = gdk_x11_get_default_xdisplay();
+	hk_x11_set_display(display);
+#endif
 
 	GError *error = NULL;
 

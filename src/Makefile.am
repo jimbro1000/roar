@@ -275,8 +275,7 @@ GTK3_RESOURCES = \
 EXTRA_DIST += \
 	$(GTK3_RESOURCES) \
 	gtk3/gtk3.gresource.c \
-	gtk3/gtk3.gresource.xml \
-	gtk3/keyboard_gtk3_mappings.c
+	gtk3/gtk3.gresource.xml
 
 if GLIB_COMPILE_RESOURCES
 .INTERMEDIATE: gtk3/gtk3.gresource.tmp
