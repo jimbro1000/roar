@@ -466,7 +466,7 @@ gboolean gtk3_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event,
 	_Bool control = event->state & GDK_CONTROL_MASK;
 
 	if (logging.debug_ui & LOG_UI_KBD_EVENT) {
-		LOG_PRINT("gtk.press   code=%3d   sym=%04x(%-12s)\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
+		LOG_PRINT("gtk.release code=%3d   sym=%04x(%-12s)\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
 	}
 
 	if (!control) {
