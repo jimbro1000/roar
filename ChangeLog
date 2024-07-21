@@ -7,6 +7,7 @@
  * New GTK+ 3 UI
  * New printer control dialog (GTK+ 3, Windows) or menu options (Mac OS X+)
  * Update CoCo 3 video timings
+ * SDL: open joysticks in controller mode if possible
 
 Version 1.5.5, Sun 24 Mar 2024
 
