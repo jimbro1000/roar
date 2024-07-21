@@ -557,7 +557,7 @@ static char const * const default_config[] = {
 	"romlist dragondos=ddos12a,ddos12,ddos40,ddos15,ddos10,'Dragon Data Ltd - DragonDOS 1.0'",
 	"romlist dosplus=dplus49b,dplus48,dosplus-4.8,DOSPLUS",
 	"romlist superdos=sdose6,'PNP - SuperDOS E6',sdose5,sdose4",
-	"romlist cumana=cdos20,CDOS20",
+	"romlist cumana=cdos20,CDOS20,'CumanaDOSv2.0'",
 	"romlist dragondos_compat=@dosplus,@superdos,@dragondos,@cumana",
 	// RSDOS
 	"romlist rsdos=disk11,disk10",
