@@ -71,6 +71,8 @@
 
 // UI: keyboard event debugging
 #define LOG_UI_KBD_EVENT (1 << 0)
+// UI: joystick motion debugging
+#define LOG_UI_JS_MOTION (1 << 1)
 
 #define LOG_DEBUG_FDC(b,...) do { if (logging.debug_fdc & (b)) { printf(__VA_ARGS__); } } while (0)
 #define LOG_DEBUG_FILE(b,...) do { if (logging.debug_file & (b)) { printf(__VA_ARGS__); } } while (0)
