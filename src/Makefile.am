@@ -384,6 +384,7 @@ xroar_OBJCFLAGS += $(COCOA_CFLAGS) $(SDL_CFLAGS)
 xroar_LDADD += $(COCOA_LIBS)
 xroar_SOURCES += \
 	macosx/filereq_cocoa.m \
+	macosx/hkbd_darwin.c macosx/hkbd_darwin.h \
 	macosx/ui_macosx.m
 xroar_SOURCES += \
 	sdl2/sdl_cocoa_keyboard.c
