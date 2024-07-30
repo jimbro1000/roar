@@ -63,8 +63,8 @@
 # define M_PI 3.14159265358979323846
 #endif
 
-// Guesses, based on not much:
-static float rgb_intensity_map[4] = { 0.00, 0.47, 0.75, 0.92 };
+// Measured peak-to-peak voltages: 0V, 1V, 1.6V, 2V.  Scaled here:
+static float rgb_intensity_map[4] = { 0.000, 0.460, 0.736, 0.920 };
 
 // The GIME appears to generate its composite output (used in NTSC machines
 // only) by switching between a set of 7 voltages at 3.58Mhz (presumably with
