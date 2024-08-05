@@ -2,7 +2,7 @@
  *
  *  \brief Dragon keyboard mapping.
  *
- *  \copyright Copyright 2013-2014 Ciaran Anscomb
+ *  \copyright Copyright 2013-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -83,6 +83,8 @@ static struct dkey_chord_mapping coco3_chord_mappings[] = {
 	// TODO: ALT
 	{ '@', { DSCAN_AT, DK_MOD_UNSHIFT } },
 	{ '\\', { DSCAN_INVALID, DK_MOD_SHIFT|DK_MOD_CLEAR } },
+	{ '[', { DSCAN_DOWN, DK_MOD_SHIFT} },
+	{ ']', { DSCAN_RIGHT, DK_MOD_SHIFT} },
 	{ '~', { DSCAN_AT, DK_MOD_SHIFT } },
 	// TODO: CONTROL
 	{ DKBD_U_F1, { DSCAN_F1, 0 } },
