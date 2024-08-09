@@ -2748,7 +2748,9 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("fast-sound", &dummy_value.v_bool), .deprecated = 1 },
 
 	/* Keyboard: */
-	{ XC_SET_STRING("keymap", &xroar_ui_cfg.keymap) },
+	{ XC_SET_ENUM("kbd-layout", &xroar.cfg.kbd.layout, hkbd_layout_list) },
+	{ XC_SET_ENUM("kbd-lang", &xroar.cfg.kbd.lang, hkbd_lang_list) },
+	{ XC_SET_ENUM("keymap", &xroar.cfg.kbd.lang, hkbd_lang_list), .deprecated = 1 },
 	{ XC_SET_BOOL("kbd-translate", &xroar.cfg.kbd.translate) },
 	{ XC_CALL_STRING("kbd-bind", &set_kbd_bind) },
 
@@ -2885,7 +2887,8 @@ static void helptext(void) {
 "  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
 
 "\n Keyboard:\n"
-"  -keymap CODE            host keyboard type (-keymap help for list)\n"
+"  -kbd-layout LAYOUT      host keyboard layout (-kbd-layout help for list)\n"
+"  -kbd-lang LANG          host keyboard language (-kbd-lang help for list)\n"
 "  -kbd-bind HK=[pre:]DK   map host key to emulated key (pre = no translate)\n"
 "  -kbd-translate          enable keyboard translation\n"
 "  -type STRING            intercept ROM calls to type STRING into BASIC\n"
@@ -3122,7 +3125,8 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Keyboard\n", f);
-	xroar_cfg_print_string(f, all, "keymap", xroar_ui_cfg.keymap, "uk");
+	xroar_cfg_print_enum(f, all, "kbd-layout", xroar.cfg.kbd.layout, hk_layout_auto, hkbd_layout_list);
+	xroar_cfg_print_enum(f, all, "kbd-lang", xroar.cfg.kbd.lang, hk_lang_auto, hkbd_lang_list);
 	xroar_cfg_print_bool(f, all, "kbd-translate", xroar.cfg.kbd.translate, 0);
 	for (struct slist *l = private_cfg.kbd.type_list; l; l = l->next) {
 		sds s = sdsx_quote(l->data);

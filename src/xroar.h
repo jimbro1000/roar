@@ -97,6 +97,8 @@ struct xroar_cfg {
 
 	// Keyboard
 	struct {
+		int layout;
+		int lang;
 		_Bool translate;
 		struct slist *bind_list;
 	} kbd;
