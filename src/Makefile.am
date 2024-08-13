@@ -156,27 +156,27 @@ FONT2C = $(top_builddir)/tools/font2c
 
 mc6847/font-6847.h:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --header --array font_6847 --type "unsigned char" --vdg $(srcdir)/mc6847/font-6847.png > $@
+	$(FONT2C) --header --array font_6847 --stdint --type "uint8_t" --vdg $(srcdir)/mc6847/font-6847.png > $@
 
 mc6847/font-6847.c:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --array font_6847 --type "unsigned char" --vdg $(srcdir)/mc6847/font-6847.png > $@
+	$(FONT2C) --array font_6847 --stdint --type "uint8_t" --vdg $(srcdir)/mc6847/font-6847.png > $@
 
 mc6847/font-6847t1.h:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --header --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/mc6847/font-6847t1.png > $@
+	$(FONT2C) --header --array font_6847t1 --stdint --type "uint8_t" --vdgt1 $(srcdir)/mc6847/font-6847t1.png > $@
 
 mc6847/font-6847t1.c:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/mc6847/font-6847t1.png > $@
+	$(FONT2C) --array font_6847t1 --stdint --type "uint8_t" --vdgt1 $(srcdir)/mc6847/font-6847t1.png > $@
 
 tcc1014/font-gime.h:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --header --array font_gime --type "unsigned char" --gime $(srcdir)/tcc1014/font-gime.png > $@
+	$(FONT2C) --header --array font_gime --stdint --type "uint8_t" --gime $(srcdir)/tcc1014/font-gime.png > $@
 
 tcc1014/font-gime.c:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --array font_gime --type "unsigned char" --gime $(srcdir)/tcc1014/font-gime.png > $@
+	$(FONT2C) --array font_gime --stdint --type "uint8_t" --gime $(srcdir)/tcc1014/font-gime.png > $@
 
 EXTRA_DIST += \
 	mc6847/font-6847.png mc6847/font-6847t1.png tcc1014/font-gime.png
