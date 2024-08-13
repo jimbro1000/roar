@@ -34,6 +34,9 @@
  *     http://tlindner.macmess.org/?p=945
  */
 
+// Additionally, I quite early on made reference to MAME source to understand
+// the overflow (V) flag.
+
 // TODO:
 //
 // - Many more instructions fall through to their unprefixed form after a

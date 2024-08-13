@@ -1835,9 +1835,6 @@ as the first option to allocate a console.
 @node Acknowledgements
 @chapter Acknowledgements
 
-Early on, I made reference to the MAME 6809 core for clues on how the overflow
-bit in the condition code register was handled.
-
 Darren Atkinson's @cite{Motorola 6809 and Hitachi 6309 Programmers Reference}
 has been very useful for 6309 support and fleshing out some of the illegal
 instructions on the 6809.
