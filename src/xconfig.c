@@ -61,7 +61,9 @@ static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_va
 	/* Only check this afterwards, as "help" could be a valid name */
 	if (0 == strcmp(name, "help")) {
 		for (int i = 0; list[i].name; i++) {
-			printf("\t%-10s %s\n", list[i].name, list[i].description);
+			if (list[i].description) {
+				printf("\t%-10s %s\n", list[i].name, list[i].description);
+			}
 		}
 		exit(EXIT_SUCCESS);
 	}
