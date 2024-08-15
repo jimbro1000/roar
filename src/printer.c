@@ -197,8 +197,7 @@ static void open_stream(struct printer_interface_private *pip) {
 #ifdef HAVE_POPEN
 		pip->stream = popen(pip->pipe, "w");
 #endif
-	}
-	if (pip->destination == PRINTER_DESTINATION_FILE && pip->filename) {
+	} else if (pip->destination == PRINTER_DESTINATION_FILE && pip->filename) {
 		pip->stream = fopen(pip->filename, "ab");
 	}
 	if (pip->stream) {
