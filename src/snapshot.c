@@ -27,6 +27,7 @@
 #include "c-strcase.h"
 #include "xalloc.h"
 
+#include "auto_kbd.h"
 #include "cart.h"
 #include "fs.h"
 #include "keyboard.h"
@@ -223,6 +224,10 @@ static int read_v2_snapshot(const char *filename) {
 	// TODO: verify that any deserialised carts had their configs included
 	// earlier in the snapshot.
 
+	if (xroar.auto_kbd) {
+		auto_kbd_free(xroar.auto_kbd);
+		xroar.auto_kbd = NULL;
+	}
 	if (xroar.machine) {
 		part_free((struct part *)xroar.machine);
 	}
