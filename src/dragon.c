@@ -911,6 +911,7 @@ static void dragon_free(struct part *p) {
 	if (md->keyboard.interface) {
 		keyboard_interface_free(md->keyboard.interface);
 	}
+	machine_bp_remove_list(&md->public, coco_print_breakpoint);
 	if (md->printer_interface) {
 		printer_interface_free(md->printer_interface);
 	}
