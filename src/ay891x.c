@@ -140,11 +140,13 @@ static void update_reg(struct AY891X_ *psg_, unsigned address);
 static struct part *ay891x_allocate(void);
 static void ay891x_initialise(struct part *p, void *options);
 static _Bool ay891x_finish(struct part *p);
+static void ay891x_free(struct part *p);
 
 static const struct partdb_entry_funcs ay891x_funcs = {
 	.allocate = ay891x_allocate,
 	.initialise = ay891x_initialise,
 	.finish = ay891x_finish,
+	.free = ay891x_free,
 
 	.ser_struct_data = &ay891x_ser_struct_data,
 };
@@ -184,6 +186,13 @@ static _Bool ay891x_finish(struct part *p) {
 	struct AY891X_ *psg_ = (struct AY891X_ *)p;
 	(void)psg_;
 	return 1;
+}
+
+static void ay891x_free(struct part *p) {
+	struct AY891X_ *psg_ = (struct AY891X_ *)p;
+	if (psg_->filter) {
+		filter_iir_free(psg_->filter);
+	}
 }
 
 static _Bool ay891x_read_elem(void *sptr, struct ser_handle *sh, int tag) {
