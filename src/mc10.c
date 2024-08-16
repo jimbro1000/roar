@@ -531,6 +531,7 @@ static void mc10_free(struct part *p) {
 	if (mp->keyboard.interface) {
 		keyboard_interface_free(mp->keyboard.interface);
 	}
+	machine_bp_remove_list(&mp->machine, mc10_print_breakpoint);
 	if (mp->printer_interface) {
 		printer_interface_free(mp->printer_interface);
 	}
