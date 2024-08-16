@@ -2,7 +2,7 @@
  *
  *  \brief TI SN76489 sound chip.
  *
- *  \copyright Copyright 2018-2022 Ciaran Anscomb
+ *  \copyright Copyright 2018-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -136,11 +136,13 @@ static void update_reg(struct SN76489_private *csg_, unsigned reg_sel, unsigned 
 static struct part *sn76489_allocate(void);
 static void sn76489_initialise(struct part *p, void *options);
 static _Bool sn76489_finish(struct part *p);
+static void sn76489_free(struct part *p);
 
 static const struct partdb_entry_funcs sn76489_funcs = {
 	.allocate = sn76489_allocate,
 	.initialise = sn76489_initialise,
 	.finish = sn76489_finish,
+	.free = sn76489_free,
 
 	.ser_struct_data = &sn76489_ser_struct_data,
 };
@@ -183,6 +185,13 @@ static _Bool sn76489_finish(struct part *p) {
 	csg_->readyticks = (int)readyticks;
 
 	return 1;
+}
+
+static void sn76489_free(struct part *p) {
+	struct SN76489_private *csg_ = (struct SN76489_private *)p;
+	if (csg_->filter) {
+		filter_iir_free(csg_->filter);
+	}
 }
 
 static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag) {
