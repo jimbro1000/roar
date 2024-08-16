@@ -701,6 +701,7 @@ static void coco3_free(struct part *p) {
 	if (mcc3->keyboard.interface) {
 		keyboard_interface_free(mcc3->keyboard.interface);
 	}
+	machine_bp_remove_list(&mcc3->public, coco3_print_breakpoint);
 	if (mcc3->printer_interface) {
 		printer_interface_free(mcc3->printer_interface);
 	}
