@@ -2114,8 +2114,9 @@ static void set_machine(const char *name) {
 
 	if (xroar.machine_config) {
 		if (private_cfg.machine.arch) {
-			if (xroar.machine_config->architecture)
+			if (xroar.machine_config->architecture) {
 				free(xroar.machine_config->architecture);
+			}
 			xroar.machine_config->architecture = private_cfg.machine.arch;
 			private_cfg.machine.arch = NULL;
 		}
@@ -2126,6 +2127,9 @@ static void set_machine(const char *name) {
 		xroar.machine_config->cpu = private_cfg.machine.cpu;
 		private_cfg.machine.cpu = CPU_MC6809;
 		if (private_cfg.machine.description) {
+			if (xroar.machine_config->description) {
+				free(xroar.machine_config->description);
+			}
 			xroar.machine_config->description = private_cfg.machine.description;
 			private_cfg.machine.description = NULL;
 		}
@@ -2141,6 +2145,9 @@ static void set_machine(const char *name) {
 		}
 #endif
 		if (private_cfg.machine.palette) {
+			if (xroar.machine_config->vdg_palette) {
+				free(xroar.machine_config->vdg_palette);
+			}
 			xroar.machine_config->vdg_palette = private_cfg.machine.palette;
 			private_cfg.machine.palette = NULL;
 		}
@@ -2173,47 +2180,35 @@ static void set_machine(const char *name) {
 			xroar.machine_config->bas_dfn = 1;
 			if (xroar.machine_config->bas_rom) {
 				free(xroar.machine_config->bas_rom);
-				xroar.machine_config->bas_rom = NULL;
 			}
-			if (private_cfg.machine.bas) {
-				xroar.machine_config->bas_rom = private_cfg.machine.bas;
-				private_cfg.machine.bas = NULL;
-			}
+			xroar.machine_config->bas_rom = private_cfg.machine.bas;
+			private_cfg.machine.bas = NULL;
 		}
 		if (private_cfg.machine.extbas_dfn) {
 			private_cfg.machine.extbas_dfn = 0;
 			xroar.machine_config->extbas_dfn = 1;
 			if (xroar.machine_config->extbas_rom) {
 				free(xroar.machine_config->extbas_rom);
-				xroar.machine_config->extbas_rom = NULL;
 			}
-			if (private_cfg.machine.extbas) {
-				xroar.machine_config->extbas_rom = private_cfg.machine.extbas;
-				private_cfg.machine.extbas = NULL;
-			}
+			xroar.machine_config->extbas_rom = private_cfg.machine.extbas;
+			private_cfg.machine.extbas = NULL;
 		}
 		if (private_cfg.machine.altbas_dfn) {
 			private_cfg.machine.altbas_dfn = 0;
 			xroar.machine_config->altbas_dfn = 1;
 			if (xroar.machine_config->altbas_rom) {
 				free(xroar.machine_config->altbas_rom);
-				xroar.machine_config->altbas_rom = NULL;
 			}
-			if (private_cfg.machine.altbas) {
-				xroar.machine_config->altbas_rom = private_cfg.machine.altbas;
-				private_cfg.machine.altbas = NULL;
-			}
+			xroar.machine_config->altbas_rom = private_cfg.machine.altbas;
+			private_cfg.machine.altbas = NULL;
 		}
 		if (private_cfg.machine.ext_charset_dfn) {
 			private_cfg.machine.ext_charset_dfn = 0;
 			if (xroar.machine_config->ext_charset_rom) {
 				free(xroar.machine_config->ext_charset_rom);
-				xroar.machine_config->ext_charset_rom = NULL;
 			}
-			if (private_cfg.machine.ext_charset) {
-				xroar.machine_config->ext_charset_rom = private_cfg.machine.ext_charset;
-				private_cfg.machine.ext_charset = NULL;
-			}
+			xroar.machine_config->ext_charset_rom = private_cfg.machine.ext_charset;
+			private_cfg.machine.ext_charset = NULL;
 		}
 		if (private_cfg.machine.cart_dfn) {
 			private_cfg.machine.cart_dfn = 0;
@@ -2264,10 +2259,16 @@ static void set_cart(const char *name) {
 	}
 	if (cc) {
 		if (private_cfg.cart.description) {
+			if (cc->description) {
+				free(cc->description);
+			}
 			cc->description = private_cfg.cart.description;
 			private_cfg.cart.description = NULL;
 		}
 		if (private_cfg.cart.type) {
+			if (cc->type) {
+				free(cc->type);
+			}
 			cc->type = private_cfg.cart.type;
 			private_cfg.cart.type = NULL;
 		}
