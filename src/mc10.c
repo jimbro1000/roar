@@ -898,13 +898,22 @@ static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t 
 	struct machine_mc10 *mp = sptr;
 	if (!dest)
 		return;
-	unsigned bank_4k = (A >> 11) & 3;
-	uint8_t *Vp = ram_a8(mp->RAM0, bank_4k, A, 0);
-	uint16_t attr = mp->video_attr;
-	for (int i = 0; i < nbytes; i++) {
-		uint16_t D = Vp ? (Vp[i] | attr) : attr;
-		D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
-		*(dest++) = D;
+	while (nbytes > 0) {
+		unsigned bank_2k = (A >> 11) & 3;
+		uint8_t *Vp = ram_a8(mp->RAM0, bank_2k, A, 0);
+		uint16_t attr = mp->video_attr;
+		// Fetch at most up to the next 16-byte boundary before we
+		// recalculate RAM bank address
+		int span = 16 - (A & 15);
+		if (span > nbytes)
+			span = nbytes;
+		for (int i = 0; i < span; i++) {
+			uint16_t D = Vp ? (Vp[i] | attr) : attr;
+			D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
+			*(dest++) = D;
+		}
+		nbytes -= span;
+		A += span;
 	}
 }
 
