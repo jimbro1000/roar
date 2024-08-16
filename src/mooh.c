@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2016-2018 Tormod Volden
  *
- *  \copyright Copyright 2018-2022 Ciaran Anscomb
+ *  \copyright Copyright 2018-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -233,9 +233,9 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 
         if (R2) {
 		if (n->rom_conf & 8)
-			return c->rom_data[((n->rom_conf & 6) << 13) | (A & 0x3fff)];
+			return c->rom_data[((n->rom_conf & 6) << 13) | (A & 0x3fff & c->rom_mask)];
 		else
-			return c->rom_data[((n->rom_conf & 7) << 13) | (A & 0x1fff)];
+			return c->rom_data[((n->rom_conf & 7) << 13) | (A & 0x1fff & c->rom_mask)];
 	}
 
 	if ((A & 0xFFFC) == 0xFF6C)
