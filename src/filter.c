@@ -6,7 +6,7 @@
  *
  *  \copyright Copyright 2008-2011 Nicolas Bourdaud
  *
- *  \copyright Copyright 2021-2023 Ciaran Anscomb
+ *  \copyright Copyright 2021-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -147,6 +147,8 @@ struct filter_iir *filter_iir_new(unsigned flags, int order, double fs, double f
 void filter_iir_free(struct filter_iir *filter) {
 	free(filter->z);
 	free(filter->p);
+	free(filter->zv);
+	free(filter->pv);
 	free(filter);
 }
 
