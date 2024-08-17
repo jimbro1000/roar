@@ -397,6 +397,14 @@ void wd279x_write(struct WD279X *fdc, uint16_t A, uint8_t D) {
 			fdc->intrq_index_pulse = D & 4;
 			// TODO: Data sheet wording implies that *only* 0xd0 can
 			// clear this.  Needs testing...
+			//
+			// TODO: DarrenA posted a clip from the "Data Storage Products Handbook" that says this:
+			//
+			// Wait 8 micro sec (double density) or 16 micro sec
+			// (single density) before issuing a new command after
+			// issuing a forced interrupt (times double when clock
+			// = 1 MHz).  Loading a new command sooner than this
+			// will nullify the forced interrupt.
 			fdc->intrq_immediate = D & 8;
 			if (!(fdc->status_register & STATUS_BUSY)) {
 				fdc->status_type1 = 1;
