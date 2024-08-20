@@ -53,6 +53,8 @@ uint8_t *os_scancode_to_hk_scancode = NULL;
 
 struct hkbd hkbd;
 
+#include "hkbd_lang_tables.c"
+
 // Scancodes taken from USB Hid Usage Tables, Keyboard/Keypad Page (0x07)
 //
 // For now we can guarantee that all scancodes fit within a uint8_t, and that
@@ -1087,6 +1089,7 @@ struct xconfig_enum hkbd_lang_list[] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static _Bool hk_default_update_keymap(void);
+static void apply_lang_table(unsigned lang);
 
 static _Bool is_dragon_key(uint16_t sym);
 static void emulator_command(uint16_t sym, _Bool shift);
@@ -1425,8 +1428,8 @@ void hk_scan_release(uint8_t code) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// A default scancode mapping, used where no OS-specific version is available,
-// or as the base when a specific map is requested.
+// Use a specific keyboard language table.  These are fixed, and should only be
+// used as a last resort, or if the user explicitly specifies a language.
 
 static _Bool hk_default_update_keymap(void) {
 	// Initialise
@@ -1437,14 +1440,18 @@ static _Bool hk_default_update_keymap(void) {
 		hkbd.scancode_mod[c] = 0;
 	}
 
+	unsigned lang = (unsigned)xroar.cfg.kbd.lang;
 	if (hkbd.layout == hk_layout_auto) {
-		hkbd.layout = hk_layout_ansi;
+		// Japanese -> JIS, else ANSI
+		hkbd.layout = lang == hk_lang_jp ? hk_layout_jis : hk_layout_ansi;
+	}
+	if (lang == hk_lang_auto) {
+		// JIS -> Japanese, else GB
+		lang = (hkbd.layout == hk_layout_jis) ? hk_lang_jp : hk_lang_gb;
 	}
 
-	int lang = xroar.cfg.kbd.lang;
-	if (lang == hk_lang_auto) {
-		lang = (hk_layout_jis) ? hk_lang_jp : hk_lang_gb;
-	}
+	apply_lang_table(0);  // default
+	apply_lang_table(lang);
 
 	for (unsigned c = 0; c < HK_NUM_SCANCODES; c++) {
 		switch (hkbd.code_to_sym[0][c]) {
@@ -1477,6 +1484,57 @@ static _Bool hk_default_update_keymap(void) {
 	}
 
 	return 1;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Apply a keyboard language table (from hkbd_lang_tables.c).  Tables can
+// specify other tables as dependencies, so may recurse.
+
+static void apply_lang_table(unsigned lang) {
+	if (lang >= ARRAY_N_ELEMENTS(lang_table)) {
+		return;
+	}
+	const uint16_t *table = lang_table[lang];
+	while (*table != HKL_END) {
+		uint16_t flags = *(table++);
+		uint8_t code = (uint8_t)(flags & 0xff);
+		if (flags & HKL_LANG) {
+			uint16_t inherit_lang = *(table++);
+			apply_lang_table(inherit_lang);
+		}
+		if (flags & HKL_CLR) {
+			for (unsigned l = 0; l < HK_NUM_LEVELS; l++) {
+				hkbd.code_to_sym[l][code] = hk_sym_None;
+			}
+		}
+		if (flags & HKL_SYM1) {
+			hkbd.code_to_sym[0][code] = *(table++);
+		}
+		if (flags & HKL_SYM2) {
+			hkbd.code_to_sym[1][code] = *(table++);
+		}
+		if (flags & HKL_SYM3) {
+			hkbd.code_to_sym[2][code] = *(table++);
+		}
+		if (flags & HKL_SYM4) {
+			hkbd.code_to_sym[3][code] = *(table++);
+		}
+		if (flags & HKL_DUP1) {
+			if (flags & HKL_SYM1) {
+				hkbd.code_to_sym[1][code] = hkbd.code_to_sym[0][code];
+				flags |= HKL_SYM2;  // just for checking DUP12
+			}
+		}
+		if (flags & HKL_DUP12) {
+			if (flags & HKL_SYM1) {
+				hkbd.code_to_sym[2][code] = hkbd.code_to_sym[0][code];
+			}
+			if (flags & HKL_SYM2) {
+				hkbd.code_to_sym[3][code] = hkbd.code_to_sym[1][code];
+			}
+		}
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
