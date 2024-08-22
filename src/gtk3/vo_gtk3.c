@@ -347,17 +347,8 @@ static void handle_resize(GtkGLArea *area, gint width, gint height, gpointer use
 	// Although GTK+ reports how the drawable is offset into the window,
 	// the OpenGL context will render with the drawable's origin, so set X
 	// and Y to 0.
-	uigtk3->draw_area.x = 0;
-	uigtk3->draw_area.y = 0;
-	uigtk3->draw_area.w = draw_allocation.width;
-	uigtk3->draw_area.h = draw_allocation.height;
-	vo_opengl_setup_context(vogl, &uigtk3->draw_area);
-
-	// Copy picture dimensions back out (for mouse calculations)
-	uigtk3->picture_area.x = vogl->picture_area.x;
-	uigtk3->picture_area.y = vogl->picture_area.y;
-	uigtk3->picture_area.w = vogl->picture_area.w;
-	uigtk3->picture_area.h = vogl->picture_area.h;
+	vo_set_draw_area(vo, 0, 0, draw_allocation.width, draw_allocation.height);
+	vo_opengl_setup_context(vogl);
 }
 
 static void realize(GtkWidget *widget, gpointer user_data) {
@@ -385,17 +376,8 @@ static void realize(GtkWidget *widget, gpointer user_data) {
 	// Although GTK+ reports how the drawable is offset into the window,
 	// the OpenGL context will render with the drawable's origin, so set X
 	// and Y to 0.
-	uigtk3->draw_area.x = 0;
-	uigtk3->draw_area.y = 0;
-	uigtk3->draw_area.w = draw_allocation.width;
-	uigtk3->draw_area.h = draw_allocation.height;
-	vo_opengl_setup_context(vogl, &uigtk3->draw_area);
-
-	// Copy picture dimensions back out (for mouse calculations)
-	uigtk3->picture_area.x = vogl->picture_area.x;
-	uigtk3->picture_area.y = vogl->picture_area.y;
-	uigtk3->picture_area.w = vogl->picture_area.w;
-	uigtk3->picture_area.h = vogl->picture_area.h;
+	vo_set_draw_area(vo, 0, 0, draw_allocation.width, draw_allocation.height);
+	vo_opengl_setup_context(vogl);
 
 	vo_gtk3_set_vsync(uigtk3, -1);
 }

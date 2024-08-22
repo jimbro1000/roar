@@ -81,6 +81,7 @@ gboolean gtk3_handle_key_release(GtkWidget *widget, GdkEventKey *event, gpointer
 
 gboolean gtk3_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
 	(void)widget;
 
 #ifndef WINDOWS32
@@ -93,10 +94,10 @@ gboolean gtk3_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpo
 #endif
 
 	// Update position data (for mouse mapped joystick)
-	int x = (event->x - uigtk3->picture_area.x) * 320;
-	int y = (event->y - uigtk3->picture_area.y) * 240;
-	uigtk3->mouse.axis[0] = (float)x / (float)uigtk3->picture_area.w;
-	uigtk3->mouse.axis[1] = (float)y / (float)uigtk3->picture_area.h;
+	int x = (event->x - vo->picture_area.x) * 320;
+	int y = (event->y - vo->picture_area.y) * 240;
+	uigtk3->mouse.axis[0] = (float)x / (float)vo->picture_area.w;
+	uigtk3->mouse.axis[1] = (float)y / (float)vo->picture_area.h;
 
 	return FALSE;
 }

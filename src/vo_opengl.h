@@ -62,7 +62,6 @@ struct vo_opengl_interface {
 		void *pixels;
 	} texture;
 
-	struct vo_picture_area picture_area;
 	struct vo_viewport viewport;
 
 	_Bool scale_60hz;
@@ -86,10 +85,8 @@ void vo_opengl_free(void *sptr);
 _Bool vo_opengl_configure(struct vo_opengl_interface *, struct vo_cfg *cfg);
 
 // Set up OpenGL context for rendering
-//
-//     struct vo_draw_area *draw_area;  // dimensions of window to draw into
 
-void vo_opengl_setup_context(struct vo_opengl_interface *, struct vo_draw_area *draw_area);
+void vo_opengl_setup_context(struct vo_opengl_interface *);
 
 // Change viewport.
 

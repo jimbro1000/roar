@@ -171,7 +171,7 @@ _Bool vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) 
 	memset(vogl->texture.pixels, 0, MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vogl->texture.pixel_size);
 	vo_render_set_buffer(vr, vogl->texture.pixels);
 
-	vogl->picture_area.x = vogl->picture_area.y = 0;
+	vo->picture_area.x = vo->picture_area.y = 0;
 	vogl->viewport.w = 640;
 	vogl->viewport.h = 240;
 	vogl->filter = cfg->gl_filter;
@@ -211,8 +211,8 @@ static void update_viewport(struct vo_opengl_interface *vogl) {
 	// Set scaling method according to options and window dimensions
 	if (!vogl->scale_60hz && (vogl->filter == UI_GL_FILTER_NEAREST ||
 				  (vogl->filter == UI_GL_FILTER_AUTO &&
-				   (vogl->picture_area.w % hw) == 0 &&
-				   (vogl->picture_area.h % hh) == 0))) {
+				   (vo->picture_area.w % hw) == 0 &&
+				   (vo->picture_area.h % hh) == 0))) {
 		vogl->blit_filter = GL_NEAREST;
 	} else {
 		vogl->blit_filter = GL_LINEAR;
@@ -242,31 +242,14 @@ void vo_opengl_set_frame_rate(struct vo_opengl_interface *vogl, _Bool is_60hz) {
 	update_viewport(vogl);
 }
 
-void vo_opengl_setup_context(struct vo_opengl_interface *vogl, struct vo_draw_area *draw_area) {
-	int x = draw_area->x;
-	int y = draw_area->y;
-	int w = draw_area->w;
-	int h = draw_area->h;
-
-	// Set up picture area
-	if (((double)w / (double)h) > (4.0 / 3.0)) {
-		vogl->picture_area.h = h;
-		vogl->picture_area.w = (((double)vogl->picture_area.h / 3.0) * 4.0) + 0.5;
-		vogl->picture_area.x = x + (w - vogl->picture_area.w) / 2;
-		vogl->picture_area.y = y;
-	} else {
-		vogl->picture_area.w = w;
-		vogl->picture_area.h = (((double)vogl->picture_area.w / 4.0) * 3.0) + 0.5;
-		vogl->picture_area.x = x;
-		vogl->picture_area.y = y + (h - vogl->picture_area.h)/2;
-	}
-
+void vo_opengl_setup_context(struct vo_opengl_interface *vogl) {
 	// Create textures, etc.
 	update_viewport(vogl);
 }
 
 void vo_opengl_draw(void *sptr) {
 	struct vo_opengl_interface *vogl = sptr;
+	struct vo_interface *vo = &vogl->vo;
 	struct vo_render *vr = vogl->vo.renderer;
 
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -278,8 +261,8 @@ void vo_opengl_draw(void *sptr) {
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, vogl->blit_fbo);
 	glBlitFramebuffer(0, vr->viewport.h, vr->viewport.w, 0,
-			  vogl->picture_area.x, vogl->picture_area.y,
-			  vogl->picture_area.w + vogl->picture_area.x,
-			  vogl->picture_area.h + vogl->picture_area.y,
+			  vo->picture_area.x, vo->picture_area.y,
+			  vo->picture_area.w + vo->picture_area.x,
+			  vo->picture_area.h + vo->picture_area.y,
 			  GL_COLOR_BUFFER_BIT, vogl->blit_filter);
 }

@@ -53,7 +53,6 @@ struct ui_gtk2_interface {
 	guint merge_carts;
 
 	// Window geometry
-	struct vo_draw_area draw_area;
 	struct vo_picture_area picture_area;
 	_Bool user_specified_geometry;
 

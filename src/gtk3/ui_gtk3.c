@@ -165,11 +165,12 @@ static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
 
 static void zoom_in(GtkEntry *entry, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
 	(void)entry;
-	if (!xroar.vo_interface)
+	if (!vo)
 		return;
 
-	struct vo_render *vr = xroar.vo_interface->renderer;
+	struct vo_render *vr = vo->renderer;
 
 	int qw = vr->viewport.w / 4;
 	int qh = vr->viewport.h / 2;
@@ -178,8 +179,8 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 		qh = (qh * 6) / 5;
 	}
 
-	int xscale = uigtk3->picture_area.w / qw;
-	int yscale = uigtk3->picture_area.h / qh;
+	int xscale = vo->picture_area.w / qw;
+	int yscale = vo->picture_area.h / qh;
 	int scale;
 	if (xscale < yscale)
 		scale = yscale;
@@ -195,8 +196,9 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 
 static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
 	(void)entry;
-	if (!xroar.vo_interface)
+	if (!vo)
 		return;
 
 	struct vo_render *vr = xroar.vo_interface->renderer;
@@ -208,8 +210,8 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 		qh = (qh * 6) / 5;
 	}
 
-	int xscale = uigtk3->picture_area.w / qw;
-	int yscale = uigtk3->picture_area.h / qh;
+	int xscale = vo->picture_area.w / qw;
+	int yscale = vo->picture_area.h / qh;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = xscale;
@@ -627,10 +629,6 @@ static void *ui_gtk3_new(void *cfg) {
 
 	// Create (hidden) video options window
 	gtk3_vo_create_window(uigtk3);
-
-	// Window geometry sensible defaults
-	uigtk3->picture_area.w = 640;
-	uigtk3->picture_area.h = 480;
 
 	// Video output
 	if (!gtk3_vo_init(uigtk3)) {
