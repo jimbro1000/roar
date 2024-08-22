@@ -66,7 +66,6 @@ struct vo_sdl_interface {
 	int filter;
 
 	struct vo_window_area window_area;
-	struct vo_window_area picture_area;
 	_Bool scale_60hz;
 };
 
@@ -193,7 +192,7 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	{
 		int w, h;
 		SDL_GetWindowSize(uisdl2->vo_window, &w, &h);
-		sdl_update_draw_area(uisdl2, w, h);
+		vo_set_draw_area(vo, 0, 0, w, h);
 	}
 
 	// Create renderer

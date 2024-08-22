@@ -95,20 +95,6 @@ struct joystick_module * const sdl_js_modlist[] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void sdl_update_draw_area(struct ui_sdl2_interface *uisdl2, int w, int h) {
-	if (((double)w / (double)h) > (4.0 / 3.0)) {
-		uisdl2->draw_area.h = h;
-		uisdl2->draw_area.w = (((double)uisdl2->draw_area.h / 3.0) * 4.0) + 0.5;
-		uisdl2->draw_area.x = (w - uisdl2->draw_area.w) / 2;
-		uisdl2->draw_area.y = 0;
-	} else {
-		uisdl2->draw_area.w = w;
-		uisdl2->draw_area.h = (((double)uisdl2->draw_area.w / 4.0) * 3.0) + 0.5;
-		uisdl2->draw_area.x = 0;
-		uisdl2->draw_area.y = (h - uisdl2->draw_area.h) / 2;
-	}
-}
-
 #ifdef HAVE_WASM
 // This currently only filters out certain keypresses from being handled by SDL
 // in the WASM build.  It allows the normal browser action to occur for these
@@ -126,6 +112,7 @@ int filter_sdl_events(void *userdata, SDL_Event *event) {
 #endif
 
 void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
 	SDL_Event event;
 	while (SDL_PollEvent(&event) == 1) {
 		switch(event.type) {
@@ -133,7 +120,7 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 			switch(event.window.event) {
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
 				sdl_vo_notify_size_changed(uisdl2, event.window.data1, event.window.data2);
-				sdl_update_draw_area(uisdl2, event.window.data1, event.window.data2);
+				vo_set_draw_area(vo, 0, 0, event.window.data1, event.window.data2);
 				break;
 			}
 			break;
@@ -207,6 +194,8 @@ static _Bool read_button(_Bool *b) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
+	struct ui_sdl2_interface *uisdl2 = global_uisdl2;
+	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
 	jaxis %= 2;
 	float off0 = (jaxis == 0) ? 2.0 : 1.5;
 	float off1 = (jaxis == 0) ? 254.0 : 190.5;
@@ -234,8 +223,8 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	*axis = (struct joystick_axis){0};
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = &mouse_axis[jaxis];
-	mouse_xscale = 320. / global_uisdl2->draw_area.w;
-	mouse_yscale = 240. / global_uisdl2->draw_area.h;
+	mouse_xscale = 320. / vo->picture_area.w;
+	mouse_yscale = 240. / vo->picture_area.h;
 	return axis;
 }
 

@@ -84,10 +84,6 @@ void ui_sdl_init(struct ui_sdl2_interface *uisdl2, struct ui_cfg *ui_cfg) {
 	ui->run = DELEGATE_AS0(void, ui_sdl_run, uisdl2);
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_update_state, uisdl2);
 
-	// Window geometry sensible defaults
-	uisdl2->draw_area.w = 320;
-	uisdl2->draw_area.h = 240;
-
 	// Make available globally for other SDL2 code
 	global_uisdl2 = uisdl2;
 
