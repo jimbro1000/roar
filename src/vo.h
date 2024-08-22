@@ -2,7 +2,7 @@
  *
  *  \brief Video ouput modules & interfaces.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -127,6 +127,12 @@ struct vo_interface {
 
 	// Current defined picture area
 	int picture;    // VO_PICTURE_*
+
+	// Current draw area coordinates
+	struct vo_draw_area draw_area;
+
+	// Current picture area coordinates
+	struct vo_picture_area picture_area;
 
 	// Called by vo_free before freeing the struct to handle
 	// module-specific allocations
@@ -257,9 +263,15 @@ void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr);
 
 void vo_set_signal(struct vo_interface *vo, int signal);
 
-// Set picture area
+// Set viewport
 
 void vo_set_viewport(struct vo_interface *vo, int picture);
+
+// Set draw area.  Also calculates and updates picture area.
+//     int x, y;  // offset into window
+//     int w, h;  // dimensions
+
+void vo_set_draw_area(struct vo_interface *, int x, int y, int w, int h);
 
 inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool value) {
 	vo_render_set_ntsc_scaling(vo->renderer, notify, value);

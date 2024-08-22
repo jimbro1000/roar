@@ -2,7 +2,7 @@
  *
  *  \brief Video ouput modules & interfaces.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -267,6 +267,26 @@ void vo_set_viewport(struct vo_interface *vo, int picture) {
 
 	DELEGATE_SAFE_CALL(vo->set_viewport, vw, vh);
 	vo->picture = picture;
+}
+
+void vo_set_draw_area(struct vo_interface *vo, int x, int y, int w, int h) {
+	vo->draw_area.x = x;
+	vo->draw_area.x = y;
+	vo->draw_area.w = w;
+	vo->draw_area.h = h;
+
+	// Set up picture area
+	if (((double)w / (double)h) > (4.0 / 3.0)) {
+		vo->picture_area.h = h;
+		vo->picture_area.w = (((double)vo->picture_area.h / 3.0) * 4.0) + 0.5;
+		vo->picture_area.x = x + (w - vo->picture_area.w) / 2;
+		vo->picture_area.y = y;
+	} else {
+		vo->picture_area.w = w;
+		vo->picture_area.h = (((double)vo->picture_area.w / 4.0) * 3.0) + 0.5;
+		vo->picture_area.x = x;
+		vo->picture_area.y = y + (h - vo->picture_area.h)/2;
+	}
 }
 
 extern inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool value);
