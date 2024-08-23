@@ -26,6 +26,7 @@
 #include "module.h"
 
 struct slist;
+struct ui_interface;
 
 typedef DELEGATE_S0(int) DELEGATE_T0(int);
 
@@ -138,5 +139,14 @@ void joystick_cycle(void);
 
 int joystick_read_axis(int port, int axis);
 int joystick_read_buttons(void);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Mouse based virtual joystick
+
+struct joystick_axis *joystick_configure_mouse_axis(struct ui_interface *,
+						    char *spec, unsigned jaxis);
+struct joystick_button *joystick_configure_mouse_button(struct ui_interface *,
+							char *spec, unsigned jbutton);
 
 #endif

@@ -134,6 +134,12 @@ struct vo_interface {
 	// Current picture area coordinates
 	struct vo_picture_area picture_area;
 
+	// Mouse tracking
+	struct {
+		int axis[2];
+		_Bool button[3];
+	} mouse;
+
 	// Called by vo_free before freeing the struct to handle
 	// module-specific allocations
 	DELEGATE_T0(void) free;

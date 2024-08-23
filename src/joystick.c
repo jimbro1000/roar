@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "pl-string.h"
 #include "sds.h"
@@ -36,6 +37,7 @@
 #include "logging.h"
 #include "module.h"
 #include "ui.h"
+#include "vo.h"
 #include "xroar.h"
 
 extern struct joystick_module linux_js_mod;
@@ -421,4 +423,142 @@ int joystick_read_buttons(void) {
 	if (read_button(1, 1))
 		buttons |= 8;
 	return buttons;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Mouse based virtual joystick
+
+struct joystick_mouse_axis {
+	struct joystick_control joystick_control;
+	struct ui_interface *ui;
+	int axis;
+	_Bool active_area_relative;
+	double offset;
+	double scale;
+};
+
+struct joystick_mouse_button {
+	struct joystick_control joystick_control;
+	struct ui_interface *ui;
+	int button;
+};
+
+static int joystick_read_mouse_axis(void *);
+static int joystick_read_mouse_button(void *);
+
+struct joystick_axis *joystick_configure_mouse_axis(struct ui_interface *ui,
+						    char *spec, unsigned jaxis) {
+	if (jaxis >= 2)
+		return NULL;
+
+	struct joystick_mouse_axis *axis = xmalloc(sizeof(*axis));
+	*axis = (struct joystick_mouse_axis){0};
+
+	axis->ui = ui;
+	axis->axis = jaxis;
+
+	double aa_dim = (jaxis == 0) ? 256.0 : 192.0;
+
+	double off0 = (jaxis == 0) ? 2.0 : 1.5;
+	double off1 = (jaxis == 0) ? 254.0 : 190.5;
+
+	if (spec) {
+		char *next = NULL;
+		double tmp = strtod(spec, &next);
+		if (next != spec) {
+			off0 = tmp;
+			if (*next == ',') {
+				++next;
+			}
+			spec = next;
+			next = NULL;
+			tmp = strtod(spec, &next);
+			if (next != spec) {
+				off1 = tmp;
+			}
+		}
+	}
+
+	// Avoid divide-by-zero
+	if (fabs(off1 - off0) <= 1e-10) {
+		off0 = 0.0;
+		off1 = aa_dim;
+	}
+
+	axis->offset = off0 / aa_dim;
+	axis->scale = aa_dim / (off1 - off0);
+
+	axis->joystick_control.read = DELEGATE_AS0(int, joystick_read_mouse_axis, axis);
+	axis->joystick_control.free = DELEGATE_AS0(void, free, axis);
+
+	return (struct joystick_axis *)&axis->joystick_control;
+}
+
+struct joystick_button *joystick_configure_mouse_button(struct ui_interface *ui,
+							char *spec, unsigned jbutton) {
+	if (spec && *spec)
+		jbutton = strtol(spec, NULL, 0) - 1;
+
+	if (jbutton >= 3)
+		return NULL;
+
+	struct joystick_mouse_button *button = xmalloc(sizeof(*button));
+	*button = (struct joystick_mouse_button){0};
+
+	button->ui = ui;
+	button->button = jbutton;
+
+	button->joystick_control.read = DELEGATE_AS0(int, joystick_read_mouse_button, button);
+	button->joystick_control.free = DELEGATE_AS0(void, free, button);
+
+	return (struct joystick_button *)&button->joystick_control;
+}
+
+static int joystick_read_mouse_axis(void *sptr) {
+	struct joystick_mouse_axis *axis = sptr;
+	struct ui_interface *ui = axis->ui;
+	struct vo_interface *vo = ui->vo_interface;
+	struct vo_render *vr = vo->renderer;
+
+	double pa_off, pa_dim;  // Picture offset, dimension
+	double vp_dim;          // Viewport dimension
+	double aa_off, aa_dim;  // Active area offset, dimension
+
+	if (axis->axis == 0) {
+		pa_off = vo->picture_area.x;
+		pa_dim = vo->picture_area.w;
+		vp_dim = vr->viewport.w;
+		aa_dim = vr->active_area.w;
+	} else {
+		pa_off = vo->picture_area.y;
+		pa_dim = vo->picture_area.h;
+		vp_dim = vr->viewport.h;
+		aa_dim = vr->active_area.h;
+	}
+	// Need to calculate active area offset
+	aa_off = (vp_dim - aa_dim) / 2.;
+
+	// Pointer's position within the picture area
+	double pointer_par = (double)vo->mouse.axis[axis->axis] - pa_off;
+
+	// Convert to viewport coordinates
+	double pointer_vpr = (pointer_par * vp_dim) / (pa_dim - 1.);
+
+	// Scale relative to active area
+	double pointer_aar = (pointer_vpr - aa_off) / aa_dim;
+
+	// Scale and offset according to axis configuration
+	double v = (pointer_aar - axis->offset) * axis->scale;
+
+	if (v < 0.0F) v = 0.0F;
+	if (v > 1.0F) v = 1.0F;
+	return (int)(v * 65535.);
+}
+
+static int joystick_read_mouse_button(void *sptr) {
+	struct joystick_mouse_button *button = sptr;
+	struct ui_interface *ui = button->ui;
+	struct vo_interface *vo = ui->vo_interface;
+	return vo->mouse.button[button->button];
 }
