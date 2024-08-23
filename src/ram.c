@@ -271,7 +271,7 @@ void ram_clear(struct ram *ram, int method) {
 	if (nbytes == 0)
 		return;
 
-	unsigned val = 0xff;
+	unsigned val = 0x00;
 	unsigned tst = 0xff;
 	if (method == ram_init_clear) {
 		val = 0;
