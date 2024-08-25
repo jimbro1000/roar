@@ -39,16 +39,16 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_axis *configure_axis(char *, unsigned);
-static struct joystick_button *configure_button(char *, unsigned);
+static struct joystick_axis *configure_physical_axis(char *, unsigned);
+static struct joystick_button *configure_physical_button(char *, unsigned);
 static void unmap_axis(struct joystick_axis *axis);
 static void unmap_button(struct joystick_button *button);
 static void sdl2_js_print_physical(void);
 
-struct joystick_submodule sdl_js_submod_physical = {
+struct joystick_submodule sdl_js_physical = {
 	.name = "physical",
-	.configure_axis = configure_axis,
-	.configure_button = configure_button,
+	.configure_axis = configure_physical_axis,
+	.configure_button = configure_physical_button,
 	.unmap_axis = unmap_axis,
 	.unmap_button = unmap_button,
 	.print_list = sdl2_js_print_physical,
@@ -57,7 +57,7 @@ struct joystick_submodule sdl_js_submod_physical = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_submodule *js_submodlist[] = {
-	&sdl_js_submod_physical,
+	&sdl_js_physical,
 	NULL
 };
 
@@ -332,7 +332,7 @@ static struct control *configure_control(char *spec, unsigned control) {
 	return c;
 }
 
-static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
+static struct joystick_axis *configure_physical_axis(char *spec, unsigned jaxis) {
 	sdl_js_physical_init();
 	struct control *c = configure_control(spec, jaxis);
 	if (!c)
@@ -349,7 +349,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	return axis;
 }
 
-static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
+static struct joystick_button *configure_physical_button(char *spec, unsigned jbutton) {
 	sdl_js_physical_init();
 	struct control *c = configure_control(spec, jbutton);
 	if (!c)

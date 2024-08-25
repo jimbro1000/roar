@@ -58,7 +58,7 @@ void ui_sdl_run(void *);
 _Bool sdl_vo_init(struct ui_sdl2_interface *);
 void sdl_keyboard_init(struct ui_sdl2_interface *);
 
-extern struct joystick_submodule sdl_js_submod_physical;
+extern struct joystick_submodule sdl_js_physical;
 extern struct joystick_module sdl_js_internal;
 
 extern struct module * const sdl2_vo_module_list[];

@@ -77,7 +77,7 @@ static _Bool mouse_button[3] = { 0, 0, 0 };
 extern struct joystick_submodule hkbd_js_keyboard;
 
 static struct joystick_submodule *js_submodlist[] = {
-	&sdl_js_submod_physical,
+	&sdl_js_physical,
 	&hkbd_js_keyboard,
 	&sdl_js_submod_mouse,
 	NULL
