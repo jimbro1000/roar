@@ -64,18 +64,7 @@
 
 static int max_machine_id = 0;
 static int max_cartridge_id = 0;
-
-static struct {
-	const char *name;
-	const char *description;
-} const joystick_names[] = {
-	{ NULL, "None" },
-	{ "joy0", "Joystick 0" },
-	{ "joy1", "Joystick 1" },
-	{ "kjoy0", "Keyboard" },
-	{ "mjoy0", "Mouse" },
-};
-#define NUM_JOYSTICK_NAMES ARRAY_N_ELEMENTS(joystick_names)
+static int max_joystick_id = 0;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -100,6 +89,7 @@ static void windows32_ui_update_state(void *, int tag, int value, const void *da
 static void windows32_create_menus(struct ui_windows32_interface *);
 static void windows32_update_machine_menu(void *);
 static void windows32_update_cartridge_menu(void *);
+static void windows32_update_joystick_menus(void *);
 
 static void *ui_windows32_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
@@ -116,6 +106,7 @@ static void *ui_windows32_new(void *cfg) {
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_update_state, uiw32);
 	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uiw32);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uiw32);
+	ui->update_joystick_menus = DELEGATE_AS0(void, windows32_update_joystick_menus, uiw32);
 
 	windows32_create_menus(uiw32);
 
@@ -126,6 +117,7 @@ static void *ui_windows32_new(void *cfg) {
 
 	windows32_update_machine_menu(uiw32);
 	windows32_update_cartridge_menu(uiw32);
+	windows32_update_joystick_menus(uiw32);
 
 	return uiw32;
 }
@@ -249,16 +241,10 @@ static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_alice), "Alice Layout");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
-	submenu = CreatePopupMenu();
+	uiw32->right_joystick_menu = submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Right joystick");
-	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_joy_right, i), joystick_names[i].description);
-	}
-	submenu = CreatePopupMenu();
+	uiw32->left_joystick_menu = submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Left joystick");
-	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_joy_left, i), joystick_names[i].description);
-	}
 	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_joystick_swap), "Swap joysticks");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
@@ -343,6 +329,31 @@ static void windows32_update_cartridge_menu(void *sptr) {
 		AppendMenu(uiw32->cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, cc->id + 1), cc->description);
 	}
 	slist_free(ccl);
+}
+
+static void windows32_update_joystick_menus(void *sptr) {
+	struct ui_windows32_interface *uiw32 = sptr;
+
+	// Get list of joystick configs
+	struct slist *jl = joystick_config_list();
+
+	// Remove old entries
+	while (DeleteMenu(uiw32->right_joystick_menu, 0, MF_BYPOSITION))
+		;
+	while (DeleteMenu(uiw32->left_joystick_menu, 0, MF_BYPOSITION))
+		;
+
+	AppendMenu(uiw32->right_joystick_menu, MF_STRING, TAGV(ui_tag_joy_right, 0), "None");
+	AppendMenu(uiw32->left_joystick_menu, MF_STRING, TAGV(ui_tag_joy_left, 0), "None");
+	max_joystick_id = 0;
+	for (struct slist *iter = jl; iter; iter = iter->next) {
+		struct joystick_config *jc = iter->data;
+		if ((jc->id + 1) > max_joystick_id) {
+			max_joystick_id = jc->id + 1;
+		}
+		AppendMenu(uiw32->right_joystick_menu, MF_STRING, TAGV(ui_tag_joy_right, jc->id + 1), jc->description);
+		AppendMenu(uiw32->left_joystick_menu, MF_STRING, TAGV(ui_tag_joy_left, jc->id + 1), jc->description);
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -505,10 +516,24 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Joysticks:
 	case ui_tag_joy_right:
-		xroar_set_joystick(1, 0, joystick_names[tag_value].name);
+		{
+			const char *name = NULL;
+			if (tag_value > 0) {
+				struct joystick_config *jc = joystick_config_by_id(tag_value - 1);
+				name = jc ? jc->name : NULL;
+			}
+			xroar_set_joystick(1, 0, name);
+		}
 		break;
 	case ui_tag_joy_left:
-		xroar_set_joystick(1, 1, joystick_names[tag_value].name);
+		{
+			const char *name = NULL;
+			if (tag_value > 0) {
+				struct joystick_config *jc = joystick_config_by_id(tag_value - 1);
+				name = jc ? jc->name : NULL;
+			}
+			xroar_set_joystick(1, 1, name);
+		}
 		break;
 
 	// Help:
@@ -625,16 +650,8 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 	case ui_tag_joy_right:
 	case ui_tag_joy_left:
 		{
-			int joy = 0;
-			if (data) {
-				for (unsigned i = 1; i < NUM_JOYSTICK_NAMES; i++) {
-					if (0 == strcmp((const char *)data, joystick_names[i].name)) {
-						joy = i;
-						break;
-					}
-				}
-			}
-			CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, NUM_JOYSTICK_NAMES - 1), TAGV(tag, joy), MF_BYCOMMAND);
+			struct joystick_config *jc = joystick_config_by_name(data);
+			CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_joystick_id), TAGV(tag, jc ? jc->id + 1 : 0), MF_BYCOMMAND);
 		}
 		break;
 

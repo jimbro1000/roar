@@ -29,6 +29,8 @@ struct ui_windows32_interface {
 	HMENU top_menu;
 	HMENU machine_menu;
 	HMENU cartridge_menu;
+	HMENU right_joystick_menu;
+	HMENU left_joystick_menu;
 
 	// Cassette tapes dialog
 	struct {
