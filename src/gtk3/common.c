@@ -94,10 +94,8 @@ gboolean gtk3_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpo
 #endif
 
 	// Update position data (for mouse mapped joystick)
-	int x = (event->x - vo->picture_area.x) * 320;
-	int y = (event->y - vo->picture_area.y) * 240;
-	uigtk3->mouse.axis[0] = (float)x / (float)vo->picture_area.w;
-	uigtk3->mouse.axis[1] = (float)y / (float)vo->picture_area.h;
+	vo->mouse.axis[0] = event->x;
+	vo->mouse.axis[1] = event->y;
 
 	return FALSE;
 }
@@ -126,6 +124,7 @@ static void clipboard_text_received(GtkClipboard *clipboard, const gchar *text, 
 
 gboolean gtk3_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
 	(void)widget;
 
 	if (event->button == 2) {
@@ -137,7 +136,7 @@ gboolean gtk3_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpoi
 
 	// Update button data (for mouse mapped joystick)
 	if (event->button >= 1 && event->button <= 3) {
-		uigtk3->mouse.button[event->button-1] = 1;
+		vo->mouse.button[event->button-1] = 1;
 	}
 
 	return FALSE;
@@ -145,11 +144,12 @@ gboolean gtk3_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpoi
 
 gboolean gtk3_handle_button_release(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
 	(void)widget;
 
 	// Update button data (for mouse mapped joystick)
 	if (event->button >= 1 && event->button <= 3) {
-		uigtk3->mouse.button[event->button-1] = 0;
+		vo->mouse.button[event->button-1] = 0;
 	}
 
 	return FALSE;

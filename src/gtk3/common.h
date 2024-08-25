@@ -73,12 +73,6 @@ struct ui_gtk3_interface {
 		struct gtk_kbd_js_button *enabled_button[GTK_KBD_JS_MAX_BUTTONS];
 	} keyboard;
 
-	// Mouse tracking
-	struct {
-		float axis[2];
-		_Bool button[3];
-	} mouse;
-
 	// Cursor hiding
 	_Bool cursor_hidden;
 	GdkCursor *old_cursor;
