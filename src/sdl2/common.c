@@ -18,20 +18,10 @@
 
 #include "top-config.h"
 
-// For strsep()
-#define _DEFAULT_SOURCE
-#define _BSD_SOURCE
-#define _DARWIN_C_SOURCE
-
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include <SDL.h>
-
-#include "pl-string.h"
-#include "xalloc.h"
 
 #include "auto_kbd.h"
 #include "events.h"
@@ -51,24 +41,14 @@ extern inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_axis *configure_axis(char *, unsigned);
-static struct joystick_button *configure_button(char *, unsigned);
+static struct joystick_axis *configure_mouse_axis(char *, unsigned);
+static struct joystick_button *configure_mouse_button(char *, unsigned);
 
-static struct joystick_submodule sdl_js_submod_mouse = {
+static struct joystick_submodule sdl_js_mouse = {
 	.name = "mouse",
-	.configure_axis = configure_axis,
-	.configure_button = configure_button,
+	.configure_axis = configure_mouse_axis,
+	.configure_button = configure_mouse_button,
 };
-
-static float mouse_xscale = 1.0;
-static float mouse_yscale = 1.0;
-static float mouse_xoffset = 34.0;
-static float mouse_yoffset = 25.5;
-static float mouse_xdiv = 252.;
-static float mouse_ydiv = 189.;
-
-static unsigned mouse_axis[2] = { 0, 0 };
-static _Bool mouse_button[3] = { 0, 0, 0 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -79,7 +59,7 @@ extern struct joystick_submodule hkbd_js_keyboard;
 static struct joystick_submodule *js_submodlist[] = {
 	&sdl_js_physical,
 	&hkbd_js_keyboard,
-	&sdl_js_submod_mouse,
+	&sdl_js_mouse,
 	NULL
 };
 
@@ -139,14 +119,8 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 				uisdl2->mouse_hidden = 0;
 			}
 			if (event.motion.windowID == uisdl2->vo_window_id) {
-				float x = (((float)event.motion.x * mouse_xscale) - mouse_xoffset) / mouse_xdiv;
-				float y = (((float)event.motion.y * mouse_yscale) - mouse_yoffset) / mouse_ydiv;
-				if (x < 0.0) x = 0.0;
-				if (x > 1.0) x = 1.0;
-				if (y < 0.0) y = 0.0;
-				if (y > 1.0) y = 1.0;
-				mouse_axis[0] = x * 65535.;
-				mouse_axis[1] = y * 65535.;
+				vo->mouse.axis[0] = event.motion.x;
+				vo->mouse.axis[1] = event.motion.y;
 			}
 			break;
 		case SDL_MOUSEBUTTONUP:
@@ -167,7 +141,7 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 				break;
 			}
 			if (event.button.button >= 1 && event.button.button <= 3) {
-				mouse_button[event.button.button-1] = event.button.state;
+				vo->mouse.button[event.button.button-1] = event.button.state;
 			}
 			break;
 
@@ -183,62 +157,12 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static unsigned read_axis(unsigned *a) {
-	return *a;
+static struct joystick_axis *configure_mouse_axis(char *spec, unsigned jaxis) {
+	return joystick_configure_mouse_axis(&global_uisdl2->ui_interface, spec, jaxis);
 }
 
-static _Bool read_button(_Bool *b) {
-	return *b;
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
-	struct ui_sdl2_interface *uisdl2 = global_uisdl2;
-	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
-	jaxis %= 2;
-	float off0 = (jaxis == 0) ? 2.0 : 1.5;
-	float off1 = (jaxis == 0) ? 254.0 : 190.5;
-	char *tmp = NULL;
-	if (spec)
-		tmp = strsep(&spec, ",");
-	if (tmp && *tmp)
-		off0 = strtof(tmp, NULL);
-	if (spec && *spec)
-		off1 = strtof(spec, NULL);
-	off0 -= 1.0;
-	off1 -= 0.75;
-	if (jaxis == 0) {
-		if (off0 < -32.0) off0 = -32.0;
-		if (off1 > 288.0) off0 = 288.0;
-		mouse_xoffset = off0 + 32.0;
-		mouse_xdiv = off1 - off0;
-	} else {
-		if (off0 < -24.0) off0 = -24.0;
-		if (off1 > 216.0) off0 = 216.0;
-		mouse_yoffset = off0 + 24.0;
-		mouse_ydiv = off1 - off0;
-	}
-	struct joystick_axis *axis = xmalloc(sizeof(*axis));
-	*axis = (struct joystick_axis){0};
-	axis->read = (js_read_axis_func)read_axis;
-	axis->data = &mouse_axis[jaxis];
-	mouse_xscale = 320. / vo->picture_area.w;
-	mouse_yscale = 240. / vo->picture_area.h;
-	return axis;
-}
-
-static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
-	jbutton %= 3;
-	if (spec && *spec)
-		jbutton = strtol(spec, NULL, 0) - 1;
-	if (jbutton >= 3)
-		return NULL;
-	struct joystick_button *button = xmalloc(sizeof(*button));
-	*button = (struct joystick_button){0};
-	button->read = (js_read_button_func)read_button;
-	button->data = &mouse_button[jbutton];
-	return button;
+static struct joystick_button *configure_mouse_button(char *spec, unsigned jbutton) {
+	return joystick_configure_mouse_button(&global_uisdl2->ui_interface, spec, jbutton);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
