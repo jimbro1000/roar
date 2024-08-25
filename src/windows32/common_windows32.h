@@ -27,6 +27,8 @@ struct ui_windows32_interface {
 	struct ui_sdl2_interface ui_sdl2_interface;
 
 	HMENU top_menu;
+	HMENU machine_menu;
+	HMENU cartridge_menu;
 
 	// Cassette tapes dialog
 	struct {

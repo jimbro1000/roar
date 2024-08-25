@@ -83,8 +83,6 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 static HWND about_dialog = NULL;
 static WNDPROC sdl_window_proc = NULL;
 static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-static HMENU machine_menu = NULL;
-static HMENU cartridge_menu = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -233,11 +231,11 @@ static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
 
 	hardware_menu = CreatePopupMenu();
 
-	machine_menu = submenu = CreatePopupMenu();
+	uiw32->machine_menu = submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Machine");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
-	cartridge_menu = submenu = CreatePopupMenu();
+	uiw32->cartridge_menu = submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Cartridge");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
@@ -305,7 +303,7 @@ static void windows32_update_machine_menu(void *sptr) {
 	// Note: this list is not a copy, so does not need freeing
 
 	// Remove old entries
-	while (DeleteMenu(machine_menu, 0, MF_BYPOSITION))
+	while (DeleteMenu(uiw32->machine_menu, 0, MF_BYPOSITION))
 		;
 
 	// Add new entries
@@ -314,7 +312,7 @@ static void windows32_update_machine_menu(void *sptr) {
 		struct machine_config *mc = mcl->data;
 		if (mc->id > max_machine_id)
 			max_machine_id = mc->id;
-		AppendMenu(machine_menu, MF_STRING, TAGV(ui_tag_machine, mc->id), mc->description);
+		AppendMenu(uiw32->machine_menu, MF_STRING, TAGV(ui_tag_machine, mc->id), mc->description);
 		mcl = mcl->next;
 	}
 }
@@ -332,17 +330,17 @@ static void windows32_update_cartridge_menu(void *sptr) {
 	}
 
 	// Remove old entries
-	while (DeleteMenu(cartridge_menu, 0, MF_BYPOSITION))
+	while (DeleteMenu(uiw32->cartridge_menu, 0, MF_BYPOSITION))
 		;
 
 	// Add new entries
-	AppendMenu(cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
+	AppendMenu(uiw32->cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
 	max_cartridge_id = 0;
 	for (struct slist *iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
 		if ((cc->id + 1) > max_cartridge_id)
 			max_cartridge_id = cc->id + 1;
-		AppendMenu(cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, cc->id + 1), cc->description);
+		AppendMenu(uiw32->cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, cc->id + 1), cc->description);
 	}
 	slist_free(ccl);
 }
