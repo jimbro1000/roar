@@ -46,11 +46,16 @@ struct ui_gtk2_interface {
 	GtkUIManager *menu_manager;
 	GtkWidget *menubar;
 	GtkWidget *drawing_area;
+
 	// Dynamic menus
 	GtkActionGroup *machine_action_group;
 	guint merge_machines;
 	GtkActionGroup *cart_action_group;
 	guint merge_carts;
+	GtkActionGroup *joy_right_action_group;
+	guint merge_right_joysticks;
+	GtkActionGroup *joy_left_action_group;
+	guint merge_left_joysticks;
 
 	// Window geometry
 	struct vo_picture_area picture_area;

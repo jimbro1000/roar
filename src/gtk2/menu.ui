@@ -65,18 +65,8 @@
       </menu>
       <separator/>
       <menu name='JoyRightMenu' action='JoyRightMenuAction'>
-        <menuitem action='joy_right_none'/>
-        <menuitem action='joy_right_joy0'/>
-        <menuitem action='joy_right_joy1'/>
-        <menuitem action='joy_right_kjoy0'/>
-        <menuitem action='joy_right_mjoy0'/>
       </menu>
       <menu name='JoyLeftMenu' action='JoyLeftMenuAction'>
-        <menuitem action='joy_left_none'/>
-        <menuitem action='joy_left_joy0'/>
-        <menuitem action='joy_left_joy1'/>
-        <menuitem action='joy_left_kjoy0'/>
-        <menuitem action='joy_left_mjoy0'/>
       </menu>
       <menuitem name='JoySwap' action='JoySwapAction'/>
       <separator/>
