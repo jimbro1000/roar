@@ -163,17 +163,9 @@ be a better way to make this usable...
 
 <tr title="Use cartridge in current machine (may need hard reset)"><th>Cartridge:</td><td><select id='cart' onchange='wasm_set_cart(this.options[this.selectedIndex].value)'></select></td></tr>
 
-<tr title="Right joystick emulation"><th>Right joystick:</td><td><select id='right-joystick' onchange='wasm_set_joystick(0,this.options[this.selectedIndex].value)'>
-	<option value='' selected>None</option>
-	<option value='kjoy0'>Keyboard</option>
-	<option value='mjoy0'>Mouse</option>
-	</select></td></tr>
+<tr title="Right joystick emulation"><th>Right joystick:</td><td><select id='right-joystick' onchange='wasm_set_joystick(0,this.options[this.selectedIndex].value)'></select></td></tr>
 
-<tr title="Left joystick emulation"><th>Left joystick:</td><td><select id='left-joystick' onchange='wasm_set_joystick(1,this.options[this.selectedIndex].value)'>
-	<option value='' selected>None</option>
-	<option value='kjoy0'>Keyboard</option>
-	<option value='mjoy0'>Mouse</option>
-	</select></td></tr>
+<tr title="Left joystick emulation"><th>Left joystick:</td><td><select id='left-joystick' onchange='wasm_set_joystick(1,this.options[this.selectedIndex].value)'></select></td></tr>
 
 </table>
 
@@ -534,7 +526,7 @@ be a better way to make this usable...
 		ui_add_cart_(-1, "None");
 	}
 
-	// Called to populate the cartridge select drop-down
+	// Helper to populate the cartridge select drop-down
 	function ui_add_cart_(index, description) {
 		var cart_select = document.getElementById("cart");
 		var opt = document.createElement("OPTION");
@@ -546,6 +538,46 @@ be a better way to make this usable...
 	// Called to populate the cartridge select drop-down
 	function ui_add_cart(index, description) {
 		ui_add_cart_(index, UTF8ToString(description, 80));
+	}
+
+	// Clear joystick drop-downs in anticipation of repopulating
+	function ui_clear_joysticks() {
+		{
+			var joystick_select = document.getElementById("right-joystick");
+			while (joystick_select.lastChild) {
+				joystick_select.removeChild(joystick_select.lastChild);
+			}
+		}
+		{
+			var joystick_select = document.getElementById("left-joystick");
+			while (joystick_select.lastChild) {
+				joystick_select.removeChild(joystick_select.lastChild);
+			}
+		}
+		ui_add_joystick_("", "None");
+	}
+
+	// Helper to populate the joystick select drop-downs
+	function ui_add_joystick_(name, description) {
+		{
+			var joystick_select = document.getElementById("right-joystick");
+			var opt = document.createElement("OPTION");
+			opt.setAttribute("value", name);
+			opt.innerHTML = description;
+			joystick_select.appendChild(opt);
+		}
+		{
+			var joystick_select = document.getElementById("left-joystick");
+			var opt = document.createElement("OPTION");
+			opt.setAttribute("value", name);
+			opt.innerHTML = description;
+			joystick_select.appendChild(opt);
+		}
+	}
+
+	// Called to populate the joystick select drop-downs
+	function ui_add_joystick(name, description) {
+		ui_add_joystick_(UTF8ToString(name, 80), UTF8ToString(description, 80));
 	}
 
 	// Called when machine changes

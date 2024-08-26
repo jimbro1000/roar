@@ -38,6 +38,7 @@
 #include "cart.h"
 #include "events.h"
 #include "fs.h"
+#include "joystick.h"
 #include "logging.h"
 #include "machine.h"
 #include "romlist.h"
@@ -77,6 +78,7 @@ struct ui_module ui_wasm_module = {
 
 static void wasm_update_machine_menu(void *sptr);
 static void wasm_update_cartridge_menu(void *sptr);
+static void wasm_update_joystick_menus(void *sptr);
 
 static void *ui_wasm_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
@@ -94,6 +96,7 @@ static void *ui_wasm_new(void *cfg) {
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, wasm_ui_update_state, uiwasm);
 	ui->update_machine_menu = DELEGATE_AS0(void, wasm_update_machine_menu, uiwasm);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, wasm_update_cartridge_menu, uiwasm);
+	ui->update_joystick_menus = DELEGATE_AS0(void, wasm_update_joystick_menus, uiwasm);
 
 	if (!sdl_vo_init(uisdl2)) {
 		free(uiwasm);
@@ -102,6 +105,7 @@ static void *ui_wasm_new(void *cfg) {
 
 	wasm_update_machine_menu(uiwasm);
 	wasm_update_cartridge_menu(uiwasm);
+	wasm_update_joystick_menus(uiwasm);
 
 	return uiwasm;
 }
@@ -273,6 +277,24 @@ static void wasm_update_cartridge_menu(void *sptr) {
 		EM_ASM_({ ui_add_cart($0, $1); }, cc->id, cc->description);
 	}
 	slist_free(ccl);
+}
+
+static void wasm_update_joystick_menus(void *sptr) {
+	struct ui_wasm_interface *uiwasm = sptr;
+	(void)uiwasm;
+
+	// Get list of joystick configs
+	struct slist *jcl = joystick_config_list();
+	// Note: this list is not a copy, so does not need freeing
+
+	// Remove old entries
+	EM_ASM_({ ui_clear_joysticks(); });
+
+	// Add new entries
+	for (struct slist *iter = jcl; iter; iter = iter->next) {
+		struct joystick_config *jc = iter->data;
+		EM_ASM_({ ui_add_joystick($0, $1); }, jc->name, jc->description);
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -593,6 +615,7 @@ void wasm_set_joystick(int port, const char *value) {
 	struct wasm_event_set_joystick *ev = xmalloc(sizeof(*ev));
 	ev->port = port;
 	ev->value = xstrdup(value);
+	LOG_PRINT("wasm_set_joystick(%d, %s)\n", port, value);
 	WASM_DEBUG("wasm_set_joystick(%d, %s): queueing do_wasm_set_joystick()\n", port, value);
 	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_joystick, ev), 1);
 }
