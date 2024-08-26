@@ -56,6 +56,10 @@ struct ui_gtk3_interface {
 	guint merge_machines;
 	GtkActionGroup *cart_action_group;
 	guint merge_carts;
+	GtkActionGroup *joy_right_action_group;
+	guint merge_right_joysticks;
+	GtkActionGroup *joy_left_action_group;
+	guint merge_left_joysticks;
 
 	// Window geometry
 	_Bool user_specified_geometry;
