@@ -143,6 +143,8 @@ static int current_cc = 0;
 static int current_ccr = 0;
 static int current_machine = 0;
 static int current_cartridge = 0;
+static int current_joy_right = 0;
+static int current_joy_left = 0;
 static int current_keymap = 0;
 static int is_fullscreen = 0;
 static int tape_is_playing = 0;
@@ -151,33 +153,6 @@ static int is_kbd_translate = 0;
 static _Bool disk_write_enable[4] = { 1, 1, 1, 1 };
 static _Bool disk_write_back[4] = { 0, 0, 0, 0 };
 static int print_destination = 0;
-
-static struct {
-	const char *name;
-	NSString *description;
-} joystick_names[] = {
-	{ NULL, @"None" },
-	{ "joy0", @"Joystick 0" },
-	{ "joy1", @"Joystick 1" },
-	{ "kjoy0", @"Keyboard" },
-	{ "mjoy0", @"Mouse" },
-};
-
-/* Hacky way to discover which joystick is mapped - for determining which radio
- * button is visible in joystick menus. */
-static int selected_joystick(unsigned port) {
-	int i;
-	if (port > 1)
-		return 0;
-	if (!joystick_port_config[port])
-		return 0;
-	if (!joystick_port_config[port]->name)
-		return 0;
-	for (i = 1; i < 5; i++)
-		if (0 == strcmp(joystick_port_config[port]->name, joystick_names[i].name))
-			return i;
-	return 0;
-}
 
 /* Setting this to true is a massive hack so that cocoa file dialogues receive
  * keypresses.  Ideally, need to sort SDL out or turn this into a regular
@@ -385,17 +360,15 @@ int cocoa_super_all_keys = 0;
 
 	/* Joysticks: */
 	case TAG_JOY_RIGHT:
-		if (tag_value >= 1 && tag_value <= 4) {
-			joystick_map(joystick_config_by_name(joystick_names[tag_value].name), 0);
-		} else {
-			joystick_unmap(0);
+		{
+			struct joystick_config *jc = joystick_config_by_id(tag_value);
+			xroar_set_joystick(1, 0, jc ? jc->name : NULL);
 		}
 		break;
 	case TAG_JOY_LEFT:
-		if (tag_value >= 1 && tag_value <= 4) {
-			joystick_map(joystick_config_by_name(joystick_names[tag_value].name), 1);
-		} else {
-			joystick_unmap(1);
+		{
+			struct joystick_config *jc = joystick_config_by_id(tag_value);
+			xroar_set_joystick(1, 1, jc ? jc->name : NULL);
 		}
 		break;
 
@@ -478,10 +451,10 @@ int cocoa_super_all_keys = 0;
 		break;
 
 	case TAG_JOY_RIGHT:
-		[item setState:((tag_value == selected_joystick(0)) ? NSOnState : NSOffState)];
+		[item setState:((tag == current_joy_right) ? NSOnState : NSOffState)];
 		break;
 	case TAG_JOY_LEFT:
-		[item setState:((tag_value == selected_joystick(1)) ? NSOnState : NSOffState)];
+		[item setState:((tag == current_joy_left) ? NSOnState : NSOffState)];
 		break;
 
 	}
@@ -932,6 +905,8 @@ static void setup_view_menu(void) {
 
 static NSMenu *machine_menu;
 static NSMenu *cartridge_menu;
+static NSMenu *joy_right_menu;
+static NSMenu *joy_left_menu;
 
 /* Create Machine menu */
 static void setup_hardware_menu(void) {
@@ -1003,34 +978,15 @@ static void setup_hardware_menu(void) {
 
 	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Right Joystick"];
-
-	int joy;
-	for (joy = 0; joy < 5; joy++) {
-		item = [[NSMenuItem alloc] initWithTitle:joystick_names[joy].description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_JOY_RIGHT | joy)];
-		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-		[submenu addItem:item];
-		[item release];
-	}
-
+	joy_right_menu = [[NSMenu alloc] initWithTitle:@"Right Joystick"];
 	item = [[NSMenuItem alloc] initWithTitle:@"Right Joystick" action:nil keyEquivalent:@""];
-	[item setSubmenu:submenu];
+	[item setSubmenu:joy_right_menu];
 	[hardware_menu addItem:item];
 	[item release];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Left Joystick"];
-
-	for (joy = 0; joy < 5; joy++) {
-		item = [[NSMenuItem alloc] initWithTitle:joystick_names[joy].description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_JOY_LEFT | joy)];
-		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-		[submenu addItem:item];
-		[item release];
-	}
-
+	joy_left_menu = [[NSMenu alloc] initWithTitle:@"Left Joystick"];
 	item = [[NSMenuItem alloc] initWithTitle:@"Left Joystick" action:nil keyEquivalent:@""];
-	[item setSubmenu:submenu];
+	[item setSubmenu:joy_left_menu];
 	[hardware_menu addItem:item];
 	[item release];
 
@@ -1263,6 +1219,7 @@ struct ui_module ui_cocoa_module = {
 
 static void cocoa_update_machine_menu(void *);
 static void cocoa_update_cartridge_menu(void *);
+static void cocoa_update_joystick_menus(void *);
 static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data);
 
 static void *ui_cocoa_new(void *cfg) {
@@ -1281,8 +1238,10 @@ static void *ui_cocoa_new(void *cfg) {
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_update_state, uisdl2);
 	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uisdl2);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
+	ui->update_joystick_menus = DELEGATE_AS0(void, cocoa_update_joystick_menus, uisdl2);
 	cocoa_update_machine_menu(uisdl2);
 	cocoa_update_cartridge_menu(uisdl2);
+	cocoa_update_joystick_menus(uisdl2);
 
 	if (!sdl_vo_init(uisdl2)) {
 		free(uisdl2);
@@ -1361,6 +1320,53 @@ static void cocoa_update_cartridge_menu(void *sptr) {
 	[cartridge_menu insertItem:item atIndex:0];
 	[item release];
 	slist_free(ccl);
+}
+
+static void cocoa_update_joystick_menus(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
+
+	// Get list of joystick configs
+	struct slist *jcl = slist_reverse(slist_copy(joystick_config_list()));
+
+	// Remove old entries
+	while ([joy_right_menu numberOfItems] > 0)
+		[joy_right_menu removeItem:[joy_right_menu itemAtIndex:0]];
+	while ([joy_left_menu numberOfItems] > 0)
+		[joy_left_menu removeItem:[joy_left_menu itemAtIndex:0]];
+
+	// Add new entries in reverse order, as each will be inserted before
+	// the previous.
+	NSMenuItem *item;
+	struct slist *iter;
+	for (iter = jcl; iter; iter = iter->next) {
+		struct joystick_config *jc = iter->data;
+		NSString *description = [[NSString alloc] initWithUTF8String:jc->description];
+		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:(TAG_JOY_RIGHT | jc->id)];
+		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+		[joy_right_menu insertItem:item atIndex:0];
+		[item release];
+
+		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:(TAG_JOY_LEFT | jc->id)];
+		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+		[description release];
+		[joy_left_menu insertItem:item atIndex:0];
+		[item release];
+	}
+
+	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_JOY_RIGHT | (-1 & TAG_VALUE_MASK))];
+	[joy_right_menu insertItem:item atIndex:0];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_JOY_LEFT | (-1 & TAG_VALUE_MASK))];
+	[joy_left_menu insertItem:item atIndex:0];
+	[item release];
+
+	slist_free(jcl);
 }
 
 static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
@@ -1442,9 +1448,26 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		current_keymap = TAG_KEYMAP | value;
 		break;
 
+	/* Joystick */
+
+	case ui_tag_joy_right:
+		{
+			struct joystick_config *jc = joystick_config_by_name(data);
+			current_joy_right = jc ? jc->id : (-1 & TAG_VALUE_MASK);
+			current_joy_right |= TAG_JOY_RIGHT;
+		}
+		break;
+
+	case ui_tag_joy_left:
+		{
+			struct joystick_config *jc = joystick_config_by_name(data);
+			current_joy_left = jc ? jc->id : (-1 & TAG_VALUE_MASK);
+			current_joy_left |= TAG_JOY_LEFT;
+		}
+		break;
+
 	default:
 		break;
 
 	}
-
 }
