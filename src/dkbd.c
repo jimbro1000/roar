@@ -272,7 +272,7 @@ int8_t dk_key_by_name(const char *name) {
 		case '.': return DSCAN_FULL_STOP;
 		case '/': return DSCAN_SLASH;
 		case '@': return DSCAN_AT;
-		case 0x53: return DSCAN_UP;
+		case '^': return DSCAN_UP;
 		case 0x0a: return DSCAN_DOWN;
 		case 0x08: return DSCAN_LEFT;
 		case 0x09: return DSCAN_RIGHT;
