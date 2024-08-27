@@ -82,10 +82,15 @@ static void joystick_config_free(struct joystick_config *jc);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void init_if(const char *if_name);
+
 void joystick_init(void) {
 	for (unsigned p = 0; p < JOYSTICK_NUM_PORTS; p++) {
 		joystick_port[p] = NULL;
 	}
+	init_if("physical");
+	init_if("mouse");
+	init_if("keyboard");
 }
 
 void joystick_shutdown(void) {
@@ -222,10 +227,10 @@ static void select_interface(char **spec) {
 	}
 }
 
-void joystick_list_physical(void) {
-	select_interface(NULL);  // default physical
-	if (selected_interface->print_list) {
-		selected_interface->print_list();
+static void init_if(const char *if_name) {
+	struct joystick_submodule *submod = find_if(if_name);
+	if (submod && submod->init) {
+		submod->init();
 	}
 }
 

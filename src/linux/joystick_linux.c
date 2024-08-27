@@ -34,6 +34,7 @@
 #include <unistd.h>
 
 #include "pl-string.h"
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -45,15 +46,15 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void linux_js_physical_init(void);
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
-static void linux_js_print_physical(void);
 
 static struct joystick_submodule linux_js_submod_physical = {
 	.name = "physical",
+	.init = linux_js_physical_init,
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
-	.print_list = linux_js_print_physical,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -98,6 +99,17 @@ struct linux_js_control {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+struct linux_js_context *init_context(void) {
+	if (!global_linux_js_context) {
+		struct linux_js_context *ctx = xmalloc(sizeof(*ctx));
+		*ctx = (struct linux_js_context){0};
+		global_linux_js_context = ctx;
+	}
+	return global_linux_js_context;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // For sorting joystick device filenames
 
 static int compar_device_path(const void *ap, const void *bp) {
@@ -116,11 +128,10 @@ static int compar_device_path(const void *ap, const void *bp) {
 	return 1;
 }
 
-// For now all this does is print out a list of joysticks.  I think I'll need
-// to switch to the event interface before a consistent gamepad experience is
-// possible.
+static void linux_js_physical_init(void) {
+	if (global_linux_js_context)
+		return;
 
-static void linux_js_print_physical(void) {
 	glob_t globbuf;
 	globbuf.gl_offs = 0;
 	unsigned prefix_len = 13;
@@ -132,7 +143,7 @@ static void linux_js_print_physical(void) {
 	// Sort the list so we can spot removed devices
 	qsort(globbuf.gl_pathv, globbuf.gl_pathc, sizeof(char *), compar_device_path);
 	// Now iterate
-	LOG_PRINT("%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
+	LOG_DEBUG(1, "%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
 	for (unsigned i = 0; i < globbuf.gl_pathc; i++) {
 		if (strlen(globbuf.gl_pathv[i]) < prefix_len)
 			continue;
@@ -141,32 +152,63 @@ static void linux_js_print_physical(void) {
 		if (fd < 0) {
 			continue;
 		}
-		LOG_PRINT("%-3s ", index);
+		LOG_DEBUG(1, "%-3s ", index);
+
+		sds name = sdscatprintf(sdsempty(), "joy%u", i);
+		struct joystick_config *jc = joystick_config_by_name(name);
+		if (!jc) {
+			jc = joystick_config_new();
+			jc->name = strdup(name);
+		}
+
+		// Description
+		const char *joy_name = NULL;
 		char buf[32];
 		if (ioctl(fd, JSIOCGNAME(sizeof(buf)), buf) >= 0) {
+			joy_name = buf;
 			buf[31] = 0;
-			LOG_PRINT("%-31s ", buf);
+			LOG_DEBUG(1, "%-31s ", buf);
+
 		}
+		if (!joy_name) {
+			joy_name = "Joystick";
+		}
+		sds desc = sdscatprintf(sdsempty(), "%u: %s", i, joy_name);
+		if (jc->description)
+			free(jc->description);
+		jc->description = strdup(desc);
+		sdsfree(desc);
+		sdsfree(name);
+
+		// Axes
 		if (ioctl(fd, JSIOCGAXES, buf) < 0)
 			buf[0] = 0;
-		LOG_PRINT("%-7d ", (int)buf[0]);
+		LOG_DEBUG(1, "%-7d ", (int)buf[0]);
+		for (unsigned a = 0; a <= 1; a++) {
+			sds tmp = sdscatprintf(sdsempty(), "physical:%u,%u", i, a);
+			if (jc->axis_specs[a])
+				free(jc->axis_specs[a]);
+			jc->axis_specs[a] = strdup(tmp);
+			sdsfree(tmp);
+		}
+
+		// Buttons
 		if (ioctl(fd, JSIOCGBUTTONS, buf) < 0)
 			buf[0] = 0;
-		LOG_PRINT("%-7d\n", (int)buf[0]);
+		LOG_DEBUG(1, "%-7d\n", (int)buf[0]);
+		for (unsigned b = 0; b <= 1; b++) {
+			sds tmp = sdscatprintf(sdsempty(), "physical:%u,%u", i, b);
+			if (jc->button_specs[b])
+				free(jc->button_specs[b]);
+			jc->button_specs[b] = strdup(tmp);
+			sdsfree(tmp);
+		}
+
 		close(fd);
 	}
 	globfree(&globbuf);
-}
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-struct linux_js_context *init_context(void) {
-	if (!global_linux_js_context) {
-		struct linux_js_context *ctx = xmalloc(sizeof(*ctx));
-		*ctx = (struct linux_js_context){0};
-		global_linux_js_context = ctx;
-	}
-	return global_linux_js_context;
+	(void)init_context();
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -209,7 +251,7 @@ static struct linux_js_device *open_device(int joystick_index) {
 	if (d->num_axes > 0) {
 		d->axis_value = xmalloc(d->num_axes * sizeof(*d->axis_value));
 		for (unsigned i = 0; i < d->num_axes; i++)
-			d->axis_value[i] = 0;
+			d->axis_value[i] = 32768;
 	}
 	if (d->num_buttons > 0) {
 		d->button_value = xmalloc(d->num_buttons * sizeof(*d->button_value));

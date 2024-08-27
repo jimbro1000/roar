@@ -614,18 +614,6 @@ static char const * const default_config[] = {
 #endif
 
 	// Joysticks
-	"joy joy0",
-	"joy-desc 'Joystick 0'",
-	"joy-axis 0='physical:0,0'",
-	"joy-axis 1='physical:0,1'",
-	"joy-button 0='physical:0,0'",
-	"joy-button 1='physical:0,1'",
-	"joy joy1",
-	"joy-desc 'Joystick 1'",
-	"joy-axis 0='physical:1,0'",
-	"joy-axis 1='physical:1,1'",
-	"joy-button 0='physical:1,0'",
-	"joy-button 1='physical:1,1'",
 	"joy mjoy0",
 	"joy-desc 'Mouse'",
 	"joy-axis 0='mouse:'",
@@ -930,17 +918,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	// Help text that depends on selected UI module.
-
-#ifndef HAVE_WASM
-	if (private_cfg.help.joystick_print_list) {
-		joystick_list_physical();
-		exit(EXIT_SUCCESS);
-	}
-#endif
-
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 	// Sanitise other command-line options.
 
 	if (private_cfg.vo.frameskip < 0)
@@ -1008,13 +985,47 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	event_current_tick = 0;
 
-	// ... modules
+#ifdef LOGGING
+#ifndef HAVE_WASM
+	// Unfortunately to print the list of joysticks, first the UI has to be
+	// initialised.  Therefore in this special case, inhibit printing
+	// anything else!
+	if (private_cfg.help.joystick_print_list) {
+		logging.level = 0;
+	}
+#endif
+#endif
+
+	// UI module
 	xroar.ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
 	if (!xroar.ui_interface || !xroar.ui_interface->vo_interface) {
 		LOG_ERROR("No UI module initialised.\n");
 		return NULL;
 	}
 	xroar.vo_interface = xroar.ui_interface->vo_interface;
+
+	// Joysticks
+	joystick_init();
+
+#ifdef LOGGING
+#ifndef HAVE_WASM
+	if (private_cfg.help.joystick_print_list) {
+		struct slist *jcl = joystick_config_list();
+		while (jcl) {
+			struct joystick_config *jc = jcl->data;
+			jcl = jcl->next;
+			printf("\t%-10s %s\n", jc->name, jc->description);
+		}
+		exit(EXIT_SUCCESS);
+	}
+#endif
+#endif
+
+	if (xroar.ui_interface) {
+		DELEGATE_SAFE_CALL(xroar.ui_interface->update_joystick_menus);
+	}
+
+	// Audio module
 
 	if (!(xroar.ao_interface = module_init_from_list(ao_module_list, ao_module, NULL))) {
 		LOG_ERROR("No audio module initialised.\n");
@@ -1025,9 +1036,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	} else {
 		sound_set_gain(xroar.ao_interface->sound_interface, private_cfg.ao.gain);
 	}
-
-	// ... subsystems
-	joystick_init();
 
 	// Default joystick mapping
 	if (private_cfg.joy.right) {
@@ -2530,15 +2538,12 @@ static void set_joystick(const char *name) {
 		}
 	}
 #ifdef LOGGING
+#ifndef HAVE_WASM
 	if (name && 0 == strcmp(name, "help")) {
-		struct slist *jcl = joystick_config_list();
-		while (jcl) {
-			struct joystick_config *jc = jcl->data;
-			jcl = jcl->next;
-			printf("\t%-10s %s\n", jc->name, jc->description);
-		}
-		exit(EXIT_SUCCESS);
+		private_cfg.help.joystick_print_list = 1;
+		return;
 	}
+#endif
 #endif
 	if (name) {
 		cur_joy_config = joystick_config_by_name(name);
@@ -2550,12 +2555,6 @@ static void set_joystick(const char *name) {
 }
 
 static void set_joystick_axis(const char *spec) {
-#ifndef HAVE_WASM
-	if (strcmp(spec, "help") == 0) {
-		private_cfg.help.joystick_print_list = 1;
-		return;
-	}
-#endif
 	char *spec_copy = xstrdup(spec);
 	char *cspec = spec_copy;
 	unsigned axis = 0;
@@ -2579,12 +2578,6 @@ static void set_joystick_axis(const char *spec) {
 }
 
 static void set_joystick_button(const char *spec) {
-#ifndef HAVE_WASM
-	if (strcmp(spec, "help") == 0) {
-		private_cfg.help.joystick_print_list = 1;
-		return;
-	}
-#endif
 	char *spec_copy = xstrdup(spec);
 	char *cspec = spec_copy;
 	unsigned button = 0;
@@ -2916,8 +2909,7 @@ static void helptext(void) {
 "  -joy NAME             configure named joystick profile (-joy help for list)\n"
 "    -joy-desc TEXT        joystick description\n"
 "    -joy-axis AXIS=SPEC   configure joystick axis\n"
-"    -joy-button BTN=SPEC  configure joystick button (-joy-button help or\n"
-"                          -joy-axis help to list physical joysticks)\n"
+"    -joy-button BTN=SPEC  configure joystick button\n"
 "  -joy-right NAME       map right joystick\n"
 "  -joy-left NAME        map left joystick\n"
 "  -joy-virtual NAME     specify the 'virtual' joystick to cycle [kjoy0]\n"

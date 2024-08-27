@@ -28,6 +28,7 @@
 #include <SDL.h>
 
 #include "pl-string.h"
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -39,19 +40,19 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void sdl_js_physical_init(void);
 static struct joystick_axis *configure_physical_axis(char *, unsigned);
 static struct joystick_button *configure_physical_button(char *, unsigned);
 static void unmap_axis(struct joystick_axis *axis);
 static void unmap_button(struct joystick_button *button);
-static void sdl2_js_print_physical(void);
 
 struct joystick_submodule sdl_js_physical = {
 	.name = "physical",
+	.init = sdl_js_physical_init,
 	.configure_axis = configure_physical_axis,
 	.configure_button = configure_physical_button,
 	.unmap_axis = unmap_axis,
 	.unmap_button = unmap_button,
-	.print_list = sdl2_js_print_physical,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -94,27 +95,6 @@ struct control {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void sdl2_js_print_physical(void) {
-	SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-	unsigned njstk = SDL_NumJoysticks();
-	LOG_PRINT("%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
-	for (unsigned index = 0; index < njstk; index++) {
-		SDL_Joystick *sdlj = SDL_JoystickOpen(index);
-		if (!sdlj)
-			continue;
-		LOG_PRINT("%-3u ", index);
-		const char *description = SDL_JoystickName(sdlj);
-		if (!description)
-			description = "";
-		LOG_PRINT("%-31s ", description);
-		LOG_PRINT("%-7d ", SDL_JoystickNumAxes(sdlj));
-		LOG_PRINT("%-7d\n", SDL_JoystickNumButtons(sdlj));
-		SDL_JoystickClose(sdlj);
-	}
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 static void sdl_js_physical_init(void) {
 	if (initialised)
 		return;
@@ -124,6 +104,72 @@ static void sdl_js_physical_init(void) {
 		LOG_DEBUG(1, "\tNo joysticks found\n");
 	} else {
 		LOG_DEBUG(1, "\t%u joysticks found\n", num_joysticks);
+	}
+	LOG_DEBUG(1, "%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
+	for (unsigned i = 0; i < num_joysticks; i++) {
+		SDL_Joystick *joystick = NULL;
+		_Bool is_gamecontroller = SDL_IsGameController(i);
+		if (!is_gamecontroller) {
+			joystick = SDL_JoystickOpen(i);
+			if (!joystick)
+				continue;
+		}
+
+		LOG_DEBUG(1, "%-3u ", i);
+		sds name = sdscatprintf(sdsempty(), "joy%u", i);
+		struct joystick_config *jc = joystick_config_by_name(name);
+		if (!jc) {
+			jc = joystick_config_new();
+			jc->name = strdup(name);
+		}
+
+		// Description
+		const char *joy_name = NULL;
+		if (is_gamecontroller) {
+			joy_name = SDL_GameControllerNameForIndex(i);
+		} else {
+			joy_name = SDL_JoystickName(joystick);
+		}
+		if (!joy_name) {
+			joy_name = "Joystick";
+		}
+		sds desc = sdscatprintf(sdsempty(), "%u: %s", i, joy_name);
+		if (jc->description)
+			free(jc->description);
+		jc->description = strdup(desc);
+		LOG_DEBUG(1, "%-31s ", jc->description);
+		sdsfree(desc);
+		sdsfree(name);
+
+		// Axes
+		if (is_gamecontroller) {
+			LOG_DEBUG(1, "(game controller)\n");
+		} else {
+			LOG_DEBUG(1, "%-7d ", SDL_JoystickNumAxes(joystick));
+		}
+		for (unsigned a = 0; a <= 1; a++) {
+			sds tmp = sdscatprintf(sdsempty(), "physical:%u,%u", i, a);
+			if (jc->axis_specs[a])
+				free(jc->axis_specs[a]);
+			jc->axis_specs[a] = strdup(tmp);
+			sdsfree(tmp);
+		}
+
+		// Buttons
+		if (!is_gamecontroller) {
+			LOG_DEBUG(1, "%-7d\n", SDL_JoystickNumButtons(joystick));
+		}
+		for (unsigned b = 0; b <= 1; b++) {
+			sds tmp = sdscatprintf(sdsempty(), "physical:%u,%u", i, b);
+			if (jc->button_specs[b])
+				free(jc->button_specs[b]);
+			jc->button_specs[b] = strdup(tmp);
+			sdsfree(tmp);
+		}
+
+		if (joystick) {
+			SDL_JoystickClose(joystick);
+		}
 	}
 	initialised = 1;
 }
