@@ -194,8 +194,11 @@ Use \fIfile\fR as the SD card image.
 .SS Keyboard:
 
 .TP
-\fB\-keymap\fR \fIcode\fR
-Host keyboard type (\fB\-keymap help\fR for list).
+\fB\-kbd\-layout\fR \fIlayout\fR
+Host keyboard layout (\fB\-kbd\-layout help\fR for list).
+.TP
+\fB\-kbd\-lang\fR \fIlang\fR
+Host keyboard language (\fB\-kbd\-lang help\fR for list).
 .TP
 \fB\-kbd\-bind\fR \fIhostkey\fR=[pre:]\fIemukey\fR
 Map host key to emulated key (pre = no translate).
@@ -205,6 +208,9 @@ Enable keyboard translation.
 .TP
 \fB\-type\fR \fIstring\fR
 Intercept ROM calls to type \fIstring\fR into BASIC.
+.TP
+\fB\-load\-text\fR \fIfile\fR
+Type \fIfile\fR into BASIC.
 
 .SS Joysticks:
 
@@ -266,6 +272,9 @@ Attach \fIfile\fR as tape image for reading.
 .TP
 \fB\-tape\-write\fR \fIfile\fR
 Open \fIfile\fR for tape writing.
+.TP
+\fB\-load\-text\fR \fIfile\fR
+Type \fIfile\fR into BASIC.
 
 .SS Firmware ROM images:
 
