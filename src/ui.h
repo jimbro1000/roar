@@ -178,6 +178,12 @@ struct ui_interface {
 	 */
 	DELEGATE_T0(void) update_cartridge_menu;
 
+	/** \brief Create or update joystick menus.
+	 *
+	 * Called at startup, and whenever the list of joysticks changes.
+	 */
+	DELEGATE_T0(void) update_joystick_menus;
+
 	/** \brief Interface to the file requester initialised by the UI.
 	 */
 	struct filereq_interface *filereq_interface;
