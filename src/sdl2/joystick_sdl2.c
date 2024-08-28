@@ -29,13 +29,13 @@
 
 #include "pl-string.h"
 #include "sds.h"
-#include "slist.h"
 #include "xalloc.h"
 
 #include "events.h"
 #include "joystick.h"
 #include "logging.h"
 #include "module.h"
+#include "xroar.h"
 
 #include "sdl2/common.h"
 
@@ -70,9 +70,6 @@ struct joystick_module sdl_js_mod_exported = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool initialised = 0;
-static unsigned num_joysticks;
-
 // Wrap SDL_Joystick up in struct device.  close_device() will only
 // close the underlying joystick once open_count reaches 0.
 struct device {
@@ -91,7 +88,9 @@ struct device {
 	unsigned *debug_buttons;
 };
 
-static struct slist *device_list = NULL;
+static int max_devices = 0;
+static int num_devices = 0;
+static struct device *devices = NULL;
 
 struct control {
 	struct device *device;
@@ -102,8 +101,21 @@ struct control {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void sdl_js_physical_init(void) {
-	if (initialised)
-		return;
+	if (devices) {
+		// Prevent all devices from being used and close them
+		for (int i = 0; i < num_devices; i++) {
+			devices[i].valid = 0;
+			if (devices[i].is_gamecontroller) {
+				SDL_GameControllerClose(devices[i].handle.gamecontroller);
+				devices[i].handle.gamecontroller = NULL;
+			} else {
+				SDL_JoystickClose(devices[i].handle.joystick);
+				devices[i].handle.joystick = NULL;
+			}
+		}
+		// Quit the appropriate SDL subsystems ready to reinit
+		SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+	}
 
 	// Initialising GAMECONTROLLER also initialises JOYSTICK.  We disable
 	// events because, if used as a standalone module outside SDL, nothing
@@ -115,21 +127,47 @@ static void sdl_js_physical_init(void) {
 	SDL_GameControllerEventState(SDL_DISABLE);
 	SDL_JoystickEventState(SDL_DISABLE);
 
-	num_joysticks = SDL_NumJoysticks();
-	if (num_joysticks < 1) {
+	int old_num_devices = num_devices;
+
+	num_devices = SDL_NumJoysticks();
+	if (num_devices < 1) {
 		LOG_DEBUG(1, "\tNo joysticks found\n");
 	} else {
-		LOG_DEBUG(1, "\t%u joysticks found\n", num_joysticks);
+		LOG_DEBUG(1, "\t%u joysticks found:\n", num_devices);
+		LOG_DEBUG(1, "%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
 	}
-	LOG_DEBUG(1, "%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
-	for (unsigned i = 0; i < num_joysticks; i++) {
+
+	// If there are now fewer joysticks, we need to remove some configs
+	for (int i = num_devices; i < old_num_devices; i++) {
+		sds name = sdscatprintf(sdsempty(), "joy%u", i);
+		xroar_remove_joystick_config(name);
+		sdsfree(name);
+	}
+
+	// Ensure we have space for any new ones
+	if (num_devices > max_devices) {
+		devices = xrealloc(devices, num_devices * sizeof(*devices));
+		for (int i = max_devices; i < num_devices; i++) {
+			devices[i] = (struct device){0};
+		}
+		max_devices = num_devices;
+	}
+
+	for (int i = 0; i < num_devices; i++) {
+		SDL_GameController *gamecontroller = NULL;
 		SDL_Joystick *joystick = NULL;
-		_Bool is_gamecontroller = SDL_IsGameController(i);
-		if (!is_gamecontroller) {
+
+		if (SDL_IsGameController(i)) {
+			gamecontroller = SDL_GameControllerOpen(i);
+			if (!gamecontroller)
+				continue;
+		} else {
 			joystick = SDL_JoystickOpen(i);
 			if (!joystick)
 				continue;
 		}
+
+		devices[i].is_gamecontroller = (gamecontroller != NULL);
 
 		LOG_DEBUG(1, "%-3u ", i);
 		sds name = sdscatprintf(sdsempty(), "joy%u", i);
@@ -141,7 +179,7 @@ static void sdl_js_physical_init(void) {
 
 		// Description
 		const char *joy_name = NULL;
-		if (is_gamecontroller) {
+		if (gamecontroller) {
 			joy_name = SDL_GameControllerNameForIndex(i);
 		} else {
 			joy_name = SDL_JoystickName(joystick);
@@ -158,7 +196,7 @@ static void sdl_js_physical_init(void) {
 		sdsfree(name);
 
 		// Axes
-		if (is_gamecontroller) {
+		if (gamecontroller) {
 			LOG_DEBUG(1, "(game controller)\n");
 		} else {
 			LOG_DEBUG(1, "%-7d ", SDL_JoystickNumAxes(joystick));
@@ -172,7 +210,7 @@ static void sdl_js_physical_init(void) {
 		}
 
 		// Buttons
-		if (!is_gamecontroller) {
+		if (!gamecontroller) {
 			LOG_DEBUG(1, "%-7d\n", SDL_JoystickNumButtons(joystick));
 		}
 		for (unsigned b = 0; b <= 1; b++) {
@@ -183,11 +221,22 @@ static void sdl_js_physical_init(void) {
 			sdsfree(tmp);
 		}
 
-		if (joystick) {
-			SDL_JoystickClose(joystick);
+		if (gamecontroller) {
+			if (devices[i].open_count) {
+				devices[i].handle.gamecontroller = gamecontroller;
+				devices[i].valid = 1;
+			} else {
+				SDL_GameControllerClose(gamecontroller);
+			}
+		} else {
+			if (devices[i].open_count) {
+				devices[i].handle.joystick = joystick;
+				devices[i].valid = 1;
+			} else {
+				SDL_JoystickClose(joystick);
+			}
 		}
 	}
-	initialised = 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -229,50 +278,49 @@ static void report_device(struct device *d) {
 }
 
 static struct device *open_device(int joystick_index) {
-	// If the device is already open, just up its count and return it
-	for (struct slist *iter = device_list; iter; iter = iter->next) {
-		struct device *d = iter->data;
-		if (d->joystick_index == joystick_index) {
-			d->open_count++;
-			return d;
-		}
+	if (joystick_index >= num_devices) {
+		return NULL;
 	}
-	// Otherwise open and throw it on the list
-	_Bool is_gamecontroller = SDL_IsGameController(joystick_index);
-	if (is_gamecontroller) {
-		SDL_GameController *j = SDL_GameControllerOpen(joystick_index);
-		if (j) {
-			struct device *d = xmalloc(sizeof(*d));
-			*d = (struct device){0};
+
+	struct device *d = &devices[joystick_index];
+
+	// If the device is already open, just up its count and return it
+	if (d->open_count) {
+		d->open_count++;
+		return d;
+	}
+
+	// Open as a controller?
+	if (d->is_gamecontroller) {
+		d->handle.gamecontroller = SDL_GameControllerOpen(joystick_index);
+		if (d->handle.gamecontroller) {
 			d->valid = 1;
-			d->is_gamecontroller = 1;
 			d->joystick_index = joystick_index;
-			d->handle.gamecontroller = j;
 			d->num_axes = SDL_CONTROLLER_AXIS_MAX;
 			d->num_buttons = SDL_CONTROLLER_BUTTON_MAX;
 			d->open_count = 1;
-			device_list = slist_prepend(device_list, d);
 			report_device(d);
 			return d;
 		}
 	}
-	SDL_Joystick *j = SDL_JoystickOpen(joystick_index);
-	if (!j)
+
+	// If that failed, open as a joystick
+	d->handle.joystick = SDL_JoystickOpen(joystick_index);
+	if (!d->handle.joystick)
 		return NULL;
-	struct device *d = xmalloc(sizeof(*d));
-	*d = (struct device){0};
 	d->valid = 1;
+	d->is_gamecontroller = 0;
 	d->joystick_index = joystick_index;
-	d->handle.joystick = j;
-	d->num_axes = SDL_JoystickNumAxes(j);
-	d->num_buttons = SDL_JoystickNumButtons(j);
+	d->num_axes = SDL_JoystickNumAxes(d->handle.joystick);
+	d->num_buttons = SDL_JoystickNumButtons(d->handle.joystick);
 	d->open_count = 1;
-	device_list = slist_prepend(device_list, d);
 	report_device(d);
 	return d;
 }
 
 static void close_device(struct device *d) {
+	if (d->open_count == 0)
+		return;
 	d->open_count--;
 	if (d->open_count == 0) {
 		if (d->is_gamecontroller) {
@@ -280,8 +328,17 @@ static void close_device(struct device *d) {
 		} else {
 			SDL_JoystickClose(d->handle.joystick);
 		}
-		device_list = slist_remove(device_list, d);
-		free(d);
+	}
+	_Bool quit = 1;
+	for (int i = 0; i < num_devices; i++) {
+		if (d->open_count)
+			quit = 0;
+	}
+	if (quit) {
+		SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+		free(devices);
+		devices = NULL;
+		num_devices = max_devices = 0;
 	}
 }
 
@@ -419,7 +476,6 @@ static struct control *configure_control(char *spec, unsigned control) {
 }
 
 static struct joystick_axis *configure_physical_axis(char *spec, unsigned jaxis) {
-	sdl_js_physical_init();
 	struct control *c = configure_control(spec, jaxis);
 	if (!c)
 		return NULL;
@@ -436,7 +492,6 @@ static struct joystick_axis *configure_physical_axis(char *spec, unsigned jaxis)
 }
 
 static struct joystick_button *configure_physical_button(char *spec, unsigned jbutton) {
-	sdl_js_physical_init();
 	struct control *c = configure_control(spec, jbutton);
 	if (!c)
 		return NULL;
