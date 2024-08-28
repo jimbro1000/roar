@@ -76,6 +76,7 @@ static unsigned num_joysticks;
 // Wrap SDL_Joystick up in struct device.  close_device() will only
 // close the underlying joystick once open_count reaches 0.
 struct device {
+	_Bool valid;
 	_Bool is_gamecontroller;
 	int joystick_index;
 	union {
@@ -243,6 +244,7 @@ static struct device *open_device(int joystick_index) {
 		if (j) {
 			struct device *d = xmalloc(sizeof(*d));
 			*d = (struct device){0};
+			d->valid = 1;
 			d->is_gamecontroller = 1;
 			d->joystick_index = joystick_index;
 			d->handle.gamecontroller = j;
@@ -259,6 +261,7 @@ static struct device *open_device(int joystick_index) {
 		return NULL;
 	struct device *d = xmalloc(sizeof(*d));
 	*d = (struct device){0};
+	d->valid = 1;
 	d->joystick_index = joystick_index;
 	d->handle.joystick = j;
 	d->num_axes = SDL_JoystickNumAxes(j);
@@ -336,6 +339,9 @@ static void debug_controls(struct device *d) {
 }
 
 static unsigned read_axis(struct control *c) {
+	if (!c->device->valid) {
+		return 32768;
+	}
 	if (c->device->last_query != event_current_tick) {
 		if (c->device->is_gamecontroller) {
 			SDL_GameControllerUpdate();
@@ -359,6 +365,9 @@ static unsigned read_axis(struct control *c) {
 }
 
 static _Bool read_button(struct control *c) {
+	if (!c->device->valid) {
+		return 0;
+	}
 	if (c->device->last_query != event_current_tick) {
 		if (c->device->is_gamecontroller) {
 			SDL_GameControllerUpdate();
