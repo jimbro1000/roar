@@ -32,6 +32,7 @@
 #include "slist.h"
 #include "xalloc.h"
 
+#include "events.h"
 #include "joystick.h"
 #include "logging.h"
 #include "module.h"
@@ -81,6 +82,7 @@ struct device {
 		SDL_Joystick *joystick;
 		SDL_GameController *gamecontroller;
 	} handle;
+	event_ticks last_query;
 	unsigned open_count;
 	unsigned num_axes;
 	unsigned num_buttons;
@@ -101,7 +103,17 @@ struct control {
 static void sdl_js_physical_init(void) {
 	if (initialised)
 		return;
-	SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+
+	// Initialising GAMECONTROLLER also initialises JOYSTICK.  We disable
+	// events because, if used as a standalone module outside SDL, nothing
+	// works.  I could have sworn it used to, but it's possible I haven't
+	// tested this since SDL 1.2!  Instead we manually call SDL_*Update()
+	// before polling.
+
+	SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
+	SDL_GameControllerEventState(SDL_DISABLE);
+	SDL_JoystickEventState(SDL_DISABLE);
+
 	num_joysticks = SDL_NumJoysticks();
 	if (num_joysticks < 1) {
 		LOG_DEBUG(1, "\tNo joysticks found\n");
@@ -324,6 +336,14 @@ static void debug_controls(struct device *d) {
 }
 
 static unsigned read_axis(struct control *c) {
+	if (c->device->last_query != event_current_tick) {
+		if (c->device->is_gamecontroller) {
+			SDL_GameControllerUpdate();
+		} else {
+			SDL_JoystickUpdate();
+		}
+		c->device->last_query = event_current_tick;
+	}
 	if (logging.debug_ui & LOG_UI_JS_MOTION) {
 		debug_controls(c->device);
 	}
@@ -339,6 +359,14 @@ static unsigned read_axis(struct control *c) {
 }
 
 static _Bool read_button(struct control *c) {
+	if (c->device->last_query != event_current_tick) {
+		if (c->device->is_gamecontroller) {
+			SDL_GameControllerUpdate();
+		} else {
+			SDL_JoystickUpdate();
+		}
+		c->device->last_query = event_current_tick;
+	}
 	if (logging.debug_ui & LOG_UI_JS_MOTION) {
 		debug_controls(c->device);
 	}
