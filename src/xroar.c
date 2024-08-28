@@ -1834,6 +1834,18 @@ void xroar_cycle_joysticks(_Bool notify) {
 	}
 }
 
+void xroar_remove_joystick_config(const char *name) {
+	for (int i = 0; i <= 1; i++) {
+		if (!joystick_port_config[i])
+			continue;
+		if (0 == strcmp(joystick_port_config[i]->name, name)) {
+			joystick_unmap(i);
+			update_ui_joysticks(i);
+		}
+	}
+	joystick_config_remove(name);
+}
+
 // Connect various external interfaces to the machine.  May well end up
 // delegated to a sub-part of the machine.  Called during
 // xroar_connect_machine(), and when cartridge is changed with

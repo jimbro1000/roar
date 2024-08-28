@@ -222,6 +222,7 @@ void xroar_set_kbd_translate(_Bool notify, int kbd_translate);
 void xroar_set_joystick(_Bool notify, int port, const char *name);
 void xroar_swap_joysticks(_Bool notify);
 void xroar_cycle_joysticks(_Bool notify);
+void xroar_remove_joystick_config(const char *name);
 void xroar_connect_machine(void);
 void xroar_configure_machine(struct machine_config *mc);
 void xroar_set_machine(_Bool notify, int id);
