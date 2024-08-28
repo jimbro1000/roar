@@ -2203,13 +2203,14 @@ static void set_machine(const char *name) {
 			xroar.machine_config->vdg_type = private_cfg.machine.vdg_type;
 			private_cfg.machine.vdg_type = -1;
 		}
+		if (private_cfg.machine.ram > 0) {
+			xroar.machine_config->ram = private_cfg.machine.ram;
+			xroar.machine_config->ram_org = ANY_AUTO;
+			private_cfg.machine.ram = 0;
+		}
 		if (private_cfg.machine.ram_org != ANY_AUTO) {
 			xroar.machine_config->ram_org = private_cfg.machine.ram_org;
 			private_cfg.machine.ram_org = ANY_AUTO;
-		}
-		if (private_cfg.machine.ram > 0) {
-			xroar.machine_config->ram = private_cfg.machine.ram;
-			private_cfg.machine.ram = 0;
 		}
 		if (private_cfg.machine.ram_init != ANY_AUTO) {
 			xroar.machine_config->ram_init = private_cfg.machine.ram_init;
