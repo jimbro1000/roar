@@ -75,9 +75,12 @@ static unsigned num_joysticks;
 // Wrap SDL_Joystick up in struct device.  close_device() will only
 // close the underlying joystick once open_count reaches 0.
 struct device {
+	_Bool is_gamecontroller;
 	int joystick_index;
-	SDL_Joystick *joystick;
-	SDL_GameController *gamecontroller;
+	union {
+		SDL_Joystick *joystick;
+		SDL_GameController *gamecontroller;
+	} handle;
 	unsigned open_count;
 	unsigned num_axes;
 	unsigned num_buttons;
@@ -179,22 +182,21 @@ static void sdl_js_physical_init(void) {
 static void report_device(struct device *d) {
 	if (logging.level < 1)
 		return;
-	_Bool is_gamecontroller = (d->gamecontroller != NULL);
-	LOG_PRINT("Opened joystick index %d as %s\n", d->joystick_index, is_gamecontroller ? "controller" : "joystick");
+	LOG_PRINT("Opened joystick index %d as %s\n", d->joystick_index, d->is_gamecontroller ? "controller" : "joystick");
 	const char *name = NULL;
 	unsigned vendor_id = 0;
 	unsigned product_id = 0;
 	unsigned product_version = 0;
-	if (is_gamecontroller) {
-		name = SDL_GameControllerName(d->gamecontroller);
-		vendor_id = SDL_GameControllerGetVendor(d->gamecontroller);
-		product_id = SDL_GameControllerGetProduct(d->gamecontroller);
-		product_version = SDL_GameControllerGetProductVersion(d->gamecontroller);
+	if (d->is_gamecontroller) {
+		name = SDL_GameControllerName(d->handle.gamecontroller);
+		vendor_id = SDL_GameControllerGetVendor(d->handle.gamecontroller);
+		product_id = SDL_GameControllerGetProduct(d->handle.gamecontroller);
+		product_version = SDL_GameControllerGetProductVersion(d->handle.gamecontroller);
 	} else {
-		name = SDL_JoystickName(d->joystick);
-		vendor_id = SDL_JoystickGetVendor(d->joystick);
-		product_id = SDL_JoystickGetProduct(d->joystick);
-		product_version = SDL_JoystickGetProductVersion(d->joystick);
+		name = SDL_JoystickName(d->handle.joystick);
+		vendor_id = SDL_JoystickGetVendor(d->handle.joystick);
+		product_id = SDL_JoystickGetProduct(d->handle.joystick);
+		product_version = SDL_JoystickGetProductVersion(d->handle.joystick);
 	}
 	if (name) {
 		LOG_PRINT("\tName: %s\n", name);
@@ -208,7 +210,7 @@ static void report_device(struct device *d) {
 	if (product_version) {
 		LOG_PRINT("\tProduct version: 0x%04x\n", product_version);
 	}
-	if (!is_gamecontroller) {
+	if (!d->is_gamecontroller) {
 		LOG_PRINT("\t%d axes, %d buttons\n", d->num_axes, d->num_buttons);
 	}
 }
@@ -229,8 +231,9 @@ static struct device *open_device(int joystick_index) {
 		if (j) {
 			struct device *d = xmalloc(sizeof(*d));
 			*d = (struct device){0};
+			d->is_gamecontroller = 1;
 			d->joystick_index = joystick_index;
-			d->gamecontroller = j;
+			d->handle.gamecontroller = j;
 			d->num_axes = SDL_CONTROLLER_AXIS_MAX;
 			d->num_buttons = SDL_CONTROLLER_BUTTON_MAX;
 			d->open_count = 1;
@@ -245,7 +248,7 @@ static struct device *open_device(int joystick_index) {
 	struct device *d = xmalloc(sizeof(*d));
 	*d = (struct device){0};
 	d->joystick_index = joystick_index;
-	d->joystick = j;
+	d->handle.joystick = j;
 	d->num_axes = SDL_JoystickNumAxes(j);
 	d->num_buttons = SDL_JoystickNumButtons(j);
 	d->open_count = 1;
@@ -257,10 +260,10 @@ static struct device *open_device(int joystick_index) {
 static void close_device(struct device *d) {
 	d->open_count--;
 	if (d->open_count == 0) {
-		if (d->gamecontroller) {
-			SDL_GameControllerClose(d->gamecontroller);
+		if (d->is_gamecontroller) {
+			SDL_GameControllerClose(d->handle.gamecontroller);
 		} else {
-			SDL_JoystickClose(d->joystick);
+			SDL_JoystickClose(d->handle.joystick);
 		}
 		device_list = slist_remove(device_list, d);
 		free(d);
@@ -285,10 +288,10 @@ static void debug_controls(struct device *d) {
 	_Bool report = 0;
 	for (unsigned i = 0; i < d->num_axes; i++) {
 		unsigned v;
-		if (d->gamecontroller) {
-			v = SDL_GameControllerGetAxis(d->gamecontroller, i) + 32768;
+		if (d->is_gamecontroller) {
+			v = SDL_GameControllerGetAxis(d->handle.gamecontroller, i) + 32768;
 		} else {
-			v = SDL_JoystickGetAxis(d->joystick, i) + 32768;
+			v = SDL_JoystickGetAxis(d->handle.joystick, i) + 32768;
 		}
 		if (d->debug_axes[i] != v) {
 			report = 1;
@@ -297,10 +300,10 @@ static void debug_controls(struct device *d) {
 	}
 	for (unsigned i = 0; i < d->num_buttons; i++) {
 		unsigned v;
-		if (d->gamecontroller) {
-			v = SDL_GameControllerGetButton(d->gamecontroller, i);
+		if (d->is_gamecontroller) {
+			v = SDL_GameControllerGetButton(d->handle.gamecontroller, i);
 		} else {
-			v = SDL_JoystickGetButton(d->joystick, i);
+			v = SDL_JoystickGetButton(d->handle.joystick, i);
 		}
 		if (d->debug_buttons[i] != v) {
 			report = 1;
@@ -325,10 +328,10 @@ static unsigned read_axis(struct control *c) {
 		debug_controls(c->device);
 	}
 	unsigned ret;
-	if (c->device->gamecontroller) {
-		ret = SDL_GameControllerGetAxis(c->device->gamecontroller, c->control) + 32768;
+	if (c->device->is_gamecontroller) {
+		ret = SDL_GameControllerGetAxis(c->device->handle.gamecontroller, c->control) + 32768;
 	} else {
-		ret = SDL_JoystickGetAxis(c->device->joystick, c->control) + 32768;
+		ret = SDL_JoystickGetAxis(c->device->handle.joystick, c->control) + 32768;
 	}
 	if (c->inverted)
 		ret ^= 0xffff;
@@ -339,10 +342,10 @@ static _Bool read_button(struct control *c) {
 	if (logging.debug_ui & LOG_UI_JS_MOTION) {
 		debug_controls(c->device);
 	}
-	if (c->device->gamecontroller) {
-		return SDL_GameControllerGetButton(c->device->gamecontroller, c->control);
+	if (c->device->is_gamecontroller) {
+		return SDL_GameControllerGetButton(c->device->handle.gamecontroller, c->control);
 	}
-	return SDL_JoystickGetButton(c->device->joystick, c->control);
+	return SDL_JoystickGetButton(c->device->handle.joystick, c->control);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
