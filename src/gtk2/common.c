@@ -207,6 +207,19 @@ void uigtk2_notify_radio_action_set_current_value(struct ui_gtk2_interface *uigt
 	g_signal_handlers_unblock_by_func(ra, G_CALLBACK(func), uigtk2);
 }
 
+void uigtk2_notify_radio_menu_set_current_value(struct uigtk2_radio_menu *rm, gint v) {
+	if (!rm)
+		return;
+	GList *list = gtk_action_group_list_actions(rm->action_group);
+	if (!list)
+		return;
+	GtkRadioAction *ra = GTK_RADIO_ACTION(list->data);
+	g_list_free(list);
+	g_signal_handlers_block_by_func(ra, rm->callback, rm->uigtk2);
+	gtk_radio_action_set_current_value(ra, v);
+	g_signal_handlers_unblock_by_func(ra, rm->callback, rm->uigtk2);
+}
+
 void uigtk2_notify_toggle_action_set_active(struct ui_gtk2_interface *uigtk2,
 					    const gchar *path, gboolean v, gpointer func) {
 	GtkToggleAction *ta = GTK_TOGGLE_ACTION(gtk_ui_manager_get_action(uigtk2->menu_manager, path));
@@ -301,4 +314,101 @@ void uigtk2_widget_set_sensitive(struct ui_gtk2_interface *uigtk2, const gchar *
 void uigtk2_widget_show(struct ui_gtk2_interface *uigtk2, const gchar *w_name) {
 	GtkWidget *w = GTK_WIDGET(gtk_builder_get_object(uigtk2->builder, w_name));
 	gtk_widget_show(w);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Create all the required bits & bobs for keeping a dynamically created radio
+// menu updated.
+
+struct uigtk2_radio_menu *uigtk2_radio_menu_new(struct ui_gtk2_interface *uigtk2,
+						const char *path, GCallback callback) {
+	struct uigtk2_radio_menu *rm = g_malloc0(sizeof(*rm));
+	static unsigned id = 0;
+	rm->uigtk2 = uigtk2;
+	rm->path = g_strdup(path);
+	rm->action_group_name = g_strdup_printf("rm%u", id++);
+	rm->action_group = gtk_action_group_new(rm->action_group_name);
+	gtk_ui_manager_insert_action_group(uigtk2->menu_manager, rm->action_group, -1);
+	rm->merge_id = gtk_ui_manager_new_merge_id(uigtk2->menu_manager);
+	rm->callback = callback;
+	return rm;
+}
+
+void uigtk2_radio_menu_free(struct uigtk2_radio_menu *rm) {
+	struct ui_gtk2_interface *uigtk2 = rm->uigtk2;
+	gtk_ui_manager_remove_action_group(uigtk2->menu_manager, rm->action_group);
+	g_object_unref(rm->action_group);
+	g_free(rm->action_group_name);
+	g_free(rm->path);
+	g_free(rm);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// [Re-]build a menu from an xconfig_enum
+
+void uigtk2_update_radio_menu_from_enum(struct uigtk2_radio_menu *rm,
+					struct xconfig_enum *xc_enum,
+					const char *name_fmt, const char *label_fmt,
+					int selected) {
+	if (!rm || !xc_enum)
+		return;
+	struct ui_gtk2_interface *uigtk2 = rm->uigtk2;
+	if (!name_fmt)
+		name_fmt = "%s";
+	if (!label_fmt)
+		label_fmt = "%s";
+
+	// Remove old entries
+	uigtk2_free_action_group(rm->action_group);
+	gtk_ui_manager_remove_ui(uigtk2->menu_manager, rm->merge_id);
+
+	// Count entries
+	int num_entries = 0;
+	int enum_index = 0;
+	for (enum_index = 0; xc_enum[enum_index].name; enum_index++) {
+		if (!xc_enum[enum_index].description)
+			continue;
+		num_entries++;
+	}
+
+	// Add entries in reverse order
+	GtkRadioActionEntry *entries = g_malloc0(num_entries * sizeof(*entries));
+	gchar **names = g_malloc0(num_entries * sizeof(gchar *));
+	gchar **labels = g_malloc0(num_entries * sizeof(gchar *));
+	for (int i = 0; i < num_entries && enum_index > 0; ) {
+		--enum_index;
+		if (!xc_enum[enum_index].description)
+			continue;
+		names[i] = g_strdup_printf(name_fmt, xc_enum[enum_index].name);
+		labels[i] = g_strdup_printf(label_fmt, xc_enum[enum_index].description);
+		entries[i].name = names[i];
+		entries[i].label = xc_enum[enum_index].description;
+		entries[i].value = enum_index;
+		gtk_ui_manager_add_ui(uigtk2->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		++i;
+	}
+	gtk_action_group_add_radio_actions(rm->action_group, entries, num_entries, selected, rm->callback, uigtk2);
+
+	// Free everything
+	for (int i = 0; i < num_entries; i++) {
+		g_free(names[i]);
+		g_free(labels[i]);
+	}
+	g_free(names);
+	g_free(labels);
+	g_free(entries);
+}
+
+static void remove_action_from_group(gpointer data, gpointer user_data) {
+	GtkAction *action = data;
+	GtkActionGroup *action_group = user_data;
+	gtk_action_group_remove_action(action_group, action);
+}
+
+void uigtk2_free_action_group(GtkActionGroup *action_group) {
+	GList *list = gtk_action_group_list_actions(action_group);
+	g_list_foreach(list, remove_action_from_group, action_group);
+	g_list_free(list);
 }

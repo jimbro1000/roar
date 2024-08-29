@@ -34,6 +34,18 @@
 struct gtk_kbd_js_axis;
 struct gtk_kbd_js_button;
 
+struct ui_gtk2_interface;
+
+// The various bits needed when constructing one-of-many dynamic menus
+struct uigtk2_radio_menu {
+	struct ui_gtk2_interface *uigtk2;
+	char *path;
+	char *action_group_name;
+	GtkActionGroup *action_group;
+	guint merge_id;
+	GCallback callback;
+};
+
 struct ui_gtk2_interface {
 	struct ui_interface public;
 
@@ -120,6 +132,8 @@ void do_uigtk2_signal_connect(struct ui_gtk2_interface *uigtk2, const gchar *o_n
 void uigtk2_notify_radio_action_set_current_value(struct ui_gtk2_interface *uigtk2,
 						  const gchar *path, gint v, gpointer func);
 
+void uigtk2_notify_radio_menu_set_current_value(struct uigtk2_radio_menu *rm, gint v);
+
 void uigtk2_notify_toggle_action_set_active(struct ui_gtk2_interface *uigtk2,
 					    const gchar *path, gboolean v, gpointer func);
 
@@ -167,5 +181,19 @@ void uigtk2_widget_set_sensitive(struct ui_gtk2_interface *uigtk2, const gchar *
 				 gboolean sensitive);
 
 void uigtk2_widget_show(struct ui_gtk2_interface *uigtk2, const gchar *w_name);
+
+// [Re-]build a menu from an xconfig_enum
+
+struct uigtk2_radio_menu *uigtk2_radio_menu_new(struct ui_gtk2_interface *uigtk2,
+						const char *path, GCallback callback);
+
+void uigtk2_radio_menu_free(struct uigtk2_radio_menu *);
+
+void uigtk2_update_radio_menu_from_enum(struct uigtk2_radio_menu *rm,
+					struct xconfig_enum *xc_enum,
+					const char *name_fmt, const char *label_fmt,
+					int selected);
+
+void uigtk2_free_action_group(GtkActionGroup *action_group);
 
 #endif

@@ -819,18 +819,6 @@ static void ui_gtk2_update_state(void *sptr, int tag, int value, const void *dat
 	}
 }
 
-static void remove_action_from_group(gpointer data, gpointer user_data) {
-	GtkAction *action = data;
-	GtkActionGroup *action_group = user_data;
-	gtk_action_group_remove_action(action_group, action);
-}
-
-static void free_action_group(GtkActionGroup *action_group) {
-	GList *list = gtk_action_group_list_actions(action_group);
-	g_list_foreach(list, remove_action_from_group, action_group);
-	g_list_free(list);
-}
-
 // Dynamic machine menu
 
 static void gtk2_update_machine_menu(void *sptr) {
@@ -840,7 +828,7 @@ static void gtk2_update_machine_menu(void *sptr) {
 	int num_machines = slist_length(mcl);
 
 	// Remove old entries
-	free_action_group(uigtk2->machine_action_group);
+	uigtk2_free_action_group(uigtk2->machine_action_group);
 	gtk_ui_manager_remove_ui(uigtk2->menu_manager, uigtk2->merge_machines);
 	GtkRadioActionEntry *radio_entries = g_malloc0(num_machines * sizeof(*radio_entries));
 
@@ -893,7 +881,7 @@ static void gtk2_update_cartridge_menu(void *sptr) {
 	}
 
 	// Remove old entries
-	free_action_group(uigtk2->cart_action_group);
+	uigtk2_free_action_group(uigtk2->cart_action_group);
 	gtk_ui_manager_remove_ui(uigtk2->menu_manager, uigtk2->merge_carts);
 
 	// Jump through alloc hoops just to avoid const-ness warnings.
@@ -954,7 +942,7 @@ static void update_joystick_menu(struct ui_gtk2_interface *uigtk2,
 	int num_joystick_configs = slist_length(jcl);
 
 	// Remove old entries
-	free_action_group(joystick_menu_data->action_group);
+	uigtk2_free_action_group(joystick_menu_data->action_group);
 	gtk_ui_manager_remove_ui(uigtk2->menu_manager, joystick_menu_data->merge_id);
 
 	// Jump through alloc hoops just to avoid const-ness warnings.
