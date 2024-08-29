@@ -874,7 +874,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Help text
 
 	// Useful for -vo help to list the video modules within all available UIs
-	if (xroar_ui_cfg.vo && 0 == strcmp(xroar_ui_cfg.vo, "help")) {
+	if (xroar_ui_cfg.vo && 0 == c_strcasecmp(xroar_ui_cfg.vo, "help")) {
 		ui_print_vo_help();
 		exit(EXIT_SUCCESS);
 	}
@@ -2157,7 +2157,7 @@ static void set_default_machine(const char *name) {
  * clears those options.  Starts a new config. */
 static void set_machine(const char *name) {
 #ifdef LOGGING
-	if (name && 0 == strcmp(name, "help")) {
+	if (name && 0 == c_strcasecmp(name, "help")) {
 		struct slist *mcl = machine_config_list();
 		while (mcl) {
 			struct machine_config *mc = mcl->data;
@@ -2190,7 +2190,7 @@ static void set_machine(const char *name) {
 			private_cfg.machine.description = NULL;
 		}
 #ifdef LOGGING
-		if (private_cfg.machine.palette && 0 == strcmp(private_cfg.machine.palette, "help")) {
+		if (private_cfg.machine.palette && 0 == c_strcasecmp(private_cfg.machine.palette, "help")) {
 			int count = vdg_palette_count();
 			int i;
 			for (i = 0; i < count; i++) {
@@ -2296,7 +2296,7 @@ static void set_machine(const char *name) {
 * options.  Starts a new config.  */
 static void set_cart(const char *name) {
 #ifdef LOGGING
-	if (name && 0 == strcmp(name, "help")) {
+	if (name && 0 == c_strcasecmp(name, "help")) {
 		struct slist *ccl = cart_config_list();
 		while (ccl) {
 			struct cart_config *cc = ccl->data;
@@ -2568,7 +2568,7 @@ static void set_joystick(const char *name) {
 	}
 #ifdef LOGGING
 #ifndef HAVE_WASM
-	if (name && 0 == strcmp(name, "help")) {
+	if (name && 0 == c_strcasecmp(name, "help")) {
 		private_cfg.help.joystick_print_list = 1;
 		return;
 	}

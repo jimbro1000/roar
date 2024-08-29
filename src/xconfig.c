@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "c-strcase.h"
 #include "sds.h"
 #include "sdsx.h"
 #include "slist.h"
@@ -54,12 +55,12 @@ static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_va
 	assert(name != NULL);
 	assert(list != NULL);
 	for (int i = 0; list[i].name; i++) {
-		if (0 == strcmp(name, list[i].name)) {
+		if (0 == c_strcasecmp(name, list[i].name)) {
 			return list[i].value;
 		}
 	}
-	/* Only check this afterwards, as "help" could be a valid name */
-	if (0 == strcmp(name, "help")) {
+	// Only check this afterwards, as "help" could be a valid name
+	if (0 == c_strcasecmp(name, "help")) {
 		for (int i = 0; list[i].name; i++) {
 			if (list[i].description) {
 				printf("\t%-10s %s\n", list[i].name, list[i].description);
@@ -77,13 +78,13 @@ static void print_part_name_description(const struct partdb_entry *pe, void *ida
 
 static const char *lookup_part(const char *name, const char *is_a) {
 	assert(name != NULL);
-	if (strcmp(name, "help") == 0) {
-		partdb_foreach_is_a((partdb_iter_func)print_part_name_description, NULL, is_a);
-		exit(EXIT_SUCCESS);
-	}
 	const struct partdb_entry *pe = partdb_find_entry(name);
 	if (pe && partdb_ent_is_a(pe, name)) {
 		return pe->name;
+	}
+	if (c_strcasecmp(name, "help") == 0) {
+		partdb_foreach_is_a((partdb_iter_func)print_part_name_description, NULL, is_a);
+		exit(EXIT_SUCCESS);
 	}
 	return NULL;
 }

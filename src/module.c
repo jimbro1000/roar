@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "c-strcase.h"
+
 #include "logging.h"
 #include "module.h"
 
@@ -50,7 +52,7 @@ struct module *module_select(struct module * const *list, const char *name) {
 struct module *module_select_by_arg(struct module * const *list, const char *name) {
 	if (name == NULL)
 		return list[0];
-	if (0 == strcmp(name, "help")) {
+	if (0 == c_strcasecmp(name, "help")) {
 		module_print_list(list);
 		exit(EXIT_SUCCESS);
 	}
