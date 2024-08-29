@@ -1784,6 +1784,22 @@ void xroar_set_keyboard_type(_Bool notify, int action) {
 	}
 }
 
+void xroar_set_hkbd_layout(_Bool notify, int hk_layout) {
+	xroar.cfg.kbd.layout = hk_layout;
+	hk_update_keymap();
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_layout, hk_layout, NULL);
+	}
+}
+
+void xroar_set_hkbd_lang(_Bool notify, int hk_lang) {
+	xroar.cfg.kbd.lang = hk_lang;
+	hk_update_keymap();
+	if (notify && xroar.ui_interface) {
+		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_lang, hk_lang, NULL);
+	}
+}
+
 void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
 	switch (kbd_translate) {
 		case XROAR_NEXT:

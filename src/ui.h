@@ -102,6 +102,8 @@ enum ui_tag {
 	ui_tag_gain,
 	// Keyboard
 	ui_tag_keymap,
+	ui_tag_hkbd_layout,
+	ui_tag_hkbd_lang,
 	ui_tag_kbd_translate,
 	// Joysticks
 	ui_tag_joy_right,
