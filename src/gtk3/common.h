@@ -165,7 +165,7 @@ void uigtk3_adjustment_set_value(struct ui_gtk3_interface *uigtk3, const gchar *
 void uigtk3_combo_box_set_active(struct ui_gtk3_interface *uigtk3, const gchar *cbt_name,
 				 gint index_);
 
-void uitgk3_editable_set_editable(struct ui_gtk3_interface *uigtk3, const gchar *e_name,
+void uigtk3_editable_set_editable(struct ui_gtk3_interface *uigtk3, const gchar *e_name,
 				  gboolean is_editable);
 
 void uigtk3_label_set_text(struct ui_gtk3_interface *uigtk3, const gchar *l_name,

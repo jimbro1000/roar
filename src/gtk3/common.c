@@ -273,8 +273,8 @@ void uigtk3_combo_box_set_active(struct ui_gtk3_interface *uigtk3, const gchar *
 	gtk_combo_box_set_active(GTK_COMBO_BOX(cbt), index_);
 }
 
-void uitgk3_editable_set_editable(struct ui_gtk3_interface *uigtk3, const gchar *e_name,
-				  gboolean is_editable) {
+void uigtk3_editable_set_editable(struct ui_gtk3_interface *uigtk3, const gchar *e_name,
+				 gboolean is_editable) {
 	GtkEditable *e = GTK_EDITABLE(gtk_builder_get_object(uigtk3->builder, e_name));
 	gtk_editable_set_editable(e, is_editable);
 }

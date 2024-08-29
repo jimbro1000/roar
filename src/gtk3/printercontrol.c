@@ -83,7 +83,7 @@ void gtk3_create_pc_window(struct ui_gtk3_interface *uigtk3) {
 	// this ever being the case...
 	uigtk3_widget_set_sensitive(uigtk3, "pc_rb_pipe", 0);
 	uigtk3_widget_hide(uigtk3, "pc_rb_pipe");
-	uitgk3_editable_set_editable(uigtk3, "pc_e_pipe", 0);
+	uigtk3_editable_set_editable(uigtk3, "pc_e_pipe", 0);
 	uigtk3_widget_hide(uigtk3, "pc_e_pipe");
 #endif
 }
