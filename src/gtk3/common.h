@@ -72,6 +72,8 @@ struct ui_gtk3_interface {
 	guint merge_right_joysticks;
 	GtkActionGroup *joy_left_action_group;
 	guint merge_left_joysticks;
+	struct uigtk3_radio_menu *hkbd_layout_radio_menu;
+	struct uigtk3_radio_menu *hkbd_lang_radio_menu;
 
 	// Window geometry
 	_Bool user_specified_geometry;
