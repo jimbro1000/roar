@@ -64,14 +64,13 @@ struct ui_gtk3_interface {
 	GtkWidget *menubar;
 
 	// Dynamic menus
-	GtkActionGroup *machine_action_group;
-	guint merge_machines;
-	GtkActionGroup *cart_action_group;
-	guint merge_carts;
-	GtkActionGroup *joy_right_action_group;
-	guint merge_right_joysticks;
-	GtkActionGroup *joy_left_action_group;
-	guint merge_left_joysticks;
+	struct uigtk3_radio_menu *tv_input_radio_menu;
+	struct uigtk3_radio_menu *ccr_radio_menu;
+	struct uigtk3_radio_menu *machine_radio_menu;
+	struct uigtk3_radio_menu *cart_radio_menu;
+	struct uigtk3_radio_menu *keymap_radio_menu;
+	struct uigtk3_radio_menu *joy_right_radio_menu;
+	struct uigtk3_radio_menu *joy_left_radio_menu;
 	struct uigtk3_radio_menu *hkbd_layout_radio_menu;
 	struct uigtk3_radio_menu *hkbd_lang_radio_menu;
 

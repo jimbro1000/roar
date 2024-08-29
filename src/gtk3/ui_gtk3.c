@@ -472,30 +472,6 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	  .callback = G_CALLBACK(toggle_ratelimit) },
 };
 
-static GtkRadioActionEntry const ccr_radio_entries[] = {
-	{ .name = "ccr-palette", .label = "None", .value = VO_CMP_CCR_PALETTE },
-	{ .name = "ccr-2bit", .label = "Simple (2-bit LUT)", .value = VO_CMP_CCR_2BIT },
-	{ .name = "ccr-5bit", .label = "5-bit LUT", .value = VO_CMP_CCR_5BIT },
-	{ .name = "ccr-partial", .label = "Partial NTSC", .value = VO_CMP_CCR_PARTIAL },
-	{ .name = "ccr-simulated", .label = "Simulated", .value = VO_CMP_CCR_SIMULATED },
-};
-
-static GtkRadioActionEntry const tv_input_radio_entries[] = {
-	{ .name = "tv-input-svideo", .label = "S-Video", .value = TV_INPUT_SVIDEO },
-	{ .name = "tv-input-cmp-kbrw", .label = "Composite (blue-red)", .value = TV_INPUT_CMP_KBRW },
-	{ .name = "tv-input-cmp-krbw", .label = "Composite (red-blue)", .value = TV_INPUT_CMP_KRBW },
-	{ .name = "tv-input-rgb", .label = "RGB", .value = TV_INPUT_RGB },
-};
-
-static GtkRadioActionEntry const keymap_radio_entries[] = {
-	{ .name = "keymap_dragon", .label = "Dragon Layout", .value = dkbd_layout_dragon },
-	{ .name = "keymap_dragon200e", .label = "Dragon 200-E Layout", .value = dkbd_layout_dragon200e },
-	{ .name = "keymap_coco", .label = "CoCo Layout", .value = dkbd_layout_coco },
-	{ .name = "keymap_coco3", .label = "CoCo 3 Layout", .value = dkbd_layout_coco3 },
-	{ .name = "keymap_mc10", .label = "MC-10 Layout", .value = dkbd_layout_mc10 },
-	{ .name = "keymap_alice", .label = "Alice Layout", .value = dkbd_layout_alice },
-};
-
 // Work around gtk_exit() being deprecated:
 static void ui_gtk3_destroy(GtkWidget *w, gpointer user_data) {
 	(void)w;
@@ -567,38 +543,32 @@ static void *ui_gtk3_new(void *cfg) {
 
 	// Action groups
 	GtkActionGroup *main_action_group = gtk_action_group_new("Main");
-	uigtk3->machine_action_group = gtk_action_group_new("Machine");
-	uigtk3->cart_action_group = gtk_action_group_new("Cartridge");
-	uigtk3->joy_right_action_group = gtk_action_group_new("RightJoystick");
-	uigtk3->joy_left_action_group = gtk_action_group_new("LeftJoystick");
 	gtk_ui_manager_insert_action_group(uigtk3->menu_manager, main_action_group, 0);
-	gtk_ui_manager_insert_action_group(uigtk3->menu_manager, uigtk3->machine_action_group, 0);
-	gtk_ui_manager_insert_action_group(uigtk3->menu_manager, uigtk3->cart_action_group, 0);
-	gtk_ui_manager_insert_action_group(uigtk3->menu_manager, uigtk3->joy_right_action_group, 0);
-	gtk_ui_manager_insert_action_group(uigtk3->menu_manager, uigtk3->joy_left_action_group, 0);
 
 	// Set up main action group
 	gtk_action_group_add_actions(main_action_group, ui_entries, G_N_ELEMENTS(ui_entries), uigtk3);
 	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, G_N_ELEMENTS(ui_toggles), uigtk3);
-	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, G_N_ELEMENTS(keymap_radio_entries), 0, (GCallback)set_keymap, uigtk3);
-	gtk_action_group_add_radio_actions(main_action_group, tv_input_radio_entries, G_N_ELEMENTS(tv_input_radio_entries), 0, (GCallback)set_tv_input, uigtk3);
-	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, G_N_ELEMENTS(ccr_radio_entries), 0, (GCallback)set_ccr, uigtk3);
 
-	// Menu merge points
-	uigtk3->merge_machines = gtk_ui_manager_new_merge_id(uigtk3->menu_manager);
-	uigtk3->merge_carts = gtk_ui_manager_new_merge_id(uigtk3->menu_manager);
-	uigtk3->merge_right_joysticks = gtk_ui_manager_new_merge_id(uigtk3->menu_manager);
-	uigtk3->merge_left_joysticks = gtk_ui_manager_new_merge_id(uigtk3->menu_manager);
-
+	// Dynamic radio menus
+	uigtk3->tv_input_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/ViewMenu/TVInputMenu", (GCallback)set_tv_input);
+	uigtk3->ccr_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/ViewMenu/CCRMenu", (GCallback)set_ccr);
+	uigtk3->machine_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/HardwareMenu/MachineMenu", (GCallback)set_machine);
+	uigtk3->cart_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/HardwareMenu/CartridgeMenu", (GCallback)set_cart);
+	uigtk3->keymap_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/HardwareMenu/KeymapMenu", (GCallback)set_keymap);
+	uigtk3->joy_right_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/HardwareMenu/JoyRightMenu", (GCallback)set_joy_right);
+	uigtk3->joy_left_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/HardwareMenu/JoyLeftMenu", (GCallback)set_joy_left);
 	uigtk3->hkbd_layout_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/ToolMenu/HKBDLayoutMenu", (GCallback)set_hkbd_layout);
 	uigtk3->hkbd_lang_radio_menu = uigtk3_radio_menu_new(uigtk3, "/MainMenu/ToolMenu/HKBDLangMenu", (GCallback)set_hkbd_lang);
 
 	// Update all dynamic menus
+	uigtk3_update_radio_menu_from_enum(uigtk3->tv_input_radio_menu, machine_tv_input_list, "tv-input-%s", NULL, 0);
+	uigtk3_update_radio_menu_from_enum(uigtk3->ccr_radio_menu, vo_cmp_ccr_list, "ccr-%s", NULL, 0);
 	ui->update_machine_menu = DELEGATE_AS0(void, gtk3_update_machine_menu, uigtk3);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, gtk3_update_cartridge_menu, uigtk3);
 	ui->update_joystick_menus = DELEGATE_AS0(void, gtk3_update_joystick_menus, uigtk3);
 	gtk3_update_machine_menu(uigtk3);
 	gtk3_update_cartridge_menu(uigtk3);
+	uigtk3_update_radio_menu_from_enum(uigtk3->keymap_radio_menu, machine_keyboard_list, "machine-keyboard-%s", NULL, 0);
 	gtk3_update_joystick_menus(uigtk3);
 	uigtk3_update_radio_menu_from_enum(uigtk3->hkbd_layout_radio_menu, hkbd_layout_list, "hkbd-layout-%s", NULL, xroar.cfg.kbd.layout);
 	uigtk3_update_radio_menu_from_enum(uigtk3->hkbd_lang_radio_menu, hkbd_lang_list, "hkbd-lang-%s", NULL, xroar.cfg.kbd.lang);
@@ -677,6 +647,13 @@ static void ui_gtk3_free(void *sptr) {
 	DELEGATE_SAFE_CALL(uigtk3->public.filereq_interface->free);
 	uigtk3_radio_menu_free(uigtk3->hkbd_lang_radio_menu);
 	uigtk3_radio_menu_free(uigtk3->hkbd_layout_radio_menu);
+	uigtk3_radio_menu_free(uigtk3->joy_left_radio_menu);
+	uigtk3_radio_menu_free(uigtk3->joy_right_radio_menu);
+	uigtk3_radio_menu_free(uigtk3->keymap_radio_menu);
+	uigtk3_radio_menu_free(uigtk3->cart_radio_menu);
+	uigtk3_radio_menu_free(uigtk3->machine_radio_menu);
+	uigtk3_radio_menu_free(uigtk3->ccr_radio_menu);
+	uigtk3_radio_menu_free(uigtk3->tv_input_radio_menu);
 	g_object_unref(uigtk3->builder);
 	gtk_widget_destroy(uigtk3->drawing_area);
 	gtk_widget_destroy(uigtk3->top_window);
@@ -707,11 +684,11 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 	// Hardware
 
 	case ui_tag_machine:
-		uigtk3_notify_radio_action_set_current_value(uigtk3, "/MainMenu/HardwareMenu/MachineMenu/machine1", value, set_machine);
+		uigtk3_notify_radio_menu_set_current_value(uigtk3->machine_radio_menu, value);
 		break;
 
 	case ui_tag_cartridge:
-		uigtk3_notify_radio_action_set_current_value(uigtk3, "/MainMenu/HardwareMenu/CartridgeMenu/cart0", value, set_cart);
+		uigtk3_notify_radio_menu_set_current_value(uigtk3->cart_radio_menu, value);
 		break;
 
 	// Tape
@@ -742,12 +719,12 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 		break;
 
 	case ui_tag_ccr:
-		uigtk3_notify_radio_action_set_current_value(uigtk3, "/MainMenu/ViewMenu/CCRMenu/ccr-palette", value, set_ccr);
+		uigtk3_notify_radio_menu_set_current_value(uigtk3->ccr_radio_menu, value);
 		gtk3_vo_update_cmp_renderer(uigtk3, value);
 		break;
 
 	case ui_tag_tv_input:
-		uigtk3_notify_radio_action_set_current_value(uigtk3, "/MainMenu/ViewMenu/TVInputMenu/tv-input-svideo", value, set_tv_input);
+		uigtk3_notify_radio_menu_set_current_value(uigtk3->tv_input_radio_menu, value);
 		break;
 
 	case ui_tag_gain:
@@ -773,7 +750,7 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 	// Keyboard
 
 	case ui_tag_keymap:
-		uigtk3_notify_radio_action_set_current_value(uigtk3, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon", value, set_keymap);
+		uigtk3_notify_radio_menu_set_current_value(uigtk3->keymap_radio_menu, value);
 		break;
 
 	case ui_tag_hkbd_layout:
@@ -791,19 +768,16 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 	// Joysticks
 
 	case ui_tag_joy_right:
+		{
+			struct joystick_config *jc = joystick_config_by_name(data);
+			uigtk3_notify_radio_menu_set_current_value(uigtk3->joy_right_radio_menu, jc ? jc->id : (unsigned)-1);
+		}
+		break;
+
 	case ui_tag_joy_left:
 		{
-			const gchar *path;
-			gpointer func;
-			if (tag == ui_tag_joy_right) {
-				path = "/MainMenu/HardwareMenu/JoyRightMenu/rjoy0";
-				func = set_joy_right;
-			} else {
-				path = "/MainMenu/HardwareMenu/JoyLeftMenu/ljoy0";
-				func = set_joy_left;
-			}
 			struct joystick_config *jc = joystick_config_by_name(data);
-			uigtk3_notify_radio_action_set_current_value(uigtk3, path, jc ? jc->id : (unsigned)-1, func);
+			uigtk3_notify_radio_menu_set_current_value(uigtk3->joy_left_radio_menu, jc ? jc->id : (unsigned)-1);
 		}
 		break;
 
@@ -824,13 +798,15 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 
 static void gtk3_update_machine_menu(void *sptr) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
+	struct uigtk3_radio_menu *rm = uigtk3->machine_radio_menu;
+
 	// Get list of machine configs
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
 	int num_machines = slist_length(mcl);
 
 	// Remove old entries
-	uigtk3_free_action_group(uigtk3->machine_action_group);
-	gtk_ui_manager_remove_ui(uigtk3->menu_manager, uigtk3->merge_machines);
+	uigtk3_free_action_group(rm->action_group);
+	gtk_ui_manager_remove_ui(uigtk3->menu_manager, rm->merge_id);
 
 	// Jump through alloc hoops just to avoid const-ness warnings
 	GtkRadioActionEntry *radio_entries = g_malloc0(num_machines * sizeof(*radio_entries));
@@ -850,9 +826,9 @@ static void gtk3_update_machine_menu(void *sptr) {
 		labels[i] = escape_underscores(mc->description);
 		radio_entries[i].label = labels[i];
 		radio_entries[i].value = mc->id;
-		gtk_ui_manager_add_ui(uigtk3->menu_manager, uigtk3->merge_machines, "/MainMenu/HardwareMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
-	gtk_action_group_add_radio_actions(uigtk3->machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, uigtk3);
+	gtk_action_group_add_radio_actions(rm->action_group, radio_entries, num_machines, selected, (GCallback)set_machine, uigtk3);
 
 	// Back through the hoops
 	for (i = 0; i < num_machines; i++) {
@@ -869,6 +845,8 @@ static void gtk3_update_machine_menu(void *sptr) {
 
 static void gtk3_update_cartridge_menu(void *sptr) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
+	struct uigtk3_radio_menu *rm = uigtk3->cart_radio_menu;
+
 	// Get list of cart configs
 	struct slist *ccl = NULL;
 	int num_carts = 0;
@@ -882,8 +860,8 @@ static void gtk3_update_cartridge_menu(void *sptr) {
 	}
 
 	// Remove old entries
-	uigtk3_free_action_group(uigtk3->cart_action_group);
-	gtk_ui_manager_remove_ui(uigtk3->menu_manager, uigtk3->merge_carts);
+	uigtk3_free_action_group(rm->action_group);
+	gtk_ui_manager_remove_ui(uigtk3->menu_manager, rm->merge_id);
 
 	// Jump through alloc hoops just to avoid const-ness warnings.
 	// Note: final entry's name & label is const, no need to allow space
@@ -905,13 +883,13 @@ static void gtk3_update_cartridge_menu(void *sptr) {
 		labels[i] = escape_underscores(cc->description);
 		radio_entries[i].label = labels[i];
 		radio_entries[i].value = cc->id;
-		gtk_ui_manager_add_ui(uigtk3->menu_manager, uigtk3->merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
 	radio_entries[num_carts].name = "cart0";
 	radio_entries[num_carts].label = "None";
 	radio_entries[num_carts].value = -1;
-	gtk_ui_manager_add_ui(uigtk3->menu_manager, uigtk3->merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
-	gtk_action_group_add_radio_actions(uigtk3->cart_action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, uigtk3);
+	gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+	gtk_action_group_add_radio_actions(rm->action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, uigtk3);
 
 	// Back through the hoops
 	for (i = 0; i < num_carts; i++) {
@@ -926,25 +904,17 @@ static void gtk3_update_cartridge_menu(void *sptr) {
 
 // Dynamic joystick menus
 
-struct joystick_menu_data {
-	const char *path;
-	const char *name_fmt;
-	const char *name0;
-	GtkActionGroup *action_group;
-	guint merge_id;
-	GCallback set_func;
-};
-
 static void update_joystick_menu(struct ui_gtk3_interface *uigtk3,
-				 struct joystick_menu_data *joystick_menu_data) {
+				 struct uigtk3_radio_menu *rm,
+				 const char *name_fmt, const char *name0) {
 	// Get list of joystick configs
 	struct slist *jcl = slist_reverse(slist_copy(joystick_config_list()));
 
 	int num_joystick_configs = slist_length(jcl);
 
 	// Remove old entries
-	uigtk3_free_action_group(joystick_menu_data->action_group);
-	gtk_ui_manager_remove_ui(uigtk3->menu_manager, joystick_menu_data->merge_id);
+	uigtk3_free_action_group(rm->action_group);
+	gtk_ui_manager_remove_ui(uigtk3->menu_manager, rm->merge_id);
 
 	// Jump through alloc hoops just to avoid const-ness warnings.
 	GtkRadioActionEntry *radio_entries = g_malloc0((num_joystick_configs+1) * sizeof(*radio_entries));
@@ -956,19 +926,19 @@ static void update_joystick_menu(struct ui_gtk3_interface *uigtk3,
 	int i = 0;
 	for (struct slist *iter = jcl; iter; iter = iter->next, i++) {
 		struct joystick_config *jc = iter->data;
-		names[i] = g_strdup_printf(joystick_menu_data->name_fmt, i+1);
+		names[i] = g_strdup_printf(name_fmt, i+1);
 		radio_entries[i].name = names[i];
 		labels[i] = escape_underscores(jc->description);
 		radio_entries[i].label = labels[i];
 		radio_entries[i].value = jc->id;
-		gtk_ui_manager_add_ui(uigtk3->menu_manager, joystick_menu_data->merge_id, joystick_menu_data->path, radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
-	radio_entries[num_joystick_configs].name = joystick_menu_data->name0;
+	radio_entries[num_joystick_configs].name = name0;
 	radio_entries[num_joystick_configs].label = "None";
 	radio_entries[num_joystick_configs].value = -1;
 
-	gtk_ui_manager_add_ui(uigtk3->menu_manager, joystick_menu_data->merge_id, joystick_menu_data->path, radio_entries[num_joystick_configs].name, radio_entries[num_joystick_configs].name, GTK_UI_MANAGER_MENUITEM, TRUE);
-	gtk_action_group_add_radio_actions(joystick_menu_data->action_group, radio_entries, num_joystick_configs+1, 0, joystick_menu_data->set_func, uigtk3);
+	gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[num_joystick_configs].name, radio_entries[num_joystick_configs].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+	gtk_action_group_add_radio_actions(rm->action_group, radio_entries, num_joystick_configs+1, 0, rm->callback, uigtk3);
 
 	// Back through the hoops
 	for (i = 0; i < num_joystick_configs; i++) {
@@ -984,25 +954,8 @@ static void update_joystick_menu(struct ui_gtk3_interface *uigtk3,
 static void gtk3_update_joystick_menus(void *sptr) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 
-	struct joystick_menu_data right = {
-		.path = "/MainMenu/HardwareMenu/JoyRightMenu",
-		.name_fmt = "rjoy%d",
-		.name0 = "rjoy0",
-		.action_group = uigtk3->joy_right_action_group,
-		.merge_id = uigtk3->merge_right_joysticks,
-		.set_func = (GCallback)set_joy_right,
-	};
-	update_joystick_menu(uigtk3, &right);
-
-	struct joystick_menu_data left = {
-		.path = "/MainMenu/HardwareMenu/JoyLeftMenu",
-		.name_fmt = "ljoy%d",
-		.name0 = "ljoy0",
-		.action_group = uigtk3->joy_left_action_group,
-		.merge_id = uigtk3->merge_left_joysticks,
-		.set_func = (GCallback)set_joy_left,
-	};
-	update_joystick_menu(uigtk3, &left);
+	update_joystick_menu(uigtk3, uigtk3->joy_right_radio_menu, "rjoy%d", "rjoy0");
+	update_joystick_menu(uigtk3, uigtk3->joy_left_radio_menu, "ljoy%d", "ljoy0");
 }
 
 // Tool callbacks
