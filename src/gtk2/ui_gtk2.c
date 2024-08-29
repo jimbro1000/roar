@@ -284,6 +284,20 @@ static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer
 	xroar_set_keyboard_type(0, val);
 }
 
+static void set_hkbd_layout(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	xroar_set_hkbd_layout(0, val);
+}
+
+static void set_hkbd_lang(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	xroar_set_hkbd_lang(0, val);
+}
+
 static void set_joy_right(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
@@ -423,6 +437,9 @@ static GtkActionEntry const ui_entries[] = {
 	  .accelerator = "<shift><control>R",
 	  .tooltip = "Hard reset machine (power cycle)",
 	  .callback = G_CALLBACK(do_hard_reset) },
+	/* Tool */
+	{ .name = "HKBDLayoutMenuAction", .label = "Keyboard la_yout" },
+	{ .name = "HKBDLangMenuAction", .label = "Keyboard lan_guage" },
 	/* Help */
 	{ .name = "AboutAction", .stock_id = GTK_STOCK_ABOUT,
 	  .label = "_About",
@@ -571,6 +588,9 @@ static void *ui_gtk2_new(void *cfg) {
 	uigtk2->merge_right_joysticks = gtk_ui_manager_new_merge_id(uigtk2->menu_manager);
 	uigtk2->merge_left_joysticks = gtk_ui_manager_new_merge_id(uigtk2->menu_manager);
 
+	uigtk2->hkbd_layout_radio_menu = uigtk2_radio_menu_new(uigtk2, "/MainMenu/ToolMenu/HKBDLayoutMenu", (GCallback)set_hkbd_layout);
+	uigtk2->hkbd_lang_radio_menu = uigtk2_radio_menu_new(uigtk2, "/MainMenu/ToolMenu/HKBDLangMenu", (GCallback)set_hkbd_lang);
+
 	/* Update all dynamic menus */
 	ui->update_machine_menu = DELEGATE_AS0(void, gtk2_update_machine_menu, uigtk2);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, gtk2_update_cartridge_menu, uigtk2);
@@ -578,6 +598,8 @@ static void *ui_gtk2_new(void *cfg) {
 	gtk2_update_machine_menu(uigtk2);
 	gtk2_update_cartridge_menu(uigtk2);
 	gtk2_update_joystick_menus(uigtk2);
+	uigtk2_update_radio_menu_from_enum(uigtk2->hkbd_layout_radio_menu, hkbd_layout_list, "hkbd-layout-%s", NULL, xroar.cfg.kbd.layout);
+	uigtk2_update_radio_menu_from_enum(uigtk2->hkbd_lang_radio_menu, hkbd_lang_list, "hkbd-lang-%s", NULL, xroar.cfg.kbd.lang);
 
 	/* Extract menubar widget and add to vbox */
 	uigtk2->menubar = gtk_ui_manager_get_widget(uigtk2->menu_manager, "/MainMenu");
@@ -651,6 +673,8 @@ static void *ui_gtk2_new(void *cfg) {
 static void ui_gtk2_free(void *sptr) {
 	struct ui_gtk2_interface *uigtk2 = sptr;
 	DELEGATE_SAFE_CALL(uigtk2->public.filereq_interface->free);
+	uigtk2_radio_menu_free(uigtk2->hkbd_lang_radio_menu);
+	uigtk2_radio_menu_free(uigtk2->hkbd_layout_radio_menu);
 	g_object_unref(uigtk2->builder);
 	gtk_widget_destroy(uigtk2->drawing_area);
 	gtk_widget_destroy(uigtk2->top_window);
@@ -789,6 +813,14 @@ static void ui_gtk2_update_state(void *sptr, int tag, int value, const void *dat
 
 	case ui_tag_keymap:
 		uigtk2_notify_radio_action_set_current_value(uigtk2, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon", value, set_keymap);
+		break;
+
+	case ui_tag_hkbd_layout:
+		uigtk2_notify_radio_menu_set_current_value(uigtk2->hkbd_layout_radio_menu, value);
+		break;
+
+	case ui_tag_hkbd_lang:
+		uigtk2_notify_radio_menu_set_current_value(uigtk2->hkbd_lang_radio_menu, value);
 		break;
 
 	case ui_tag_kbd_translate:

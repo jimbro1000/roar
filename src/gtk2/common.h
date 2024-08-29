@@ -68,6 +68,8 @@ struct ui_gtk2_interface {
 	guint merge_right_joysticks;
 	GtkActionGroup *joy_left_action_group;
 	guint merge_left_joysticks;
+	struct uigtk2_radio_menu *hkbd_layout_radio_menu;
+	struct uigtk2_radio_menu *hkbd_lang_radio_menu;
 
 	// Window geometry
 	struct vo_picture_area picture_area;
