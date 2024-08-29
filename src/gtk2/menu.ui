@@ -19,19 +19,8 @@
       <menuitem name='Quit' action='QuitAction'/>
     </menu>
     <menu name='ViewMenu' action='ViewMenuAction'>
-      <menu name='TVInputMenu' action='TVInputMenuAction'>
-        <menuitem action='tv-input-svideo'/>
-        <menuitem action='tv-input-cmp-kbrw'/>
-        <menuitem action='tv-input-cmp-krbw'/>
-        <menuitem action='tv-input-rgb'/>
-      </menu>
-      <menu name='CCRMenu' action='CCRMenuAction'>
-        <menuitem action='ccr-palette'/>
-        <menuitem action='ccr-2bit'/>
-        <menuitem action='ccr-5bit'/>
-        <menuitem action='ccr-partial'/>
-        <menuitem action='ccr-simulated'/>
-      </menu>
+      <menu name='TVInputMenu' action='TVInputMenuAction'/>
+      <menu name='CCRMenu' action='CCRMenuAction'/>
       <menuitem name='VideoOptions' action='VideoOptionsAction'/>
       <separator/>
       <menuitem name='InverseText' action='InverseTextAction'/>
@@ -49,25 +38,14 @@
       <menuitem name='FullScreen' action='FullScreenAction'/>
     </menu>
     <menu name='HardwareMenu' action='HardwareMenuAction'>
-      <menu name='MachineMenu' action='MachineMenuAction'>
-      </menu>
+      <menu name='MachineMenu' action='MachineMenuAction'/>
       <separator/>
-      <menu name='CartridgeMenu' action='CartridgeMenuAction'>
-      </menu>
+      <menu name='CartridgeMenu' action='CartridgeMenuAction'/>
       <separator/>
-      <menu name='KeymapMenu' action='KeymapMenuAction'>
-        <menuitem action='keymap_dragon'/>
-        <menuitem action='keymap_dragon200e'/>
-        <menuitem action='keymap_coco'/>
-        <menuitem action='keymap_coco3'/>
-        <menuitem action='keymap_mc10'/>
-        <menuitem action='keymap_alice'/>
-      </menu>
+      <menu name='KeymapMenu' action='KeymapMenuAction'/>
       <separator/>
-      <menu name='JoyRightMenu' action='JoyRightMenuAction'>
-      </menu>
-      <menu name='JoyLeftMenu' action='JoyLeftMenuAction'>
-      </menu>
+      <menu name='JoyRightMenu' action='JoyRightMenuAction'/>
+      <menu name='JoyLeftMenu' action='JoyLeftMenuAction'/>
       <menuitem name='JoySwap' action='JoySwapAction'/>
       <separator/>
       <menuitem name='SoftReset' action='SoftResetAction'/>
