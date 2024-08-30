@@ -53,8 +53,9 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_deluxecoco {
-	struct machine_dragon machine_dragon;
+	struct machine_dragon_common machine_dragon;
 
+	struct rombank *ROM0;
 	struct MOS6551 *ACIA;
 	struct AY891X *PSG;
 
@@ -91,8 +92,8 @@ static void deluxecoco_attach_interface(struct part *, const char *ifname, void 
 
 static void deluxecoco_reset(struct machine *, _Bool hard);
 
-static _Bool deluxecoco_read_byte(struct machine_dragon *, unsigned A);
-static _Bool deluxecoco_write_byte(struct machine_dragon *, unsigned A);
+static _Bool deluxecoco_read_byte(struct machine_dragon_common *, unsigned A);
+static _Bool deluxecoco_write_byte(struct machine_dragon_common *, unsigned A);
 static void deluxecoco_cpu_cycle(void *, int ncycles, _Bool RnW, uint16_t A);
 
 static void deluxecoco_vdg_hs(void *, _Bool level);
@@ -126,7 +127,7 @@ const struct partdb_entry deluxecoco_part = { .name = "deluxecoco", .funcs = &de
 
 static struct part *deluxecoco_allocate(void) {
 	struct machine_deluxecoco *mdp = part_new(sizeof(*mdp));
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 
@@ -142,8 +143,6 @@ static struct part *deluxecoco_allocate(void) {
 	md->read_byte = deluxecoco_read_byte;
 	md->write_byte = deluxecoco_write_byte;
 
-	md->is_dragon = 0;
-
 	return p;
 }
 
@@ -151,11 +150,12 @@ static void deluxecoco_initialise(struct part *p, void *options) {
 	assert(p != NULL);
 	assert(options != NULL);
 	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)p;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine_config *mc = options;
 
 	deluxecoco_config_complete(mc);
 
+	md->is_dragon = 0;
 	dragon_initialise_common(md, mc);
 
 	// ACIA
@@ -171,42 +171,40 @@ static void deluxecoco_initialise(struct part *p, void *options) {
 static _Bool deluxecoco_finish(struct part *p) {
 	assert(p != NULL);
 	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)p;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
 	assert(mc != NULL);
-
-	if (!dragon_finish_common(md))
-		return 0;
-
-	// We're repurposing these slots for now until there's a better way
-	// to specify which ROMs a machine has.
-	if (md->has_bas && md->has_extbas && md->has_altbas) {
-		_Bool forced = 0, valid_crc = 0;
-
-		md->crc_bas = crc32_block(CRC32_RESET, md->rom0, 0x4000);
-		md->crc_bas = crc32_block(md->crc_bas, md->rom1, 0x4000);
-
-		valid_crc = crclist_match("@deluxecoco", md->crc_bas);
-		if (xroar.cfg.force_crc_match) {
-			md->crc_bas = 0x1cce231e;  // Advanced BASIC 00.00.07
-			forced = 1;
-		}
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tAdvanced BASIC CRC = 0x%08x%s\n", md->crc_bas, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for Advanced BASIC ROM\n");
-		}
-	}
 
 	// Find attached parts
 	mdp->ACIA = (struct MOS6551 *)part_component_by_id_is_a(p, "ACIA", "MOS6551");
 	mdp->PSG = (struct AY891X *)part_component_by_id_is_a(p, "PSG", "AY891X");
 
 	// Check all required parts are attached
-	if (!mdp->PSG) {
+	if (!mdp->ACIA || !mdp->PSG) {
 		return 0;
 	}
+
+	md->is_dragon = 0;
+	if (!dragon_finish_common(md))
+		return 0;
+
+	// ROM
+	mdp->ROM0 = rombank_new(8, 8192, 4);
+
+	// Advanced Colour BASIC
+	if (mc->extbas_rom) {
+		sds tmp = romlist_find(mc->extbas_rom);
+		if (tmp) {
+			rombank_load_image(mdp->ROM0, 0, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+
+	// Report and check CRC (Advanced Colour BASIC)
+	rombank_report(mdp->ROM0, "Advanced Colour BASIC");
+	md->crc_combined = 0x1cce231e;  // ACB 00.00.07
+	md->has_combined = rombank_verify_crc(mdp->ROM0, "Advanced Colour BASIC", -1, "@deluxecoco", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, deluxecoco_cpu_cycle, mdp);
 
@@ -228,15 +226,15 @@ static void deluxecoco_free(struct part *p) {
 	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)p;
 	struct machine_dragon_common *md = &mdp->machine_dragon;
 	md->snd->get_non_muxed_audio.func = NULL;
-        dragon_free(p);
+        dragon_free_common(p);
+	rombank_free(mdp->ROM0);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void deluxecoco_config_complete(struct machine_config *mc) {
 	// Default ROMs
-	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "deluxe_extbas");
-	set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "deluxe_altbas");
+	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "deluxe");
 
 	// Validate requested total RAM
 	if (mc->ram < 32) {
@@ -305,13 +303,18 @@ static void deluxecoco_reset(struct machine *m, _Bool hard) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool deluxecoco_read_byte(struct machine_dragon *md, unsigned A) {
+static _Bool deluxecoco_read_byte(struct machine_dragon_common *md, unsigned A) {
 	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)md;
 
 	switch (md->SAM->S) {
+	case 1:
+	case 2:
+		rombank_d8(mdp->ROM0, A, &md->CPU->D);
+		return 1;
+
 	case 3:
 		if (mdp->cart_inhibit) {
-			md->CPU->D = md->rom1[A & 0x3fff];
+			rombank_d8(mdp->ROM0, A, &md->CPU->D);
 			return 1;
 		}
 		break;
@@ -340,13 +343,18 @@ static _Bool deluxecoco_read_byte(struct machine_dragon *md, unsigned A) {
 	return 0;
 }
 
-static _Bool deluxecoco_write_byte(struct machine_dragon *md, unsigned A) {
+static _Bool deluxecoco_write_byte(struct machine_dragon_common *md, unsigned A) {
 	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
+	case 1:
+	case 2:
+		rombank_d8(mdp->ROM0, A, &md->CPU->D);
+		return 1;
+
 	case 3:
 		if (mdp->cart_inhibit) {
-			md->CPU->D = md->rom1[A & 0x3fff];
+			rombank_d8(mdp->ROM0, A, &md->CPU->D);
 			return 1;
 		}
 		break;
@@ -383,7 +391,7 @@ static _Bool deluxecoco_write_byte(struct machine_dragon *md, unsigned A) {
 
 static void deluxecoco_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	struct machine_deluxecoco *mdp = sptr;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 
 	if (ncycles && !md->clock_inhibit) {
 		advance_clock(md, ncycles);
@@ -407,7 +415,7 @@ static void deluxecoco_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A)
 
 static void deluxecoco_vdg_hs(void *sptr, _Bool level) {
 	struct machine_deluxecoco *mdp = sptr;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	mc6821_set_cx1(&md->PIA0->a, level);
 	mc6883_vdg_hsync(md->SAM, level);
 	if (!level) {
@@ -423,7 +431,7 @@ static void deluxecoco_vdg_hs(void *sptr, _Bool level) {
 
 static void deluxecoco_vdg_fs(void *sptr, _Bool level) {
 	struct machine_deluxecoco *mdp = sptr;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	mc6821_set_cx1(&md->PIA0->b, level);
 	mc6883_vdg_fsync(md->SAM, level);
 	if (level) {

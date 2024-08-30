@@ -67,14 +67,16 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_dragonpro {
-	struct machine_dragon machine_dragon;
+	struct machine_dragon_common machine_dragon;
 
-	// Points to either md->rom0 (Boot) or md->rom1 (BASIC)
-	uint8_t *rom;
-
+	struct rombank *BOOT;
+	struct rombank *ROM0;
 	struct MOS6551 *ACIA;
 	struct MC6821 *PIA2;
 	struct AY891X *PSG;
+
+	// Points to either BOOT or ROM0 (BASIC)
+	struct rombank *rom;
 
 	uint8_t old_ay_io;  // to test if AY I/O output has changed
 	struct {
@@ -97,8 +99,8 @@ static void dragonpro_attach_interface(struct part *, const char *ifname, void *
 
 static void dragonpro_reset(struct machine *m, _Bool hard);
 
-static _Bool dragonpro_read_byte(struct machine_dragon *, unsigned A);
-static _Bool dragonpro_write_byte(struct machine_dragon *, unsigned A);
+static _Bool dragonpro_read_byte(struct machine_dragon_common *, unsigned A);
+static _Bool dragonpro_write_byte(struct machine_dragon_common *, unsigned A);
 static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 
 #define dragonpro_pia2a_data_preread NULL
@@ -143,7 +145,7 @@ const struct partdb_entry dragonpro_part = { .name = "dragonpro", .funcs = &drag
 
 static struct part *dragonpro_allocate(void) {
 	struct machine_dragonpro *mdp = part_new(sizeof(*mdp));
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 
@@ -159,8 +161,6 @@ static struct part *dragonpro_allocate(void) {
 	md->read_byte = dragonpro_read_byte;
 	md->write_byte = dragonpro_write_byte;
 
-	md->is_dragon = 1;
-
 	return p;
 }
 
@@ -168,11 +168,12 @@ static void dragonpro_initialise(struct part *p, void *options) {
 	assert(p != NULL);
 	assert(options != NULL);
 	struct machine_dragonpro *mdp = (struct machine_dragonpro *)p;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine_config *mc = options;
 
 	dragonpro_config_complete(mc);
 
+	md->is_dragon = 1;
 	dragon_initialise_common(md, mc);
 
 	// ACIA
@@ -191,45 +192,10 @@ static void dragonpro_initialise(struct part *p, void *options) {
 static _Bool dragonpro_finish(struct part *p) {
 	assert(p != NULL);
 	struct machine_dragonpro *mdp = (struct machine_dragonpro *)p;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
 	assert(mc != NULL);
-
-	if (!dragon_finish_common(md))
-		return 0;
-
-	if (md->has_bas) {
-		_Bool forced = 0, valid_crc = 0;
-
-		md->crc_bas = crc32_block(CRC32_RESET, md->rom0 + 0x2000, 0x2000);
-		valid_crc = crclist_match("@dragonpro_boot", md->crc_bas);
-		if (xroar.cfg.force_crc_match) {
-			md->crc_bas = 0xc3dab585;  // Boot ROM v1.0
-			forced = 1;
-		}
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tBOOT CRC = 0x%08x%s\n", md->crc_bas, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for Dragon Professional BOOT ROM\n");
-		}
-	}
-
-	if (md->has_altbas) {
-		_Bool forced = 0, valid_crc = 0;
-
-		md->crc_altbas = crc32_block(CRC32_RESET, md->rom1, 0x4000);
-		valid_crc = crclist_match("@d64_1", md->crc_altbas);
-		if (xroar.cfg.force_crc_match) {
-			md->crc_altbas = 0x84f68bf9;  // Dragon 64 32K mode BASIC
-			forced = 1;
-		}
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tBASIC CRC = 0x%08x%s\n", md->crc_altbas, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for Dragon Professional BASIC ROM\n");
-		}
-	}
 
 	// Find attached parts
 	mdp->ACIA = (struct MOS6551 *)part_component_by_id_is_a(p, "ACIA", "MOS6551");
@@ -242,8 +208,41 @@ static _Bool dragonpro_finish(struct part *p) {
 		return 0;
 	}
 
-	// Default to boot ROM
-	mdp->rom = md->rom0;
+	md->is_dragon = 1;
+	if (!dragon_finish_common(md))
+		return 0;
+
+	// ROMs
+	mdp->BOOT = rombank_new(8, 8192, 1);
+	mdp->ROM0 = rombank_new(8, 16384, 1);
+
+	// BOOT
+	if (mc->extbas_rom) {
+		sds tmp = romlist_find(mc->extbas_rom);
+		if (tmp) {
+			rombank_load_image(mdp->BOOT, 0, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+
+	// 32K BASIC
+	if (mc->altbas_rom) {
+		sds tmp = romlist_find(mc->altbas_rom);
+		if (tmp) {
+			rombank_load_image(mdp->ROM0, 0, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+
+	// Report and check CRC (BOOT)
+	rombank_report(mdp->BOOT, "BOOT");
+	uint32_t boot_crc32 = 0xc3dab585;  // Dragon Pro BOOT 1.0
+	(void)rombank_verify_crc(mdp->BOOT, "BOOT", -1, "@dragonpro_boot", xroar.cfg.force_crc_match, &boot_crc32);
+
+	// Report and check CRC (32K BASIC)
+	rombank_report(mdp->ROM0, "32K BASIC");
+	md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
+	md->has_combined = rombank_verify_crc(mdp->ROM0, "32K BASIC", -1, "@d64_1", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, dragonpro_cpu_cycle, mdp);
 
@@ -254,12 +253,15 @@ static _Bool dragonpro_finish(struct part *p) {
 	mdp->PIA2->b.data_postwrite = DELEGATE_AS0(void, dragonpro_pia2b_data_postwrite, mdp);
 	mdp->PIA2->b.control_postwrite = DELEGATE_AS0(void, dragonpro_pia2b_control_postwrite, mdp);
 
+	// ROM selection from PIA
+	mdp->rom = (PIA_VALUE_A(mdp->PIA2) & 0x04) ? mdp->BOOT : mdp->ROM0;
+
 	mdp->PSG->a.data_postwrite = DELEGATE_AS0(void, dragonpro_ay891x_data_postwrite, mdp);
 
 	// Note: the Dragon Professional ROM layout is somewhat different from
 	// a normal Dragon 64.  At the moment, it's kludged by having the boot
-	// ROM loaded as "bas" and the BASIC ROM loaded as "altbas" in the main
-	// Dragon code, but this should probably be done properly.
+	// ROM loaded as "extbas" and the BASIC ROM loaded as "altbas", but we
+	// could do with a more general named ROM bank config scheme.
 
 	// Default all PIA connections to unconnected (no source, no sink)
 	mdp->PIA2->b.in_source = 0;
@@ -279,14 +281,16 @@ static void dragonpro_free(struct part *p) {
 	struct machine_dragonpro *mdp = (struct machine_dragonpro *)p;
 	struct machine_dragon_common *md = &mdp->machine_dragon;
 	md->snd->get_ay_audio.func = NULL;
-	dragon_free(p);
+	dragon_free_common(p);
+	rombank_free(mdp->ROM0);
+	rombank_free(mdp->BOOT);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragonpro_config_complete(struct machine_config *mc) {
 	// Default ROMs
-	set_default_rom(mc->bas_dfn, &mc->bas_rom, "alpha-boot-v1.0");
+	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "alpha-boot-v1.0");
 	set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "alpha-basic");
 
 	// Validate requested total RAM
@@ -378,16 +382,16 @@ static void dragonpro_reset(struct machine *m, _Bool hard) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static uint8_t dragonpro_dos_read(struct machine_dragon *, uint16_t A, uint8_t D);
-static uint8_t dragonpro_dos_write(struct machine_dragon *, uint16_t A, uint8_t D);
+static uint8_t dragonpro_dos_read(struct machine_dragon_common *, uint16_t A, uint8_t D);
+static uint8_t dragonpro_dos_write(struct machine_dragon_common *, uint16_t A, uint8_t D);
 
-static _Bool dragonpro_read_byte(struct machine_dragon *md, unsigned A) {
+static _Bool dragonpro_read_byte(struct machine_dragon_common *md, unsigned A) {
 	struct machine_dragonpro *mdp = (struct machine_dragonpro *)md;
 
 	switch (md->SAM->S) {
 	case 1:
 	case 2:
-		md->CPU->D = mdp->rom[A & 0x3fff];
+		rombank_d8(mdp->rom, A, &md->CPU->D);
 		return 1;
 
 	case 4:
@@ -414,13 +418,13 @@ static _Bool dragonpro_read_byte(struct machine_dragon *md, unsigned A) {
 	return 0;
 }
 
-static _Bool dragonpro_write_byte(struct machine_dragon *md, unsigned A) {
+static _Bool dragonpro_write_byte(struct machine_dragon_common *md, unsigned A) {
 	struct machine_dragonpro *mdp = (struct machine_dragonpro *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
 	case 1:
 	case 2:
-		md->CPU->D = mdp->rom[A & 0x3fff];
+		rombank_d8(mdp->rom, A, &md->CPU->D);
 		return 1;
 
 	case 4:
@@ -449,7 +453,7 @@ static _Bool dragonpro_write_byte(struct machine_dragon *md, unsigned A) {
 
 static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	struct machine_dragonpro *mdp = sptr;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 
 	if (ncycles && !md->clock_inhibit) {
 		advance_clock(md, ncycles);
@@ -468,17 +472,13 @@ static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) 
 
 static void dragonpro_pia2a_data_postwrite(void *sptr) {
 	struct machine_dragonpro *mdp = sptr;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	mdp->PIA2->b.in_sink = 0xff;
 	mdp->PIA2->b.in_source = 0xff;
 	uint8_t out = PIA_VALUE_A(mdp->PIA2);
 	_Bool BDIR = out & 0x01;
 	_Bool BC1 = out & 0x02;
-	if (out & 0x04) {
-		mdp->rom = md->rom0;
-	} else {
-		mdp->rom = md->rom1;
-	}
+	mdp->rom = (out & 0x04) ? mdp->BOOT : mdp->ROM0;
 	sound_update(md->snd);
 	uint8_t D = PIA_VALUE_B(mdp->PIA2);
 	ay891x_cycle(mdp->PSG, BDIR, BC1, &D);
@@ -580,13 +580,13 @@ static void dragonpro_ay891x_data_postwrite(void *sptr) {
 
 // TODO: optional "becker port" might make sense at $FF29/$FF2A?
 
-static uint8_t dragonpro_dos_read(struct machine_dragon *md, uint16_t A, uint8_t D) {
+static uint8_t dragonpro_dos_read(struct machine_dragon_common *md, uint16_t A, uint8_t D) {
 	struct machine_dragonpro *mdp = (struct machine_dragonpro *)md;
 	(void)D;
 	return wd279x_read(mdp->dos.fdc, A);
 }
 
-static uint8_t dragonpro_dos_write(struct machine_dragon *md, uint16_t A, uint8_t D) {
+static uint8_t dragonpro_dos_write(struct machine_dragon_common *md, uint16_t A, uint8_t D) {
 	struct machine_dragonpro *mdp = (struct machine_dragonpro *)md;
 	wd279x_write(mdp->dos.fdc, A, D);
 	return D;
@@ -599,7 +599,7 @@ static void set_drq(void *sptr, _Bool value) {
 
 static void set_intrq(void *sptr, _Bool value) {
 	struct machine_dragonpro *mdp = sptr;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 
 	// XXX NMI may need to be merged with line from the cartridge.  There
 	// may even be a way of selecting between them in the dragonpro...

@@ -30,10 +30,13 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_dragon64 {
-	struct machine_dragon machine_dragon;
+	struct machine_dragon_common machine_dragon;
 
-	// Points to either md->rom0 (32K BASIC) or md->rom1 (64K BASIC)
-	uint8_t *rom;
+	struct rombank *ROM0;
+	struct rombank *ROM1;
+
+	// Points to either ROM0 (32K BASIC) or ROM1 (64K BASIC)
+	struct rombank *rom;
 
 	struct MOS6551 *ACIA;
 };
@@ -44,8 +47,8 @@ static void dragon64_config_complete(struct machine_config *);
 
 static void dragon64_reset(struct machine *, _Bool hard);
 
-static _Bool dragon64_read_byte(struct machine_dragon *, unsigned A);
-static _Bool dragon64_write_byte(struct machine_dragon *, unsigned A);
+static _Bool dragon64_read_byte(struct machine_dragon_common *, unsigned A);
+static _Bool dragon64_write_byte(struct machine_dragon_common *, unsigned A);
 
 static void dragon64_pia1b_data_postwrite(void *);
 
@@ -62,7 +65,9 @@ static const struct partdb_entry_funcs dragon64_funcs = {
 	.finish = dragon64_finish,
 	.free = dragon64_free,
 
-	// XXX will need to serialise more than stock dragon
+	// Dragon 64 needs to be kept in Dragon common data for compatibility
+	// with old snapshots.  That's fine: there's no extra state not covered
+	// by sub-parts.
 	.ser_struct_data = &dragon_ser_struct_data,
 
 	.is_a = machine_is_a,
@@ -78,7 +83,7 @@ const struct partdb_entry dragon64_part = { .name = "dragon64", .funcs = &dragon
 
 static struct part *dragon64_allocate(void) {
 	struct machine_dragon64 *mdp = part_new(sizeof(*mdp));
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 
@@ -91,8 +96,6 @@ static struct part *dragon64_allocate(void) {
 	md->read_byte = dragon64_read_byte;
 	md->write_byte = dragon64_write_byte;
 
-	md->is_dragon = 1;
-
 	return p;
 }
 
@@ -100,11 +103,12 @@ static void dragon64_initialise(struct part *p, void *options) {
 	assert(p != NULL);
 	assert(options != NULL);
 	struct machine_dragon64 *mdp = (struct machine_dragon64 *)p;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine_config *mc = options;
 
 	dragon64_config_complete(mc);
 
+	md->is_dragon = 1;
 	dragon_initialise_common(md, mc);
 
 	// ACIA
@@ -114,46 +118,10 @@ static void dragon64_initialise(struct part *p, void *options) {
 static _Bool dragon64_finish(struct part *p) {
 	assert(p != NULL);
 	struct machine_dragon64 *mdp = (struct machine_dragon64 *)p;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
 	assert(mc != NULL);
-
-	if (!dragon_finish_common(md))
-		return 0;
-
-	if (md->has_combined) {
-		_Bool forced = 0, valid_crc = 0;
-
-		md->crc_combined = crc32_block(CRC32_RESET, md->rom0, 0x4000);
-		valid_crc = crclist_match("@d64_1", md->crc_combined);
-		if (xroar.cfg.force_crc_match) {
-			md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
-			forced = 1;
-		}
-
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\t32K mode BASIC CRC = 0x%08x%s\n", md->crc_combined, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for combined BASIC ROM\n");
-		}
-	}
-
-	if (md->has_altbas) {
-		_Bool forced = 0, valid_crc = 0;
-
-		md->crc_altbas = crc32_block(CRC32_RESET, md->rom1, 0x4000);
-		valid_crc = crclist_match("@d64_2", md->crc_altbas);
-		if (xroar.cfg.force_crc_match) {
-			md->crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
-			forced = 1;
-		}
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\t64K mode BASIC CRC = 0x%08x%s\n", md->crc_altbas, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for alternate BASIC ROM\n");
-		}
-	}
 
 	// Find attached parts
 	mdp->ACIA = (struct MOS6551 *)part_component_by_id_is_a(p, "ACIA", "MOS6551");
@@ -163,8 +131,44 @@ static _Bool dragon64_finish(struct part *p) {
 		return 0;
 	}
 
-	// Default to 32K BASIC
-	mdp->rom = md->rom0;
+	md->is_dragon = 1;
+	if (!dragon_finish_common(md))
+		return 0;
+
+	// ROMs
+	mdp->ROM0 = rombank_new(8, 16384, 1);
+	mdp->ROM1 = rombank_new(8, 16384, 1);
+
+	// 32K mode Extended BASIC
+	if (mc->extbas_rom) {
+		sds tmp = romlist_find(mc->extbas_rom);
+		if (tmp) {
+			rombank_load_image(mdp->ROM0, 0, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+
+	// 64K mode Extended BASIC
+	if (mc->altbas_rom) {
+		sds tmp = romlist_find(mc->altbas_rom);
+		if (tmp) {
+			rombank_load_image(mdp->ROM1, 0, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+
+	// Report and check CRC (32K BASIC)
+	rombank_report(mdp->ROM0, "32K BASIC");
+	md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
+	md->has_combined = rombank_verify_crc(mdp->ROM0, "32K BASIC", -1, "@d64_1", xroar.cfg.force_crc_match, &md->crc_combined);
+
+	// Report and check CRC (64K BASIC)
+	rombank_report(mdp->ROM1, "64K BASIC");
+	md->crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
+	md->has_altbas = rombank_verify_crc(mdp->ROM1, "64K BASIC", -1, "@d64_2", xroar.cfg.force_crc_match, &md->crc_altbas);
+
+	// ROM selection from PIA
+	mdp->rom = (PIA_VALUE_B(md->PIA1) & 0x04) ? mdp->ROM0 : mdp->ROM1;
 
 	// Override PIA1 PB2 as ROMSEL
 	md->PIA1->b.in_source |= (1<<2);  // pull-up
@@ -179,7 +183,10 @@ static _Bool dragon64_finish(struct part *p) {
 }
 
 static void dragon64_free(struct part *p) {
-	dragon_free(p);
+	struct machine_dragon64 *mdp = (struct machine_dragon64 *)p;
+	dragon_free_common(p);
+	rombank_free(mdp->ROM1);
+	rombank_free(mdp->ROM0);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -224,13 +231,13 @@ static void dragon64_reset(struct machine *m, _Bool hard) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool dragon64_read_byte(struct machine_dragon *md, unsigned A) {
+static _Bool dragon64_read_byte(struct machine_dragon_common *md, unsigned A) {
 	struct machine_dragon64 *mdp = (struct machine_dragon64 *)md;
 
 	switch (md->SAM->S) {
 	case 1:
 	case 2:
-		md->CPU->D = mdp->rom[A & 0x3fff];
+		rombank_d8(mdp->rom, A, &md->CPU->D);
 		return 1;
 
 	case 4:
@@ -246,13 +253,13 @@ static _Bool dragon64_read_byte(struct machine_dragon *md, unsigned A) {
 	return 0;
 }
 
-static _Bool dragon64_write_byte(struct machine_dragon *md, unsigned A) {
+static _Bool dragon64_write_byte(struct machine_dragon_common *md, unsigned A) {
 	struct machine_dragon64 *mdp = (struct machine_dragon64 *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
 	case 1:
 	case 2:
-		md->CPU->D = mdp->rom[A & 0x3fff];
+		rombank_d8(mdp->rom, A, &md->CPU->D);
 		return 1;
 
 	case 4:
@@ -272,14 +279,14 @@ static _Bool dragon64_write_byte(struct machine_dragon *md, unsigned A) {
 
 static void dragon64_pia1b_data_postwrite(void *sptr) {
 	struct machine_dragon64 *mdp = sptr;
-	struct machine_dragon *md = &mdp->machine_dragon;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
 
 	_Bool is_32k = PIA_VALUE_B(md->PIA1) & 0x04;
 	if (is_32k) {
-		mdp->rom = md->rom0;
+		mdp->rom = mdp->ROM0;
 		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_32k_basic);
 	} else {
-		mdp->rom = md->rom1;
+		mdp->rom = mdp->ROM1;
 		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_64k_basic);
 	}
 	pia1b_data_postwrite(sptr);
