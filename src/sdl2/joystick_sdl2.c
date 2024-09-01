@@ -131,10 +131,10 @@ static void sdl_js_physical_init(void) {
 
 	num_devices = SDL_NumJoysticks();
 	if (num_devices < 1) {
-		LOG_DEBUG(1, "\tNo joysticks found\n");
+		LOG_DEBUG(1, "[sdl] No joystick devices found.\n");
 	} else {
-		LOG_DEBUG(1, "\t%u joysticks found:\n", num_devices);
-		LOG_DEBUG(1, "%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
+		LOG_DEBUG(1, "[sdl] Joystick devices found:\n");
+		LOG_DEBUG(1, "\t%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
 	}
 
 	// If there are now fewer joysticks, we need to remove some configs
@@ -169,7 +169,7 @@ static void sdl_js_physical_init(void) {
 
 		devices[i].is_gamecontroller = (gamecontroller != NULL);
 
-		LOG_DEBUG(1, "%-3u ", i);
+		LOG_DEBUG(1, "\t%-3u ", i);
 		sds name = sdscatprintf(sdsempty(), "joy%u", i);
 		struct joystick_config *jc = joystick_config_by_name(name);
 		if (!jc) {
