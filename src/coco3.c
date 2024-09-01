@@ -51,6 +51,7 @@
 #include "part.h"
 #include "printer.h"
 #include "ram.h"
+#include "rombank.h"
 #include "romlist.h"
 #include "serialise.h"
 #include "sound.h"
@@ -134,13 +135,12 @@ struct machine_coco3 {
 	struct MC6809 *CPU;
 	struct TCC1014 *GIME;
 	struct MC6821 *PIA0, *PIA1;
+	struct rombank *ROM0;
 	struct ram *RAM;
 
 	struct vo_interface *vo;
 	int frame;  // track frameskip
 	struct sound_interface *snd;
-
-	uint8_t rom0[0x8000];
 
 	_Bool inverted_text;
 	struct cart *cart;
@@ -494,16 +494,34 @@ static _Bool coco3_finish(struct part *p) {
 
 	// Check all required parts are attached
 	if (!mcc3->GIME || !mcc3->CPU || !mcc3->PIA0 || !mcc3->PIA1 ||
+	    !mcc3->RAM ||
 	    !mcc3->vo || !mcc3->snd || !mcc3->tape_interface) {
 		return 0;
 	}
+
+	// ROM
+	mcc3->ROM0 = rombank_new(8, 32768, 1);
+
+	// Super Extended Colour BASIC
+        if (mc->extbas_rom) {
+                sds tmp = romlist_find(mc->extbas_rom);
+                if (tmp) {
+                        rombank_load_image(mcc3->ROM0, 0, tmp, 0);
+                        sdsfree(tmp);
+                }
+	}
+
+	// Report and check CRC (Super Extended Colour BASIC)
+	rombank_report(mcc3->ROM0, "Super Extended Colour BASIC");
+	mcc3->crc_secb = 0xb4c88d6c;  // Super Extended Colour BASIC (NTSC)
+	mcc3->has_secb = rombank_verify_crc(mcc3->ROM0, "Super Extended Colour BASIC", -1, "@coco3", xroar.cfg.force_crc_match, &mcc3->crc_secb);
 
 	// RAM configuration
 	{
 		unsigned nbanks = mcc3->RAM->nbanks;
 		unsigned bank_k = mcc3->RAM->bank_nelems / 1024;
 		unsigned total_k = nbanks * bank_k;
-		LOG_DEBUG(1, "\t%u banks * %uK = %uK total RAM\n", nbanks, bank_k, total_k);
+		LOG_DEBUG(1, "RAM: %u banks * %uK = %uK total RAM\n", nbanks, bank_k, total_k);
 	}
 
 	// Connect any cartridge part
@@ -614,47 +632,6 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->GIME->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, gime_render_line, mcc3);
 	tcc1014_set_inverted_text(mcc3->GIME, mcc3->inverted_text);
 
-	// Load appropriate ROMs.  The CoCo 3 ROM is a single 32K image: Super
-	// Extended Colour BASIC.  There are NTSC and PAL variants though.
-
-	memset(mcc3->rom0, 0, sizeof(mcc3->rom0));
-
-	mcc3->has_secb = 0;
-	mcc3->crc_secb = 0;
-
-	/* ... Super Extended BASIC */
-	if (mc->extbas_rom) {
-		sds tmp = romlist_find(mc->extbas_rom);
-		if (tmp) {
-			int size = machine_load_rom(tmp, mcc3->rom0, sizeof(mcc3->rom0));
-			if (size > 0) {
-				mcc3->has_secb = 1;
-			}
-			sdsfree(tmp);
-		}
-	}
-
-	// Check CRCs
-
-	if (mcc3->has_secb) {
-		_Bool forced = 0, valid_crc = 0;
-
-		mcc3->crc_secb = crc32_block(CRC32_RESET, mcc3->rom0, 0x8000);
-
-		valid_crc = crclist_match("@coco3", mcc3->crc_secb);
-
-		if (xroar.cfg.force_crc_match) {
-			mcc3->crc_secb = 0xb4c88d6c;  // CoCo 3 Super Extended BASIC
-			forced = 1;
-		}
-
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tSuper Extended BASIC CRC = 0x%08x%s\n", mcc3->crc_secb, forced ? " (forced)" : "");
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for Super Extended BASIC ROM\n");
-		}
-	}
-
 	// Default all PIA connections to unconnected (no source, no sink)
 	mcc3->PIA0->b.in_source = 0;
 	mcc3->PIA1->b.in_source = 0;
@@ -708,6 +685,7 @@ static void coco3_free(struct part *p) {
 	if (mcc3->bp_session) {
 		bp_session_free(mcc3->bp_session);
 	}
+	rombank_free(mcc3->ROM0);
 }
 
 static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag) {
@@ -1057,7 +1035,7 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 	switch (mcc3->GIME->S) {
 	case 0:
 		// ROM
-		mcc3->CPU->D = mcc3->rom0[A & 0x7fff];
+		rombank_d8(mcc3->ROM0, A, &mcc3->CPU->D);
 		break;
 
 	case 1:
@@ -1121,7 +1099,7 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 		switch (mcc3->GIME->S) {
 		case 0:
 			// ROM
-			mcc3->CPU->D = mcc3->rom0[A & 0x7fff];
+			rombank_d8(mcc3->ROM0, A, &mcc3->CPU->D);
 			break;
 
 		case 1:
