@@ -140,10 +140,16 @@ static void linux_js_physical_init(void) {
 		prefix_len = 7;
 		glob("/dev/js*", GLOB_ERR|GLOB_NOSORT, NULL, &globbuf);
 	}
+
+	if (!globbuf.gl_pathc) {
+		LOG_DEBUG(1, "[joydev] No joystick devices found.\n");
+	} else {
+		LOG_DEBUG(1, "[joydev] Joystick devices found:\n");
+		LOG_DEBUG(1, "\t%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
+	}
 	// Sort the list so we can spot removed devices
 	qsort(globbuf.gl_pathv, globbuf.gl_pathc, sizeof(char *), compar_device_path);
 	// Now iterate
-	LOG_DEBUG(1, "%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
 	for (unsigned i = 0; i < globbuf.gl_pathc; i++) {
 		if (strlen(globbuf.gl_pathv[i]) < prefix_len)
 			continue;
@@ -152,7 +158,7 @@ static void linux_js_physical_init(void) {
 		if (fd < 0) {
 			continue;
 		}
-		LOG_DEBUG(1, "%-3s ", index);
+		LOG_DEBUG(1, "\t%-3s ", index);
 
 		sds name = sdscatprintf(sdsempty(), "joy%u", i);
 		struct joystick_config *jc = joystick_config_by_name(name);
