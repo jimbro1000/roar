@@ -226,7 +226,8 @@ static _Bool deluxecoco_finish(struct part *p) {
 
 static void deluxecoco_free(struct part *p) {
 	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)p;
-	(void)mdp;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
+	md->snd->get_non_muxed_audio.func = NULL;
         dragon_free(p);
 }
 

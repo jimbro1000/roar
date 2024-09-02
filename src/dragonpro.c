@@ -276,6 +276,9 @@ static _Bool dragonpro_finish(struct part *p) {
 }
 
 static void dragonpro_free(struct part *p) {
+	struct machine_dragonpro *mdp = (struct machine_dragonpro *)p;
+	struct machine_dragon_common *md = &mdp->machine_dragon;
+	md->snd->get_ay_audio.func = NULL;
 	dragon_free(p);
 }
 
