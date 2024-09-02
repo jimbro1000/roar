@@ -42,6 +42,7 @@
 #include "part.h"
 #include "printer.h"
 #include "ram.h"
+#include "rombank.h"
 #include "romlist.h"
 #include "serialise.h"
 #include "sound.h"
@@ -57,6 +58,7 @@ struct machine_mc10 {
 
 	struct MC6801 *CPU;
 	struct MC6847 *VDG;
+	struct rombank *ROM0;
 	struct ram *RAM0;
 	struct ram *RAM1;
 
@@ -65,7 +67,6 @@ struct machine_mc10 {
 	struct sound_interface *snd;
 
 	unsigned ram0_inhibit_bit;
-	uint8_t rom0[0x2000];
 
 	_Bool inverted_text;
 	unsigned frameskip;
@@ -368,18 +369,35 @@ static _Bool mc10_finish(struct part *p) {
 		return 0;
 	}
 
+	// ROM
+	mp->ROM0 = rombank_new(8, 8192, 1);
+
+	// Microcolour BASIC
+	if (mc->bas_rom) {
+		sds tmp = romlist_find(mc->bas_rom);
+		if (tmp) {
+			rombank_load_image(mp->ROM0, 0, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+
+	// Report and check CRC (Microcolour BASIC)
+	rombank_report(mp->ROM0, "MicroColour BASIC");
+	mp->crc_bas = 0x11fda97e;  // MicroColour BASIC 1.0 (MC-10)
+	mp->has_bas = rombank_verify_crc(mp->ROM0, "MicroColour BASIC", -1, "@mc10_compat", xroar.cfg.force_crc_match, &mp->crc_bas);
+
 	// RAM configuration
 	{
 		unsigned ram0_nbanks = mp->RAM0 ? mp->RAM0->nbanks : 0;
 		unsigned ram0_bank_k = mp->RAM0 ? (mp->RAM0->bank_nelems / 1024) : 0;
 		unsigned ram0_k = ram0_nbanks * ram0_bank_k;
-		LOG_DEBUG(1, "\t%u banks * %uK = %uK internal RAM\n", ram0_nbanks, ram0_bank_k, ram0_k);
+		LOG_DEBUG(1, "RAM: %u banks * %uK = %uK internal RAM\n", ram0_nbanks, ram0_bank_k, ram0_k);
 
 		unsigned ram1_nbanks = mp->RAM1 ? mp->RAM1->nbanks : 0;
 		unsigned ram1_bank_k = mp->RAM1 ? (mp->RAM1->bank_nelems / 1024) : 0;
 		unsigned ram1_k = ram1_nbanks * ram1_bank_k;
 		if (ram1_k > 0) {
-			LOG_DEBUG(1, "\t%u banks * %uK = %uK external RAM\n", ram1_nbanks, ram1_bank_k, ram1_k);
+			LOG_DEBUG(1, "RAM: %u banks * %uK = %uK external RAM\n", ram1_nbanks, ram1_bank_k, ram1_k);
 			unsigned total_k = ram0_k + ram1_k;
 			LOG_DEBUG(1, "\t%uK total RAM\n", total_k);
 		}
@@ -469,39 +487,6 @@ static _Bool mc10_finish(struct part *p) {
 	// Tape
 	mp->tape_interface->update_audio = DELEGATE_AS1(void, float, mc10_update_tape_input, mp);
 
-	memset(mp->rom0, 0, sizeof(mp->rom0));
-
-	// BASIC
-	if (mc->bas_rom) {
-		sds tmp = romlist_find(mc->bas_rom);
-		if (tmp) {
-			int size = machine_load_rom(tmp, mp->rom0, sizeof(mp->rom0));
-			if (size > 0) {
-				mp->has_bas = 1;
-			}
-			sdsfree(tmp);
-		}
-	}
-
-	if (mp->has_bas) {
-		_Bool forced = 0, valid_crc = 0;
-
-		mp->crc_bas = crc32_block(CRC32_RESET, mp->rom0, 0x2000);
-		valid_crc = crclist_match("@mc10_compat", mp->crc_bas);
-
-		if (xroar.cfg.force_crc_match) {
-			mp->crc_bas = 0x11fda97e;  // MC-10 ROM
-			forced = 1;
-		}
-
-		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tBASIC CRC = 0x%08x%s\n", mp->crc_bas, forced ? " (forced)" : "");
-
-		if (!valid_crc) {
-			LOG_WARN("Invalid CRC for Micro Colour BASIC ROM\n");
-		}
-	}
-
 	// Keyboard interface
 	mp->keyboard.interface = keyboard_interface_new();
 	mp->keyboard.interface->update = DELEGATE_AS0(void, mc10_keyboard_update, mp);
@@ -538,6 +523,7 @@ static void mc10_free(struct part *p) {
 	if (mp->bp_session) {
 		bp_session_free(mp->bp_session);
 	}
+	rombank_free(mp->ROM0);
 }
 
 static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
@@ -761,7 +747,7 @@ static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D) {
 		break;
 
 	case 3:
-		D = mp->rom0[A & 0x1fff];
+		rombank_d8(mp->ROM0, A, &D);
 		break;
 
 	default:
