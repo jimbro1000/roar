@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2015-2022 Ciaran Anscomb
+ *  \copyright Copyright 2015-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -35,6 +35,7 @@
 #include "ide.h"
 #include "logging.h"
 #include "part.h"
+#include "rombank.h"
 #include "serialise.h"
 #include "xconfig.h"
 #include "xroar.h"
@@ -136,9 +137,8 @@ static void idecart_initialise(struct part *p, void *options) {
 	assert(cc != NULL);
 
 	struct idecart *ide = (struct idecart *)p;
-	struct cart *c = &ide->cart;
 
-	c->config = cc;
+	cart_rom_initialise(p, options);
 
 	xconfig_parse_list_struct(idecart_options, cc->opts, ide);
 	ide->io_region &= 0xfff0;
@@ -173,7 +173,10 @@ static _Bool idecart_finish(struct part *p) {
 	}
 	ide_reset_begin(ide->controller);
 
-	cart_finish(c);
+	if (!cart_rom_finish(p)) {
+		return 0;
+	}
+
 	if (c->config->becker_port) {
 		ide->becker = becker_open();
 	}
@@ -218,7 +221,8 @@ static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint
 	struct idecart *ide = (struct idecart *)c;
 
 	if (R2) {
-		return c->rom_data[A & 0x3FFF];
+		rombank_d8(c->ROM, A, &D);
+		return D;
 	}
 
 	if ((A & 0xfff0) != ide->io_region) {
@@ -253,7 +257,8 @@ static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uin
 	struct idecart *ide = (struct idecart *)c;
 
 	if (R2) {
-		return c->rom_data[A & 0x3FFF];
+		rombank_d8(c->ROM, A, &D);
+		return D;
 	}
 
 	if ((A & 0xfff0) != ide->io_region) {

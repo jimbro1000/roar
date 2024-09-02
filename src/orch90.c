@@ -2,7 +2,7 @@
  *
  *  \brief Orchestra 90-CC sound cartridge.
  *
- *  \copyright Copyright 2013-2022 Ciaran Anscomb
+ *  \copyright Copyright 2013-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -63,12 +63,11 @@ static void orch90_attach_interface(struct cart *c, const char *ifname, void *in
 // Orchestra 90-CC part creation
 
 static struct part *orch90_allocate(void);
-static void orch90_initialise(struct part *p, void *options);
 static _Bool orch90_finish(struct part *p);
 
 static const struct partdb_entry_funcs orch90_funcs = {
 	.allocate = orch90_allocate,
-	.initialise = orch90_initialise,
+	.initialise = cart_rom_initialise,
 	.finish = orch90_finish,
 
 	.ser_struct_data = &orch90_ser_struct_data,
@@ -97,18 +96,10 @@ static struct part *orch90_allocate(void) {
 	return p;
 }
 
-static void orch90_initialise(struct part *p, void *options) {
-	struct cart_config *cc = options;
-	assert(cc != NULL);
-
-	struct orch90 *o = (struct orch90 *)p;
-	struct cart *c = &o->cart;
-
-	c->config = cc;
-}
-
 static _Bool orch90_finish(struct part *p) {
-	cart_finish((struct cart *)p);
+	if (!cart_rom_finish(p)) {
+		return 0;
+	}
 	return 1;
 }
 

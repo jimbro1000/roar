@@ -29,6 +29,7 @@
 #include "becker.h"
 #include "cart.h"
 #include "part.h"
+#include "rombank.h"
 #include "serialise.h"
 #include "spi65.h"
 #include "xroar.h"
@@ -126,7 +127,7 @@ static void mooh_initialise(struct part *p, void *options) {
 	struct mooh *n = (struct mooh *)p;
 	struct cart *c = &n->cart;
 
-	c->config = cc;
+	cart_rom_initialise(p, options);
 
 	// 65SPI/B for interfacing to SD card
 	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
@@ -149,7 +150,10 @@ static _Bool mooh_finish(struct part *p) {
 		return 0;
 	}
 
-	cart_finish(&n->cart);
+	if (!cart_rom_finish(p)) {
+		return 0;
+	}
+
 	if (c->config->becker_port) {
 		n->becker = becker_open();
 	}
@@ -233,9 +237,10 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 
         if (R2) {
 		if (n->rom_conf & 8)
-			return c->rom_data[((n->rom_conf & 6) << 13) | (A & 0x3fff & c->rom_mask)];
+			rombank_d8(c->ROM, ((n->rom_conf & 6) << 13) | (A & 0x3fff), &D);
 		else
-			return c->rom_data[((n->rom_conf & 7) << 13) | (A & 0x1fff & c->rom_mask)];
+			rombank_d8(c->ROM, ((n->rom_conf & 7) << 13) | (A & 0x1fff), &D);
+		return D;
 	}
 
 	if ((A & 0xFFFC) == 0xFF6C)
@@ -295,9 +300,10 @@ static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 
         if (R2) {
 		if (n->rom_conf & 8)
-			return c->rom_data[((n->rom_conf & 6) << 13) | (A & 0x3fff)];
+			rombank_d8(c->ROM, ((n->rom_conf & 6) << 13) | (A & 0x3fff), &D);
 		else
-			return c->rom_data[((n->rom_conf & 7) << 13) | (A & 0x1fff)];
+			rombank_d8(c->ROM, ((n->rom_conf & 7) << 13) | (A & 0x1fff), &D);
+		return D;
 	}
 
 	if (A == 0xFF64 && (n->rom_conf & 16) == 0)

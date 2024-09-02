@@ -2,7 +2,7 @@
  *
  *  \brief DragonDOS cartridge.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -36,6 +36,7 @@
 #include "cart.h"
 #include "logging.h"
 #include "part.h"
+#include "rombank.h"
 #include "serialise.h"
 #include "vdrive.h"
 #include "wd279x.h"
@@ -126,14 +127,7 @@ static struct part *dragondos_allocate(void) {
 }
 
 static void dragondos_initialise(struct part *p, void *options) {
-	struct cart_config *cc = options;
-	assert(cc != NULL);
-
-	struct dragondos *d = (struct dragondos *)p;
-	struct cart *c = &d->cart;
-
-	c->config = cc;
-
+	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("WD2797", "WD2797"), "FDC");
 }
 
@@ -153,7 +147,9 @@ static _Bool dragondos_finish(struct part *p) {
 		d->becker = becker_open();
 	}
 
-	cart_finish(c);
+	if (!cart_rom_finish(p)) {
+		return 0;
+	}
 
 	return 1;
 }
@@ -188,7 +184,8 @@ static void dragondos_detach(struct cart *c) {
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct dragondos *d = (struct dragondos *)c;
 	if (R2) {
-		return c->rom_data[A & c->rom_mask];
+		rombank_d8(c->ROM, A, &D);
+		return D;
 	}
 	if (!P2) {
 		return D;
@@ -215,7 +212,8 @@ static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, u
 	struct dragondos *d = (struct dragondos *)c;
 	(void)R2;
 	if (R2) {
-		return c->rom_data[A & c->rom_mask];
+		rombank_d8(c->ROM, A, &D);
+		return D;
 	}
 	if (!P2) {
 		return D;

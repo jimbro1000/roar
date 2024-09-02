@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2016-2018 Tormod Volden
  *
- *  \copyright Copyright 2016-2022 Ciaran Anscomb
+ *  \copyright Copyright 2016-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -118,7 +118,7 @@ static void nx32_initialise(struct part *p, void *options) {
 	struct nx32 *n = (struct nx32 *)p;
 	struct cart *c = &n->cart;
 
-	c->config = cc;
+	cart_rom_initialise(p, options);
 
 	// 65SPI/B for interfacing to SD card
 	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
@@ -141,7 +141,10 @@ static _Bool nx32_finish(struct part *p) {
 		return 0;
 	}
 
-	cart_finish(&n->cart);
+	if (!cart_rom_finish(p)) {
+		return 0;
+	}
+
 	if (c->config->becker_port) {
 		n->becker = becker_open();
 	}

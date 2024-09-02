@@ -38,6 +38,7 @@
 #include "logging.h"
 #include "machine.h"
 #include "part.h"
+#include "rombank.h"
 #include "romlist.h"
 #include "serialise.h"
 #include "xconfig.h"
@@ -70,11 +71,12 @@ static const struct ser_struct_data cart_config_ser_struct_data = {
 #define CART_CONFIG_SER_MPI_LOAD_SLOT_NAME (1)
 
 #define CART_SER_CART_CONFIG (1)
+#define CART_SER_ROM_BANK_OLD (3)
 
 static const struct ser_struct ser_struct_cart[] = {
 	SER_ID_STRUCT_UNHANDLED(CART_SER_CART_CONFIG),
 	SER_ID_STRUCT_ELEM(2, ser_type_bool,   struct cart, EXTMEM),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint32, struct cart, rom_bank),
+	SER_ID_STRUCT_UNHANDLED(CART_SER_ROM_BANK_OLD),
 	SER_ID_STRUCT_ELEM(4, ser_type_event,  struct cart, firq_event),
 };
 
@@ -110,7 +112,6 @@ static struct cart_config *rom_cart_config = NULL;
 
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void cart_rom_load(struct cart *c);
 static void do_firq(void *);
 static _Bool cart_rom_has_interface(struct cart *c, const char *ifname);
 
@@ -725,32 +726,12 @@ struct cart *cart_create(const char *cc_name) {
 	return c;
 }
 
-void cart_finish(struct cart *c) {
-#ifdef HAVE_WASM
-	// This is a bodge to ensure that ROM files are fetched during snapshot
-	// loads in WASM builds.  Possible real fix is to a) have a "filename"
-	// string type during serialisation, and b) record actual filename used
-	// for any ROMs (after searching paths).
-	struct cart_config *cc = c->config;
-	if (cc->rom) {
-		if (cc->rom[0] != '@' && strchr(cc->rom, '/') == NULL) {
-			FILE *f = fopen(cc->rom, "a");
-			if (f)
-				fclose(f);
-		}
-	}
-	if (cc->rom2) {
-		if (cc->rom2[0] != '@' && strchr(cc->rom2, '/') == NULL) {
-			FILE *f = fopen(cc->rom2, "a");
-			if (f)
-				fclose(f);
-		}
-	}
-#endif
-	cart_rom_load(c);
+_Bool cart_finish(struct part *p) {
+	struct cart *c = (struct cart *)p;
 	if (c->firq_event.next == &c->firq_event) {
 		event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
 	}
+	return 1;
 }
 
 static _Bool cart_is_a(struct part *p, const char *name) {
@@ -774,6 +755,8 @@ static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	case CART_SER_CART_CONFIG:
 		c->config = cart_config_deserialise(sh);
 		break;
+	case CART_SER_ROM_BANK_OLD:
+		break;
 	default:
 		return 0;
 	}
@@ -786,6 +769,8 @@ static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	case CART_SER_CART_CONFIG:
 		cart_config_serialise(c->config, sh, tag);
 		break;
+	case CART_SER_ROM_BANK_OLD:
+		break;
 	default:
 		return 0;
 	}
@@ -797,8 +782,6 @@ static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 // ROM cart part creation
 
 static struct part *cart_rom_allocate(void);
-static void cart_rom_initialise(struct part *p, void *options);
-static _Bool cart_rom_finish(struct part *p);
 
 static const struct partdb_entry_funcs cart_rom_funcs = {
 	.allocate = cart_rom_allocate,
@@ -824,19 +807,80 @@ static struct part *cart_rom_allocate(void) {
 	return p;
 }
 
-static void cart_rom_initialise(struct part *p, void *options) {
+void cart_rom_initialise(struct part *p, void *options) {
 	struct cart_config *cc = options;
 	assert(cc != NULL);
 
 	struct cart *c = (struct cart *)p;
-
 	c->config = cc;
 }
 
-static _Bool cart_rom_finish(struct part *p) {
+_Bool cart_rom_finish(struct part *p) {
 	struct cart *c = (struct cart *)p;
-	cart_finish(c);
-	return 1;
+	struct cart_config *cc = c->config;
+
+#ifdef HAVE_WASM
+	// This is a bodge to ensure that ROM files are fetched during snapshot
+	// loads in WASM builds.  Possible real fix is to a) have a "filename"
+	// string type during serialisation, and b) record actual filename used
+	// for any ROMs (after searching paths).
+	if (cc->rom) {
+		if (cc->rom[0] != '@' && strchr(cc->rom, '/') == NULL) {
+			FILE *f = fopen(cc->rom, "a");
+			if (f)
+				fclose(f);
+		}
+	}
+	if (cc->rom2) {
+		if (cc->rom2[0] != '@' && strchr(cc->rom2, '/') == NULL) {
+			FILE *f = fopen(cc->rom2, "a");
+			if (f)
+				fclose(f);
+		}
+	}
+#endif
+
+	{
+		// Default to 2 * 8K
+		unsigned slot_size = 8192;
+		unsigned nslots = 2;
+
+		if (cc->rom && !cc->rom2) {
+			sds tmp = romlist_find(cc->rom);
+			if (tmp) {
+				FILE *fd = fopen(tmp, "rb");
+				if (fd) {
+					off_t fsize = fs_file_size(fd);
+					slot_size = fsize > 0x40000 ? 0x40000 : fsize;
+					nslots = 1;
+					fclose(fd);
+				}
+				sdsfree(tmp);
+			}
+		}
+
+		c->ROM = rombank_new(8, slot_size, nslots);
+	}
+
+	if (cc->rom) {
+		sds tmp = romlist_find(cc->rom);
+		if (tmp) {
+			rombank_load_image(c->ROM, 0, tmp, 0);
+		}
+		sdsfree(tmp);
+		rombank_report(c->ROM, "Cartridge ROM");
+	}
+
+	if (cc->rom2 && c->ROM->nslots > 1) {
+		sds tmp = romlist_find(cc->rom2);
+		if (tmp) {
+			rombank_load_image(c->ROM, 1, tmp, 0);
+		}
+		sdsfree(tmp);
+		rombank_report(c->ROM, "Cartridge second ROM");
+	}
+
+	return cart_finish(p);
 }
 
 void cart_rom_free(struct part *p) {
@@ -844,9 +888,7 @@ void cart_rom_free(struct part *p) {
 	if (c->detach) {
 		c->detach(c);
 	}
-	if (c->rom_data) {
-		free(c->rom_data);
-	}
+	rombank_free(c->ROM);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -859,9 +901,6 @@ void cart_rom_init(struct cart *c) {
 	c->reset = cart_rom_reset;
 	c->attach = cart_rom_attach;
 	c->detach = cart_rom_detach;
-	c->rom_mask = 0;
-	c->rom_bank = 0;
-	c->rom_bank_mask = 0;
 
 	event_init(&c->firq_event, DELEGATE_AS0(void, do_firq, c));
 	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
@@ -874,110 +913,21 @@ void cart_rom_init(struct cart *c) {
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	(void)P2;
 	if (R2)
-		return c->rom_data[c->rom_bank | (A & c->rom_mask)];
+		rombank_d8(c->ROM, A, &D);
 	return D;
 }
 
 static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	(void)P2;
 	if (R2)
-		return c->rom_data[c->rom_bank | (A & c->rom_mask)];
+		rombank_d8(c->ROM, A, &D);
 	return D;
 }
 
-static void cart_rom_load(struct cart *c) {
-	struct cart_config *cc = c->config;
-
-	if (cc->rom) {
-		sds tmp = romlist_find(cc->rom);
-		if (tmp) {
-			// Specifying rom2 explicitly limits us to 16K total,
-			// otherwise scale up the size we allocate:
-			off_t max_size = 0x4000;
-			if (!cc->rom2) {
-				FILE *fd = fopen(tmp, "rb");
-				if (fd) {
-					off_t fsize = fs_file_size(fd);
-					if (fsize > 0x20000) {
-						// Never actually seen a 256K
-						// cart, but support it anyway:
-						max_size = 0x40000;
-					} else if (fsize > 0x10000) {
-						// 128K cart, e.g. RoboCop
-						max_size = 0x20000;
-					} else if (fsize > 0x4000) {
-						// 64K cart, e.g. any GMC
-						max_size = 0x10000;
-					} else if (fsize > 0x2000) {
-						// 16K cart
-						max_size = 0x4000;
-					} else {
-						// 8K cart
-						max_size = 0x2000;
-					}
-					fclose(fd);
-				}
-			}
-			c->rom_data = xrealloc(c->rom_data, max_size);
-			memset(c->rom_data, 0xff, max_size);
-
-			int actual_size = machine_load_rom_nh(tmp, c->rom_data, max_size, cc->no_header);
-#ifdef LOGGING
-			if (actual_size > 0) {
-				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data, actual_size);
-				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
-			}
-#endif
-			sdsfree(tmp);
-			c->rom_bank_mask = 0;
-			if (actual_size > 0x10000) {
-				c->rom_bank_mask = 0x3c000;
-				c->rom_mask = 0x7fff;
-			} else if (actual_size > 0x10000) {
-				c->rom_bank_mask = 0x1c000;
-				c->rom_mask = 0x7fff;
-			} else if (actual_size > 0x4000) {
-				c->rom_bank_mask = 0x0c000;
-				c->rom_mask = 0x7fff;
-			} else if (actual_size > 0x2000) {
-				c->rom_mask = 0x3fff;
-			} else {
-				c->rom_mask = 0x1fff;
-			}
-		}
-	}
-
-	if (cc->rom2) {
-		if (!c->rom_data) {
-			c->rom_data = xmalloc(0x4000);
-			memset(c->rom_data, 0xff, 0x4000);
-		}
-		sds tmp = romlist_find(cc->rom2);
-		if (tmp) {
-			off_t max_size = 0x2000;
-			int actual_size = machine_load_rom(tmp, c->rom_data + 0x2000, max_size);
-#ifdef LOGGING
-			if (actual_size > 0) {
-				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data + 0x2000, actual_size);
-				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
-			}
-#endif
-			c->rom_mask = 0x3fff;
-			sdsfree(tmp);
-		}
-	}
-
-	if (!c->rom_data) {
-		c->rom_data = xmalloc(1);
-		c->rom_bank_mask = 0;
-		c->rom_mask = 0;
-	}
-}
-
 void cart_rom_reset(struct cart *c, _Bool hard) {
-	if (hard)
-		cart_rom_load(c);
-	c->rom_bank = 0;
+	if (hard) {
+		rombank_reset(c->ROM);
+	}
 }
 
 // The general approach taken by autostarting carts is to tie the CART FIRQ
@@ -1000,10 +950,6 @@ void cart_rom_attach(struct cart *c) {
 
 void cart_rom_detach(struct cart *c) {
 	event_dequeue(&c->firq_event);
-}
-
-void cart_rom_select_bank(struct cart *c, uint32_t bank) {
-	c->rom_bank = bank & c->rom_bank_mask;
 }
 
 // Toggles the cartridge interrupt line.

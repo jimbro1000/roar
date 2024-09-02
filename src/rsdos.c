@@ -36,6 +36,7 @@
 #include "cart.h"
 #include "logging.h"
 #include "part.h"
+#include "rombank.h"
 #include "serialise.h"
 #include "vdrive.h"
 #include "wd279x.h"
@@ -129,14 +130,7 @@ static struct part *rsdos_allocate(void) {
 }
 
 static void rsdos_initialise(struct part *p, void *options) {
-	struct cart_config *cc = options;
-	assert(cc != NULL);
-
-	struct rsdos *d = (struct rsdos *)p;
-	struct cart *c = &d->cart;
-
-	c->config = cc;
-
+	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("WD2793", "WD2793"), "FDC");
 }
 
@@ -152,7 +146,10 @@ static _Bool rsdos_finish(struct part *p) {
 		return 0;
 	}
 
-	cart_finish(c);
+	if (!cart_rom_finish(p)) {
+		return 0;
+	}
+
 	if (c->config->becker_port) {
 		d->becker = becker_open();
 	}
@@ -192,7 +189,8 @@ static void rsdos_detach(struct cart *c) {
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct rsdos *d = (struct rsdos *)c;
 	if (R2) {
-		return c->rom_data[A & c->rom_mask];
+		rombank_d8(c->ROM, A, &D);
+		return D;
 	}
 	if (!P2) {
 		return D;
@@ -216,7 +214,8 @@ static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct rsdos *d = (struct rsdos *)c;
 	if (R2) {
-		return c->rom_data[A & c->rom_mask];
+		rombank_d8(c->ROM, A, &D);
+		return D;
 	}
 	if (!P2) {
 		return D;

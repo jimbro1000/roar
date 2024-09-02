@@ -85,10 +85,7 @@ struct cart {
 
 	// ROM data.  Not a necessary feature of a cartridge, but included here
 	// to avoid having to create a "cart_rom" struct that adds little else.
-	uint8_t *rom_data;
-	uint32_t rom_bank;
-	uint32_t rom_bank_mask;
-	uint16_t rom_mask;
+	struct rombank *ROM;
 
 	// Used to schedule regular FIRQs when an "autorun" cartridge is
 	// configured.
@@ -127,17 +124,18 @@ void cart_config_remove_all(void);
 extern const struct ser_struct_data cart_ser_struct_data;
 
 struct cart *cart_create(const char *cc_name);
-void cart_finish(struct cart *c);
+_Bool cart_finish(struct part *p);
 _Bool dragon_cart_is_a(struct part *p, const char *name);
 _Bool mc10_cart_is_a(struct part *p, const char *name);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+void cart_rom_initialise(struct part *p, void *options);
+_Bool cart_rom_finish(struct part *p);
 void cart_rom_init(struct cart *c);
 void cart_rom_reset(struct cart *c, _Bool hard);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
 void cart_rom_free(struct part *p);
-void cart_rom_select_bank(struct cart *c, uint32_t bank);
 
 #endif
