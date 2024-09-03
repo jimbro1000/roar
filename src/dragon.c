@@ -380,8 +380,8 @@ const struct machine_partdb_extra dragon_machine_extra = {
 	.cart_arch = "dragon-cart",
 };
 
-const struct partdb_entry dragon32_part = { .name = "dragon32", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
-const struct partdb_entry coco_part = { .name = "coco", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
+const struct partdb_entry dragon32_part = { .name = "dragon32", .description = "Dragon 32", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
+const struct partdb_entry coco_part = { .name = "coco", .description = "Tandy Colour Computer", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
 
 static void dragon_allocate_common(struct machine_dragon_common *md) {
 	struct machine *m = &md->public;
