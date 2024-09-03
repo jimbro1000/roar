@@ -63,7 +63,7 @@ void *module_init(struct module *module, void *cfg) {
 	if (!module)
 		return NULL;
 	const char *description = module->description ? module->description : "unknown";
-	LOG_DEBUG(1, "%s: init: %s\n", module->name, description);
+	LOG_DEBUG(1, "[%s] %s\n", module->name, description);
 	// New interface?
 	if (module->new) {
 		void *m = module->new(cfg);
