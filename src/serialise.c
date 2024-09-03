@@ -86,12 +86,16 @@ static void *s_read_new(struct ser_handle *sh, size_t size);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct ser_handle *ser_open(const char *filename, enum ser_mode mode) {
-	FILE *fd;
+	if (!filename) {
+		return NULL;
+	}
+	FILE *fd = NULL;
 	if (mode == ser_mode_read) {
 		fd = fopen(filename, "rb");
 	} else if (mode == ser_mode_write) {
 		fd = fopen(filename, "wb");
-	} else {
+	}
+	if (!fd) {
 		return NULL;
 	}
 	struct ser_handle *sh = xmalloc(sizeof(*sh));
