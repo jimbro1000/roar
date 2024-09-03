@@ -521,7 +521,7 @@ static _Bool coco3_finish(struct part *p) {
 		unsigned nbanks = mcc3->RAM->nbanks;
 		unsigned bank_k = mcc3->RAM->bank_nelems / 1024;
 		unsigned total_k = nbanks * bank_k;
-		LOG_DEBUG(1, "RAM: %u banks * %uK = %uK total RAM\n", nbanks, bank_k, total_k);
+		LOG_DEBUG(1, "[ram] %u banks * %uK = %uK total RAM\n", nbanks, bank_k, total_k);
 	}
 
 	// Connect any cartridge part

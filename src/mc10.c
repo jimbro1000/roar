@@ -391,13 +391,13 @@ static _Bool mc10_finish(struct part *p) {
 		unsigned ram0_nbanks = mp->RAM0 ? mp->RAM0->nbanks : 0;
 		unsigned ram0_bank_k = mp->RAM0 ? (mp->RAM0->bank_nelems / 1024) : 0;
 		unsigned ram0_k = ram0_nbanks * ram0_bank_k;
-		LOG_DEBUG(1, "RAM: %u banks * %uK = %uK internal RAM\n", ram0_nbanks, ram0_bank_k, ram0_k);
+		LOG_DEBUG(1, "[ram] %u banks * %uK = %uK internal RAM\n", ram0_nbanks, ram0_bank_k, ram0_k);
 
 		unsigned ram1_nbanks = mp->RAM1 ? mp->RAM1->nbanks : 0;
 		unsigned ram1_bank_k = mp->RAM1 ? (mp->RAM1->bank_nelems / 1024) : 0;
 		unsigned ram1_k = ram1_nbanks * ram1_bank_k;
 		if (ram1_k > 0) {
-			LOG_DEBUG(1, "RAM: %u banks * %uK = %uK external RAM\n", ram1_nbanks, ram1_bank_k, ram1_k);
+			LOG_DEBUG(1, "[ram] %u banks * %uK = %uK external RAM\n", ram1_nbanks, ram1_bank_k, ram1_k);
 			unsigned total_k = ram0_k + ram1_k;
 			LOG_DEBUG(1, "\t%uK total RAM\n", total_k);
 		}

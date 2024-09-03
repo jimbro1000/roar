@@ -521,7 +521,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 		unsigned nbanks = md->RAM->nbanks;
 		unsigned bank_k = md->RAM->bank_nelems / 1024;
 		unsigned total_k = nbanks * bank_k;
-		LOG_DEBUG(1, "RAM: %u banks * %uK = %uK total RAM\n", nbanks, bank_k, total_k);
+		LOG_DEBUG(1, "[ram] %u banks * %uK = %uK total RAM\n", nbanks, bank_k, total_k);
 	}
 
 	// Connect any cartridge part
