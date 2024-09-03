@@ -280,7 +280,4 @@ struct machine_module {
 	struct machine *(* const new)(struct machine_config *mc);
 };
 
-int machine_load_rom_nh(const char *path, uint8_t *dest, off_t max_size, _Bool no_header);
-#define machine_load_rom(p,d,s) machine_load_rom_nh(p,d,s,0)
-
 #endif

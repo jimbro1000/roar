@@ -39,10 +39,6 @@
 #include "serialise.h"
 #include "xroar.h"
 
-#ifdef HAVE_WASM
-#include "wasm/wasm.h"
-#endif
-
 #define MACHINE_CONFIG_SER_ARCHITECTURE_OLD (2)
 
 static const struct ser_struct ser_struct_machine_config[] = {
@@ -393,40 +389,6 @@ void machine_config_print_all(FILE *f, _Bool all) {
 		xroar_cfg_print_dec_indent();
 		fprintf(f, "\n");
 	}
-}
-
-int machine_load_rom_nh(const char *path, uint8_t *dest, off_t max_size, _Bool no_header) {
-	if (path == NULL)
-		return -1;
-
-#ifdef HAVE_WASM
-	FILE *fd = wasm_fopen(path, "rb");
-#else
-	FILE *fd = fopen(path, "rb");
-#endif
-
-	if (!fd) {
-		return -1;
-	}
-
-	off_t file_size = fs_file_size(fd);
-	if (file_size < 0)
-		return -1;
-	int header_size = no_header ? 0 : (file_size % 256);
-	file_size -= header_size;
-	if (file_size > max_size)
-		file_size = max_size;
-
-	LOG_DEBUG(1, "Loading ROM image: %s\n", path);
-
-	if (header_size > 0) {
-		LOG_DEBUG(2, "\tskipping %d byte header\n", header_size);
-		fseek(fd, header_size, SEEK_SET);
-	}
-
-	size_t size = fread(dest, 1, file_size, fd);
-	fclose(fd);
-	return size;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
