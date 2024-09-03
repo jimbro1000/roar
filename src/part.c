@@ -228,6 +228,10 @@ struct part *part_create(const char *name, void *options) {
 	p = pe->funcs->allocate();
 	if (!p)
 		return NULL;
+	// If there's a description, print it (log level >= 1)
+	if (pe->description) {
+		LOG_DEBUG(1, "[%s] %s\n", pe->name, pe->description);
+	}
 
 	// Initialise, populating useful stuff from partdb
 	*p = (struct part){0};
@@ -371,6 +375,10 @@ struct part *part_deserialise(struct ser_handle *sh) {
 					assert(pe->funcs->ser_struct_data != NULL);
 					p = pe->funcs->allocate();
 					assert(p != NULL);
+					// If there's a description, print it (log level >= 1)
+					if (pe->description) {
+						LOG_DEBUG(1, "[%s] %s\n", pe->name, pe->description);
+					}
 					p->partdb = pe;
 					ser_read_struct_data(sh, pe->funcs->ser_struct_data, p);
 				}
