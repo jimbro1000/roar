@@ -395,7 +395,6 @@ void machine_config_print_all(FILE *f, _Bool all) {
 
 struct machine *machine_new(struct machine_config *mc) {
 	assert(mc != NULL);
-	LOG_DEBUG(1, "Machine: [%s] %s\n", mc->architecture, mc->description);
 	// sanity check that the part is a machine
 	if (!partdb_is_a(mc->architecture, "machine")) {
 		return NULL;

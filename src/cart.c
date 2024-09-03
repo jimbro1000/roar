@@ -720,7 +720,6 @@ struct cart *cart_create(const char *cc_name) {
 		LOG_WARN("Cartridge create FAILED: [%s]\n", cc->type);
 		return NULL;
 	}
-	LOG_DEBUG(1, "Cartridge: [%s] %s\n", cc->type, cc->description);
 	if (c->attach)
 		c->attach(c);
 	return c;
