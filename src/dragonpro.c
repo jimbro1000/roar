@@ -90,6 +90,23 @@ struct machine_dragonpro {
 	} dos;
 };
 
+static const struct ser_struct ser_struct_dragonpro[] = {
+	// Nest common Dragon data
+	SER_ID_STRUCT_NEST(1,  &dragon_ser_struct_data),
+
+	// Floppy disk data
+	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct machine_dragonpro, dos.device_select),
+	SER_ID_STRUCT_ELEM(3, ser_type_bool,     struct machine_dragonpro, dos.motor_enable),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool,     struct machine_dragonpro, dos.single_density),
+	SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct machine_dragonpro, dos.precomp_enable),
+	SER_ID_STRUCT_ELEM(6, ser_type_bool,     struct machine_dragonpro, dos.nmi_enable),
+};
+
+static const struct ser_struct_data dragonpro_ser_struct_data = {
+	.elems = ser_struct_dragonpro,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_dragonpro),
+};
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragonpro_config_complete(struct machine_config *);
@@ -129,8 +146,7 @@ static const struct partdb_entry_funcs dragonpro_funcs = {
 	.finish = dragonpro_finish,
 	.free = dragonpro_free,
 
-	// XXX will need to serialise more than stock dragon
-	.ser_struct_data = &dragon_ser_struct_data,
+	.ser_struct_data = &dragonpro_ser_struct_data,
 
 	.is_a = machine_is_a,
 };
