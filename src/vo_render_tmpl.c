@@ -191,6 +191,11 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn, unsigned npixels
 	struct vo_render *vr = &vrt->generic;
 	(void)burstn;
 
+	if (!burstn && vr->cmp.colour_killer) {
+		TNAME(render_cmp_palette)(sptr, burstn, npixels, data);
+		return;
+	}
+
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
 	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
@@ -236,6 +241,11 @@ static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels
 	struct TNAME(vo_render) *vrt = sptr;
 	struct vo_render *vr = &vrt->generic;
 	(void)burstn;
+
+	if (!burstn && vr->cmp.colour_killer) {
+		TNAME(render_cmp_palette)(sptr, burstn, npixels, data);
+		return;
+	}
 
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
