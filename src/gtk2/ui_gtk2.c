@@ -145,94 +145,25 @@ static void do_hard_reset(GtkEntry *entry, gpointer user_data) {
 	xroar_hard_reset();
 }
 
-static void zoom_1_1(GtkEntry *entry, gpointer user_data) {
-	struct ui_gtk2_interface *uigtk2 = user_data;
+static void zoom_reset(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
-	if (!xroar.vo_interface)
-		return;
-
-	struct vo_render *vr = xroar.vo_interface->renderer;
-
-	int qw = vr->viewport.w / 4;
-	int qh = vr->viewport.h / 2;
-
-	uigtk2->user_specified_geometry = 0;
-	DELEGATE_SAFE_CALL(xroar.vo_interface->resize, qw * 2, qh * 2);
-}
-
-static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
-	(void)entry;
-	if (!xroar.vo_interface)
-		return;
-
-	struct vo_render *vr = xroar.vo_interface->renderer;
-
-	int qw = vr->viewport.w / 4;
-	int qh = vr->viewport.h / 2;
-
-	uigtk2->user_specified_geometry = 0;
-	DELEGATE_SAFE_CALL(xroar.vo_interface->resize, qw * 4, qh * 4);
+	struct vo_interface *vo = uigtk2->public.vo_interface;
+	vo_zoom_reset(vo);
 }
 
 static void zoom_in(GtkEntry *entry, gpointer user_data) {
-	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)entry;
-	if (!xroar.vo_interface)
-		return;
-
-	struct vo_render *vr = xroar.vo_interface->renderer;
-
-	int qw = vr->viewport.w / 4;
-	int qh = vr->viewport.h / 2;
-
-	if (vr->is_60hz) {
-		qh = (qh * 6) / 5;
-	}
-
-	int xscale = uigtk2->picture_area.w / qw;
-	int yscale = uigtk2->picture_area.h / qh;
-	int scale;
-	if (xscale < yscale)
-		scale = yscale;
-	else if (xscale > yscale)
-		scale = xscale;
-	else
-		scale = xscale + 1;
-	if (scale < 1)
-		scale = 1;
-	uigtk2->user_specified_geometry = 0;
-	DELEGATE_SAFE_CALL(xroar.vo_interface->resize, qw * scale, qh * scale);
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	struct vo_interface *vo = uigtk2->public.vo_interface;
+	vo_zoom_in(vo);
 }
 
 static void zoom_out(GtkEntry *entry, gpointer user_data) {
-	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)entry;
-	if (!xroar.vo_interface)
-		return;
-
-	struct vo_render *vr = xroar.vo_interface->renderer;
-
-	int qw = vr->viewport.w / 4;
-	int qh = vr->viewport.h / 2;
-
-	if (vr->is_60hz) {
-		qh = (qh * 6) / 5;
-	}
-
-	int xscale = uigtk2->picture_area.w / qw;
-	int yscale = uigtk2->picture_area.h / qh;
-	int scale = 1;
-	if (xscale < yscale)
-		scale = xscale;
-	else if (xscale > yscale)
-		scale = yscale;
-	else
-		scale = xscale - 1;
-	if (scale < 1)
-		scale = 1;
-	uigtk2->user_specified_geometry = 0;
-	DELEGATE_SAFE_CALL(xroar.vo_interface->resize, qw * scale, qh * scale);
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	struct vo_interface *vo = uigtk2->public.vo_interface;
+	vo_zoom_out(vo);
 }
 
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
@@ -412,13 +343,9 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "zoom_out", .label = "Zoom Out",
 	  .accelerator = "<control>minus",
 	  .callback = G_CALLBACK(zoom_out) },
-	{ .name = "zoom_1_1", .label = "1:1",
-	  .callback = G_CALLBACK(zoom_1_1) },
-	{ .name = "zoom_2_1", .label = "2:1",
-	  .callback = G_CALLBACK(zoom_2_1) },
 	{ .name = "zoom_reset", .label = "Reset",
 	  .accelerator = "<control>0",
-	  .callback = G_CALLBACK(zoom_2_1) },
+	  .callback = G_CALLBACK(zoom_reset) },
 	/* Hardware */
 	{ .name = "MachineMenuAction", .label = "_Machine" },
 	{ .name = "CartridgeMenuAction", .label = "_Cartridge" },
