@@ -92,6 +92,9 @@ static gboolean run_cpu(gpointer data);
 // Helpers
 static char *escape_underscores(const char *str);
 
+static gboolean gtk3_handle_focus_in(GtkWidget *self, GdkEventFocus *event,
+				     gpointer user_data);
+
 // This feels stupid...
 static void insert_disk1(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 0); }
 static void insert_disk2(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 1); }
@@ -567,6 +570,7 @@ static void *ui_gtk3_new(void *cfg) {
 	// Connect relevant event signals
 	g_signal_connect(G_OBJECT(uigtk3->top_window), "key-press-event", G_CALLBACK(gtk3_handle_key_press), uigtk3);
 	g_signal_connect(G_OBJECT(uigtk3->top_window), "key-release-event", G_CALLBACK(gtk3_handle_key_release), uigtk3);
+	g_signal_connect(G_OBJECT(uigtk3->top_window), "focus-in-event", G_CALLBACK(gtk3_handle_focus_in), uigtk3);
 	g_signal_connect(G_OBJECT(uigtk3->drawing_area), "motion-notify-event", G_CALLBACK(gtk3_handle_motion_notify), uigtk3);
 	g_signal_connect(G_OBJECT(uigtk3->drawing_area), "button-press-event", G_CALLBACK(gtk3_handle_button_press), uigtk3);
 	g_signal_connect(G_OBJECT(uigtk3->drawing_area), "button-release-event", G_CALLBACK(gtk3_handle_button_release), uigtk3);
@@ -917,4 +921,15 @@ static char *escape_underscores(const char *str) {
 	}
 	*out = 0;
 	return ret_str;
+}
+
+// Event handlers
+
+static gboolean gtk3_handle_focus_in(GtkWidget *self, GdkEventFocus *event,
+				     gpointer user_data) {
+	(void)self;
+	(void)event;
+	(void)user_data;
+	hk_focus_in();
+	return TRUE;
 }
