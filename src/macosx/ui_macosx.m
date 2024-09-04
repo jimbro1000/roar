@@ -105,6 +105,7 @@ enum {
 	TAG_PRINT_FLUSH,
 	TAG_ZOOM_IN,
 	TAG_ZOOM_OUT,
+	TAG_ZOOM_RESET,
 	TAG_JOY_SWAP,
 };
 
@@ -243,10 +244,13 @@ int cocoa_super_all_keys = 0;
 			xroar_flush_printer();
 			break;
 		case TAG_ZOOM_IN:
-			sdl_zoom_in(global_uisdl2);
+			vo_zoom_in(xroar.vo_interface);
 			break;
 		case TAG_ZOOM_OUT:
-			sdl_zoom_out(global_uisdl2);
+			vo_zoom_out(xroar.vo_interface);
+			break;
+		case TAG_ZOOM_RESET:
+			vo_zoom_reset(xroar.vo_interface);
 			break;
 		case TAG_JOY_SWAP:
 			joystick_swap();
@@ -882,6 +886,13 @@ static void setup_view_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Zoom Out" action:@selector(do_set_state:) keyEquivalent:@"-"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_OUT)];
+	[submenu addItem:item];
+	[item release];
+
+	[submenu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Reset" action:@selector(do_set_state:) keyEquivalent:@"0"];
+	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_RESET)];
 	[submenu addItem:item];
 	[item release];
 
