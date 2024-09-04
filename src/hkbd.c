@@ -1720,12 +1720,16 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		return;
 
 #ifndef HAVE_WASM
+	case hk_sym_0:
+		vo_zoom_reset(ui->vo_interface);
+		return;
+
 	case hk_sym_minus:
-		// TODO: zoom out
+		vo_zoom_out(ui->vo_interface);
 		return;
 
 	case hk_sym_plus:
-		// TODO: zoom in
+		vo_zoom_in(ui->vo_interface);
 		return;
 #endif
 
