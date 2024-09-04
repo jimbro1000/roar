@@ -505,3 +505,29 @@ void hk_x11_handle_keymap_event(XKeymapEvent *xkeymap) {
 		}
 	}
 }
+
+// Call on focus event.  This does a better job at syncing keyboard state than
+// the default, which just releases all keys.
+
+_Bool hk_x11_focus_in(void) {
+	if (!display || !os_scancode_to_hk_scancode)
+		return 0;
+
+	char keys[HK_NUM_SCANCODES/8];
+	(void)XQueryKeymap(display, keys);
+	for (unsigned i = 8; i < 256; i++) {
+		uint8_t code = os_scancode_to_hk_scancode[i];
+		if (code == hk_scan_None)
+			continue;
+		if (keys[i >> 3] & (1 << (i & 7))) {
+			if (hkbd.scancode_pressed_sym[code] == hk_sym_None) {
+				hk_scan_press(code);
+			}
+		} else {
+			if (hkbd.scancode_pressed_sym[code] != hk_sym_None) {
+				hk_scan_release(code);
+			}
+		}
+	}
+	return 1;
+}

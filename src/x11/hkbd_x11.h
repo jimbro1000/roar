@@ -41,4 +41,8 @@ void hk_x11_handle_mapping_event(XMappingEvent *xmapping);
 
 void hk_x11_handle_keymap_event(XKeymapEvent *xkeymap);
 
+// Call on focus event.
+
+_Bool hk_x11_focus_in(void);
+
 #endif

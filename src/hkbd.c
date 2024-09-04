@@ -1215,6 +1215,9 @@ void hk_update_keymap(void) {
 
 void hk_focus_in(void) {
 	_Bool done = 0;
+#if defined(HAVE_X11)
+	done = done || hk_x11_focus_in();
+#endif
 	// Default to just releasing any key marked as pressed.
 	if (!done) {
 		for (unsigned i = 0; i < HK_NUM_SCANCODES; i++) {
