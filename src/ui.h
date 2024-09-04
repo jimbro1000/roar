@@ -136,6 +136,7 @@ enum ui_action {
 	ui_action_tape_output_rewind,
 	ui_action_zoom_in,
 	ui_action_zoom_out,
+	ui_action_zoom_reset,
 	ui_action_joystick_swap,
 };
 
