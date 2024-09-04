@@ -210,6 +210,8 @@ static void setup_view_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Zoom");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_in), "Zoom In");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_out), "Zoom Out");
+	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_reset), "Reset");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "&Full screen");
@@ -421,10 +423,13 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 			tape_set_playing(xroar.tape_interface, !(GetMenuState(uiw32->top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND) & MF_CHECKED), 1);
 			break;
 		case ui_action_zoom_in:
-			sdl_zoom_in(global_uisdl2);
+			vo_zoom_in(xroar.vo_interface);
 			break;
 		case ui_action_zoom_out:
-			sdl_zoom_out(global_uisdl2);
+			vo_zoom_out(xroar.vo_interface);
+			break;
+		case ui_action_zoom_reset:
+			vo_zoom_reset(xroar.vo_interface);
 			break;
 		case ui_action_joystick_swap:
 			xroar_swap_joysticks(1);
