@@ -1157,6 +1157,10 @@ void hk_shutdown(void);
 
 void hk_update_keymap(void);
 
+// Call when window gets focus.  Will try and update keypress state, falling
+// back to just releasing any key marked as pressed.
+void hk_focus_in(void);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Metadata

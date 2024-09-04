@@ -1213,6 +1213,20 @@ void hk_update_keymap(void) {
 	}
 }
 
+void hk_focus_in(void) {
+	_Bool done = 0;
+	// Default to just releasing any key marked as pressed.
+	if (!done) {
+		for (unsigned i = 0; i < HK_NUM_SCANCODES; i++) {
+			if (hkbd.scancode_pressed_sym[i] != hk_sym_None) {
+				hk_scan_release(i);
+			}
+		}
+		// And for good measure
+		hkbd.state = 0;
+	}
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Metadata
@@ -1400,7 +1414,7 @@ void hk_scan_release(uint8_t code) {
 
 	int level = (shift ? HK_LEVEL_SHIFT : 0) | (altgr ? HK_LEVEL_ALTGR : 0);
 	uint16_t sym = hkbd.scancode_pressed_sym[code];
-	hkbd.scancode_pressed_sym[code] = 0;
+	hkbd.scancode_pressed_sym[code] = hk_sym_None;
 	if (!sym) {
 		sym = hkbd.code_to_sym[level][code];
 	}
