@@ -323,6 +323,12 @@ inline void vo_refresh(struct vo_interface *vo) {
 	DELEGATE_SAFE_CALL(vo->draw);
 }
 
+// Zoom helpers
+
+void vo_zoom_reset(struct vo_interface *);
+void vo_zoom_in(struct vo_interface *);
+void vo_zoom_out(struct vo_interface *);
+
 // Helper function to parse geometry string
 
 void vo_parse_geometry(const char *str, struct vo_geometry *geometry);
