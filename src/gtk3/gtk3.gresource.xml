@@ -7,5 +7,6 @@
       <file preprocess="xml-stripblanks">printercontrol.ui</file>
       <file preprocess="xml-stripblanks">tapecontrol.ui</file>
       <file preprocess="xml-stripblanks">video_options.ui</file>
+      <file>xroar-48x48.raw</file>
    </gresource>
 </gresources>

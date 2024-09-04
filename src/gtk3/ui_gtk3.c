@@ -339,7 +339,20 @@ static void close_about(GtkDialog *dialog, gint response_id, gpointer user_data)
 static void about(GtkMenuItem *item, gpointer user_data) {
 	(void)item;
 	struct ui_gtk3_interface *uigtk3 = user_data;
+
+	GdkPixbuf *logo_pixbuf = NULL;
+	GError *error = NULL;
+	GBytes *logo_bytes = g_resources_lookup_data("/uk/org/6809/xroar/gtk3/xroar-48x48.raw", 0, &error);
+	if (logo_bytes) {
+		logo_pixbuf = gdk_pixbuf_new_from_bytes(logo_bytes, GDK_COLORSPACE_RGB, 1, 8, 48, 48, 192);
+		g_bytes_unref(logo_bytes);
+	}
+
 	GtkAboutDialog *dialog = (GtkAboutDialog *)gtk_about_dialog_new();
+	if (logo_pixbuf) {
+		gtk_about_dialog_set_logo(dialog, logo_pixbuf);
+		gdk_pixbuf_unref(logo_pixbuf);
+	}
 	gtk_about_dialog_set_version(dialog, VERSION);
 	gtk_about_dialog_set_copyright(dialog, "Copyright © " PACKAGE_YEAR " Ciaran Anscomb <xroar@6809.org.uk>");
 	gtk_about_dialog_set_license(dialog,
@@ -357,6 +370,7 @@ static void about(GtkMenuItem *item, gpointer user_data) {
 "with XRoar.  If not, see <https://www.gnu.org/licenses/>."
 	);
 	gtk_about_dialog_set_website(dialog, "https://www.6809.org.uk/xroar/");
+	gtk_about_dialog_set_website_label(dialog, "https://www.6809.org.uk/xroar/");
 	g_signal_connect(dialog, "response", G_CALLBACK(close_about), uigtk3);
 	gtk_widget_show(GTK_WIDGET(dialog));
 }
