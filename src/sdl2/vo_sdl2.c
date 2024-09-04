@@ -81,6 +81,7 @@ static const Uint32 renderer_flags[] = {
 static void vo_sdl_free(void *);
 static void set_viewport(void *, int vp_w, int vp_h);
 static void draw(void *);
+static void resize(void *, unsigned int w, unsigned int h);
 static int set_fullscreen(void *, _Bool fullscreen);
 static void set_menubar(void *, _Bool show_menubar);
 
@@ -152,6 +153,7 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	// Used by machine to render video
 	vo->draw = DELEGATE_AS0(void, draw, uisdl2);
+	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, uisdl2);
 
 	vosdl->window_area.w = 640;
 	vosdl->window_area.h = 480;
@@ -484,4 +486,9 @@ static void draw(void *sptr) {
 	SDL_RenderClear(vosdl->sdl_renderer);
 	SDL_RenderCopy(vosdl->sdl_renderer, vosdl->texture.texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->sdl_renderer);
+}
+
+static void resize(void *sptr, unsigned int w, unsigned int h) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	SDL_SetWindowSize(uisdl2->vo_window, w, h);
 }
