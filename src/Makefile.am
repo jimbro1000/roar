@@ -220,6 +220,8 @@ if X11
 xroar_SOURCES += \
 	x11/hkbd_x11.c x11/hkbd_x11.h \
 	x11/hkbd_x11_keycode_tables.h
+xroar_CFLAGS += $(X11_CFLAGS)
+xroar_LDADD += $(X11_LIBS)
 endif
 
 # WebAssembly support
@@ -360,8 +362,6 @@ xroar_SOURCES += \
 if X11
 xroar_SOURCES += \
 	sdl2/sdl_x11.c
-xroar_CFLAGS += $(X11_CFLAGS)
-xroar_LDADD += $(X11_LIBS)
 endif
 
 endif
