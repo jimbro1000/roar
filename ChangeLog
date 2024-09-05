@@ -13,6 +13,8 @@ Version 1.6, Thu  5 Sep 2024
  * New unified keyboard abstraction
  * Extra default keyboard-based virtual joystick profiles: WASD, IJKL, QAOP
  * Dynamically include configs for all physical joysticks on startup
+ * New machine Dragon Professional (Alpha), 'dragonpro'
+ * New machine Tandy Deluxe Colour Computer, 'deluxecoco'
 
 Version 1.5.5, Sun 24 Mar 2024
 
