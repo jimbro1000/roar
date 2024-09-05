@@ -23,6 +23,13 @@
 
 #include "sdl2/common.h"
 
+#define UIW32_TAG(t) (((t) & 0x7f) << 8)
+#define UIW32_TAGV(t,v) (UIW32_TAG(t) | ((v) & 0xff))
+#define UIW32_TAG_TYPE(t) (((t) >> 8) & 0x7f)
+#define UIW32_TAG_VALUE(t) ((t) & 0xff)
+
+struct xconfig_enum;
+
 struct ui_windows32_interface {
 	struct ui_sdl2_interface ui_sdl2_interface;
 
@@ -69,5 +76,7 @@ void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS);
 // message to it.
 LRESULT windows32_send_message_dlg_item(HWND hDlg, int nIDDlgItem, UINT Msg,
 					WPARAM wParam, LPARAM lParam);
+
+void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_enum, unsigned tag);
 
 #endif

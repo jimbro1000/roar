@@ -27,6 +27,7 @@
 #include "xalloc.h"
 
 #include "logging.h"
+#include "xconfig.h"
 
 #include "windows32/common_windows32.h"
 #include "windows32/guicon.h"
@@ -73,4 +74,50 @@ LRESULT windows32_send_message_dlg_item(HWND hDlg, int nIDDlgItem, UINT Msg,
 					WPARAM wParam, LPARAM lParam) {
 	HWND hWnd = GetDlgItem(hDlg, nIDDlgItem);
 	return SendMessage(hWnd, Msg, wParam, lParam);
+}
+
+static char *escape_string(const char *str) {
+	const char *s = str;
+	unsigned size = 1;
+	while (*s) {
+		++size;
+		if (*s == '&')
+			++size;
+		++s;
+	}
+	char *r = xmalloc(size);
+	s = str;
+	char *d = r;
+	while (*s) {
+		if (*s == '&') {
+			*(d++) = *s;
+			--size;
+			if (size == 0)
+				break;
+		}
+		*(d++) = *(s++);
+		--size;
+		if (size == 0)
+			break;
+	}
+	*d = 0;
+	return r;
+}
+
+void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_enum, unsigned tag) {
+	// Remove old entries
+	while (DeleteMenu(menu, 0, MF_BYPOSITION))
+		;
+
+	// Add entries
+	while (xc_enum->name) {
+		if (!xc_enum->description) {
+			++xc_enum;
+			continue;
+		}
+		char *label = escape_string(xc_enum->description);
+		AppendMenu(menu, MF_STRING, UIW32_TAGV(tag, xc_enum->value), label);
+		free(label);
+		++xc_enum;
+	}
 }
