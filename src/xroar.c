@@ -537,6 +537,11 @@ static char const * const default_config[] = {
 	"romlist coco2=bas12,@coco",
 	"romlist coco2_ext=extbas11,@coco_ext",
 	"romlist coco2b=bas13,@coco",
+	// Deluxe CoCo
+	"romlist deluxecoco=adv070_u24,deluxe",
+	"romlist deluxecoco1=adv071_u24",
+	"romlist deluxecoco2=adv072_u24",
+	"romlist deluxecoco3=adv073-2_u24,adv073_u24",
 	// MX-1600 and zephyr-patched version
 	"romlist mx1600=mx1600bas,mx1600bas_zephyr",
 	"romlist mx1600ext=mx1600extbas",

@@ -201,6 +201,30 @@ static _Bool deluxecoco_finish(struct part *p) {
 		}
 	}
 
+	// Bodge loading the ROM in four parts.  XXX need support for sets of
+	// ROMs.
+	if (!mdp->ROM0->d[1]) {
+		sds tmp = romlist_find("@deluxecoco1");
+		if (tmp) {
+			rombank_load_image(mdp->ROM0, 1, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+	if (!mdp->ROM0->d[2]) {
+		sds tmp = romlist_find("@deluxecoco2");
+		if (tmp) {
+			rombank_load_image(mdp->ROM0, 2, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+	if (!mdp->ROM0->d[3]) {
+		sds tmp = romlist_find("@deluxecoco3");
+		if (tmp) {
+			rombank_load_image(mdp->ROM0, 3, tmp, 0);
+			sdsfree(tmp);
+		}
+	}
+
 	// Report and check CRC (Advanced Colour BASIC)
 	rombank_report(mdp->ROM0, "Advanced Colour BASIC");
 	md->crc_combined = 0x1cce231e;  // ACB 00.00.07
@@ -234,7 +258,7 @@ static void deluxecoco_free(struct part *p) {
 
 static void deluxecoco_config_complete(struct machine_config *mc) {
 	// Default ROMs
-	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "deluxe");
+	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@deluxecoco");
 
 	// Validate requested total RAM
 	if (mc->ram < 32) {
