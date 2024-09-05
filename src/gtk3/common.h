@@ -28,6 +28,8 @@
 #include "ui.h"
 #include "vo.h"
 
+struct xconfig_enum;
+
 #define GTK_KBD_JS_MAX_AXES (4)
 #define GTK_KBD_JS_MAX_BUTTONS (4)
 
