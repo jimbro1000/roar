@@ -64,7 +64,7 @@
 
 static int max_machine_id = 0;
 static int max_cartridge_id = 0;
-static int max_joystick_id = 0;
+static unsigned max_joystick_id = 0;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
