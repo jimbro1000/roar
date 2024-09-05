@@ -177,8 +177,9 @@ static void recompute_crc32(struct rombank *);
 // Load ROM image.  Returns number of slots loaded, or -1 on failure.
 
 int rombank_load_image(struct rombank *rb, unsigned slot, const char *filename, off_t offset) {
-	if (!filename)
+	if (!filename) {
 		return -1;
+	}
 
 #ifdef HAVE_WASM
 	FILE *fd = wasm_fopen(filename, "rb");
@@ -187,8 +188,11 @@ int rombank_load_image(struct rombank *rb, unsigned slot, const char *filename, 
 #endif
 
 	if (!fd) {
+		LOG_DEBUG(2, "[rom] failed to open: %s\n", filename);
 		return -1;
 	}
+
+	LOG_DEBUG(2, "[rom] opened: %s\n", filename);
 
 	off_t file_size = fs_file_size(fd);
 
@@ -226,6 +230,7 @@ int rombank_load_image(struct rombank *rb, unsigned slot, const char *filename, 
 		}
 	}
 	recompute_crc32(rb);
+	fclose(fd);
 
 	return 1;
 }
