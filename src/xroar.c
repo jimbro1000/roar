@@ -772,11 +772,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	if (!no_builtin) {
 		// Set a default ROM search path if required.
-		char const *env = getenv("XROAR_ROM_PATH");
-		if (!env)
-			env = ROMPATH;
-		if (env)
-			xroar.cfg.file.rompath = xstrdup(env);
+		xroar.cfg.file.rompath = xstrdup(ROMPATH);
 		// Process builtin directives
 		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(default_config); i++) {
 			xconfig_parse_line(xroar_options, default_config[i]);
@@ -799,6 +795,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Parse config file, if found (and not disabled).
 
 	if (!no_conffile) {
+		// Deprecated XROAR_CONF_PATH in 1.6
 		const char *xroar_conf_path = getenv("XROAR_CONF_PATH");
 		if (!xroar_conf_path) {
 			xroar_conf_path = CONFPATH;
