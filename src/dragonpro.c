@@ -258,7 +258,7 @@ static _Bool dragonpro_finish(struct part *p) {
 	// Report and check CRC (32K BASIC)
 	rombank_report(mdp->ROM0, "32K BASIC");
 	md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
-	md->has_combined = rombank_verify_crc(mdp->ROM0, "32K BASIC", -1, "@d64_1", xroar.cfg.force_crc_match, &md->crc_combined);
+	md->has_combined = rombank_verify_crc(mdp->ROM0, "32K BASIC", -1, "@dragonpro_basic", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, dragonpro_cpu_cycle, mdp);
 
@@ -306,8 +306,8 @@ static void dragonpro_free(struct part *p) {
 
 static void dragonpro_config_complete(struct machine_config *mc) {
 	// Default ROMs
-	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "alpha-boot-v1.0");
-	set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "alpha-basic");
+	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragonpro_boot");
+	set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragonpro_basic");
 
 	// Validate requested total RAM
 	if (mc->ram < 64) {

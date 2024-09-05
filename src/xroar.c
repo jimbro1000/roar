@@ -524,6 +524,9 @@ static char const * const default_config[] = {
 	"romlist dragon200e=@d200e_1,@d64_1,@dragon",
 	"romlist dragon200e_alt=@d200e_2,@d64_2",
 	"romlist dragon200e_charset=d200e_26,rom26.ic1",
+	// Dragon Professional (Alpha)
+	"romlist dragonpro_boot=alpha-boot-v1.0,alpha_bt_10,'Dragon Data Ltd - Dragon Alpha Boot v1.0 150584',alpha-boot-v0.4,alpha_bt_04",
+	"romlist dragonpro_basic=alpha-basic,alpha_ba,'Dragon Data Ltd - Dragon Alpga Basic',@d64_1",
 	// Fallback CoCo BASIC
 	"romlist coco=bas13,bas12,'Color Basic v1.2 (1982)(Tandy)',bas11,bas10",
 	"romlist coco_ext=extbas11,extbas10,coco,COCO",
@@ -584,6 +587,7 @@ static char const * const default_config[] = {
 	"crclist woolham_d32=0xff7bf41e,0x9c7eed69",
 	// Dragon Pro
 	"crclist dragonpro_boot=0xd6172b56,0xc3dab585",
+	"crclist dragonpro_basic=@d64_1",
 	// CoCo BASIC
 	"crclist bas10=0x00b50aaa",
 	"crclist bas11=0x6270955a",
