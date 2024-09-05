@@ -385,7 +385,7 @@ void uigtk2_update_radio_menu_from_enum(struct uigtk2_radio_menu *rm,
 		labels[i] = g_strdup_printf(label_fmt, xc_enum[enum_index].description);
 		entries[i].name = names[i];
 		entries[i].label = xc_enum[enum_index].description;
-		entries[i].value = enum_index;
+		entries[i].value = xc_enum[enum_index].value;
 		gtk_ui_manager_add_ui(uigtk2->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 		++i;
 	}
