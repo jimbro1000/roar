@@ -186,19 +186,11 @@ static void setup_view_menu(struct ui_windows32_interface *uiw32) {
 
 	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "&TV input");
-	for (int i = 0; machine_tv_input_list[i].name; i++) {
-		if (!machine_tv_input_list[i].description)
-			continue;
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tv_input, machine_tv_input_list[i].value), machine_tv_input_list[i].description);
-	}
+	uiw32_update_radio_menu_from_enum(submenu, machine_tv_input_list, ui_tag_tv_input);
 
 	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Composite &rendering");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_PALETTE), "None");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_2BIT), "Simple (2-bit LUT)");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_5BIT), "5-bit LUT");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_PARTIAL), "Partial NTSC");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_SIMULATED), "Simulated");
+	uiw32_update_radio_menu_from_enum(submenu, vo_cmp_ccr_list, ui_tag_ccr);
 
 	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_dialog), "TV &controls");
 
@@ -235,12 +227,7 @@ static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Keyboard type");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon), "Dragon Layout");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon200e), "Dragon 200-E Layout");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_coco), "CoCo Layout");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_coco3), "CoCo 3 Layout");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_mc10), "MC-10 Layout");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_alice), "Alice Layout");
+	uiw32_update_radio_menu_from_enum(submenu, machine_keyboard_list, ui_tag_keymap);
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	uiw32->right_joystick_menu = submenu = CreatePopupMenu();
