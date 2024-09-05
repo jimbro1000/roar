@@ -191,6 +191,11 @@ int rombank_load_image(struct rombank *rb, unsigned slot, const char *filename, 
 	}
 
 	off_t file_size = fs_file_size(fd);
+
+	if (file_size > 256 && (file_size % 256) != 0) {
+		offset += (file_size % 256);
+	}
+
 	if (file_size < 0 || offset >= file_size || fseeko(fd, offset, SEEK_SET) < 0) {
 		fclose(fd);
 		return -1;
