@@ -37,6 +37,7 @@
 #include "ao.h"
 #include "cart.h"
 #include "events.h"
+#include "hkbd.h"
 #include "joystick.h"
 #include "keyboard.h"
 #include "logging.h"
@@ -249,8 +250,17 @@ static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
 
 static void setup_tool_menu(struct ui_windows32_interface *uiw32) {
 	HMENU tool_menu;
+	HMENU submenu;
 
 	tool_menu = CreatePopupMenu();
+
+	submenu = CreatePopupMenu();
+	AppendMenu(tool_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Keyboard la&yout");
+	uiw32_update_radio_menu_from_enum(submenu, hkbd_layout_list, ui_tag_hkbd_layout);
+
+	submenu = CreatePopupMenu();
+	AppendMenu(tool_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Keyboard lan&guage");
+	uiw32_update_radio_menu_from_enum(submenu, hkbd_lang_list, ui_tag_hkbd_lang);
 
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "&Keyboard translation");
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit), "&Rate limit");
@@ -499,6 +509,12 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		break;
 
 	// Keyboard:
+	case ui_tag_hkbd_layout:
+		xroar_set_hkbd_layout(1, tag_value);
+		break;
+	case ui_tag_hkbd_lang:
+		xroar_set_hkbd_lang(1, tag_value);
+		break;
 	case ui_tag_keymap:
 		xroar_set_keyboard_type(1, tag_value);
 		break;
@@ -628,6 +644,14 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		break;
 
 	// Keyboard
+
+	case ui_tag_hkbd_layout:
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 0xff), TAGV(tag, value), MF_BYCOMMAND);
+		break;
+
+	case ui_tag_hkbd_lang:
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 0xff), TAGV(tag, value), MF_BYCOMMAND);
+		break;
 
 	case ui_tag_keymap:
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, (dkbd_num_layouts - 1)), TAGV(tag, value), MF_BYCOMMAND);

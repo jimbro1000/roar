@@ -1062,6 +1062,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Notify UI of starting options:
 	DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
+	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_layout, xroar.cfg.kbd.layout, NULL);
+	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_lang, xroar.cfg.kbd.lang, NULL);
 	xroar_set_kbd_translate(1, xroar.cfg.kbd.translate);
 
 	xroar.tape_interface = tape_interface_new(xroar.ui_interface);
