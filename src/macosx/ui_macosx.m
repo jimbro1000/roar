@@ -89,6 +89,7 @@
 #define TAG_HKBD_LAYOUT (27 << 24)
 #define TAG_HKBD_LANG (28 << 24)
 #define TAG_KBD_TRANSLATE (13 << 24)
+#define TAG_RATELIMIT (29 << 24)
 #define TAG_JOY_RIGHT (14 << 24)
 #define TAG_JOY_LEFT (15 << 24)
 
@@ -159,6 +160,7 @@ static int is_fullscreen = 0;
 static int tape_is_playing = 0;
 static int vdg_inverted = 0;
 static int is_kbd_translate = 0;
+static int is_ratelimit = 1;
 static _Bool disk_write_enable[4] = { 1, 1, 1, 1 };
 static _Bool disk_write_back[4] = { 0, 0, 0, 0 };
 static int print_destination = 0;
@@ -365,6 +367,8 @@ int cocoa_super_all_keys = 0;
 		current_keymap = tag;
 		xroar_set_keyboard_type(0, tag_value);
 		break;
+
+	// Tool
 	case TAG_HKBD_LAYOUT:
 		current_hkbd_layout = tag;
 		xroar_set_hkbd_layout(0, tag_value);
@@ -376,6 +380,10 @@ int cocoa_super_all_keys = 0;
 	case TAG_KBD_TRANSLATE:
 		is_kbd_translate = !is_kbd_translate;
 		xroar_set_kbd_translate(1, is_kbd_translate);
+		break;
+	case TAG_RATELIMIT:
+		is_ratelimit = !is_ratelimit;
+		xroar_set_ratelimit_latch(1, is_ratelimit);
 		break;
 
 	/* Joysticks: */
@@ -474,6 +482,9 @@ int cocoa_super_all_keys = 0;
 		break;
 	case TAG_KBD_TRANSLATE:
 		[item setState:(is_kbd_translate ? NSOnState : NSOffState)];
+		break;
+	case TAG_RATELIMIT:
+		[item setState:(is_ratelimit ? NSOnState : NSOffState)];
 		break;
 
 	case TAG_JOY_RIGHT:
@@ -1001,6 +1012,11 @@ static void setup_tool_menu(void) {
 	[tool_menu addItem:item];
 	[item release];
 
+	item = [[NSMenuItem alloc] initWithTitle:@"Rate limit" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:TAG_RATELIMIT];
+	[tool_menu addItem:item];
+	[item release];
+
 	tool_menu_item = [[NSMenuItem alloc] initWithTitle:@"Tool" action:nil keyEquivalent:@""];
 	[tool_menu_item setSubmenu:tool_menu];
 	[[NSApp mainMenu] addItem:tool_menu_item];
@@ -1389,6 +1405,12 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		disk_write_back[value] = data ? 1 : 0;
 		break;
 
+	// Audio
+
+	case ui_tag_ratelimit:
+		is_ratelimit = value;
+		break;
+
 	// Printer
 
 	case ui_tag_print_destination:
@@ -1429,6 +1451,10 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 
 	case ui_tag_hkbd_lang:
 		current_hkbd_lang = TAG_HKBD_LANG | value;
+		break;
+
+	case ui_tag_kbd_translate:
+		is_kbd_translate = value;
 		break;
 
 	/* Joystick */
