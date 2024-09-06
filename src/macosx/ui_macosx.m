@@ -139,6 +139,9 @@ static NSString *get_application_name(void) {
 	return app_name;
 }
 
+static void cocoa_update_radio_menu_from_enum(NSMenu *menu, struct xconfig_enum *xc_enum,
+					      unsigned tag);
+
 static int current_picture = 0;
 static int current_cc = 0;
 static int current_ccr = 0;
@@ -1480,5 +1483,34 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 	default:
 		break;
 
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void cocoa_update_radio_menu_from_enum(NSMenu *menu, struct xconfig_enum *xc_enum,
+					      unsigned tag) {
+	// Remove old entries
+	while ([menu numberOfItems] > 0) {
+		[menu removeItem:[menu itemAtIndex:0]];
+	}
+
+	// Fine list terminating entry
+	int enum_index;
+	for (enum_index = 0; xc_enum[enum_index].name; enum_index++);
+
+	// Add entries in reverse order
+	while (enum_index > 0) {
+		--enum_index;
+		if (!xc_enum[enum_index].description) {
+			continue;
+		}
+		NSString *description = [[NSString alloc] initWithUTF8String:xc_enum[enum_index].description];
+		NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:(tag | xc_enum[enum_index].value)];
+		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+		[menu insertItem:item atIndex:0];
+		[item release];
+		[description release];
 	}
 }
