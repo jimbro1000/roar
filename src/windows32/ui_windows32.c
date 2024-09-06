@@ -451,7 +451,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// Cassettes:
 	case ui_tag_tape_dialog:
-		windows32_tc_update_state((struct ui_windows32_interface *)global_uisdl2, ui_tag_tape_dialog, 0, NULL);
+		windows32_tc_update_state(uiw32, ui_tag_tape_dialog, 0, NULL);
 		break;
 	case ui_tag_tape_flags:
 		tape_select_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ tag_value);
@@ -459,7 +459,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// Disks:
 	case ui_tag_disk_dialog:
-		windows32_dc_update_state((struct ui_windows32_interface *)global_uisdl2, ui_tag_disk_dialog, 0, NULL);
+		windows32_dc_update_state(uiw32, ui_tag_disk_dialog, 0, NULL);
 		break;
 	case ui_tag_disk_insert:
 		xroar_insert_disk(tag_value);
@@ -481,7 +481,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// TV controls:
 	case ui_tag_tv_dialog:
-		windows32_vo_update_state((struct ui_windows32_interface *)global_uisdl2, ui_tag_tv_dialog, 0, NULL);
+		windows32_vo_update_state(uiw32, ui_tag_tv_dialog, 0, NULL);
 		break;
 
 	case ui_tag_fullscreen:
@@ -505,7 +505,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// Printer
 	case ui_tag_print_dialog:
-		windows32_pc_update_state((struct ui_windows32_interface *)global_uisdl2, ui_tag_print_dialog, 0, NULL);
+		windows32_pc_update_state(uiw32, ui_tag_print_dialog, 0, NULL);
 		break;
 
 	// Keyboard:
