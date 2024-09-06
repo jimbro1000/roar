@@ -1,3 +1,5 @@
+ * Add missing menus to Windows/Mac OS X+ UIs
+
 Version 1.6.1, Thu  5 Sep 2024
 
  * Reinstate ROM image header skipping [Davy Mitchell]
