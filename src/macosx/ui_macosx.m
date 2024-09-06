@@ -578,14 +578,14 @@ static void setup_file_menu(void) {
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Cassette"];
 
-	tmp = [NSString stringWithFormat:@"Input Tape%C", 0x2026];
+	tmp = [NSString stringWithFormat:@"Input tape%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_TAPE_INPUT)];
 	[submenu addItem:item];
 	[item release];
 	[tmp release];
 
-	tmp = [NSString stringWithFormat:@"Output Tape%C", 0x2026];
+	tmp = [NSString stringWithFormat:@"Output tape%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@"w"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_TAPE_OUTPUT)];
 	[submenu addItem:item];
@@ -594,7 +594,7 @@ static void setup_file_menu(void) {
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Rewind Input Tape" action:@selector(do_set_state:) keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"Rewind input tape" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_TAPE_INPUT_REWIND)];
 	[submenu addItem:item];
 	[item release];
@@ -608,12 +608,12 @@ static void setup_file_menu(void) {
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Fast Loading" action:@selector(do_set_state:) keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"Fast loading" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_TAPE_FLAGS | TAPE_FAST)];
 	[submenu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"CAS Padding" action:@selector(do_set_state:) keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"CAS padding" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_TAPE_FLAGS | TAPE_PAD_AUTO)];
 	[submenu addItem:item];
 	[item release];
@@ -639,14 +639,14 @@ static void setup_file_menu(void) {
 
 		submenu = [[NSMenu alloc] initWithTitle:title];
 
-		tmp = [NSString stringWithFormat:@"Insert Disk%C", 0x2026];
+		tmp = [NSString stringWithFormat:@"Insert disk%C", 0x2026];
 		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:key1];
 		[item setTag:(TAG_INSERT_DISK | drive)];
 		[submenu addItem:item];
 		[item release];
 		[tmp release];
 
-		tmp = [NSString stringWithFormat:@"New Disk%C", 0x2026];
+		tmp = [NSString stringWithFormat:@"New disk%C", 0x2026];
 		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:key1];
 		[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 		[item setTag:(TAG_NEW_DISK | drive)];
@@ -656,12 +656,12 @@ static void setup_file_menu(void) {
 
 		[submenu addItem:[NSMenuItem separatorItem]];
 
-		item = [[NSMenuItem alloc] initWithTitle:@"Write Enable" action:@selector(do_set_state:) keyEquivalent:key2];
+		item = [[NSMenuItem alloc] initWithTitle:@"Write enable" action:@selector(do_set_state:) keyEquivalent:key2];
 		[item setTag:(TAG_WRITE_ENABLE | drive)];
 		[submenu addItem:item];
 		[item release];
 
-		item = [[NSMenuItem alloc] initWithTitle:@"Write Back" action:@selector(do_set_state:) keyEquivalent:key2];
+		item = [[NSMenuItem alloc] initWithTitle:@"Write back" action:@selector(do_set_state:) keyEquivalent:key2];
 		[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 		[item setTag:(TAG_WRITE_BACK | drive)];
 		[submenu addItem:item];
@@ -669,7 +669,7 @@ static void setup_file_menu(void) {
 
 		[submenu addItem:[NSMenuItem separatorItem]];
 
-		tmp = [NSString stringWithFormat:@"Eject Disk%C", 0x2026];
+		tmp = [NSString stringWithFormat:@"Eject disk%C", 0x2026];
 		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
 		[item setTag:(TAG_EJECT_DISK | drive)];
 		[submenu addItem:item];
@@ -721,7 +721,7 @@ static void setup_file_menu(void) {
 
 	[file_menu addItem:[NSMenuItem separatorItem]];
 
-	tmp = [NSString stringWithFormat:@"Save Snapshot%C", 0x2026];
+	tmp = [NSString stringWithFormat:@"Save snapshot%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@"s"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_FILE_SAVE_SNAPSHOT)];
 	[file_menu addItem:item];
@@ -756,14 +756,14 @@ static void setup_view_menu(void) {
 
 	view_menu = [[NSMenu alloc] initWithTitle:@"View"];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"TV Input"];
+	submenu = [[NSMenu alloc] initWithTitle:@"TV input"];
 	cocoa_update_radio_menu_from_enum(submenu, machine_tv_input_list, TAG_TV_INPUT);
-	item = [[NSMenuItem alloc] initWithTitle:@"TV Input" action:nil keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"TV input" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Picture Area"];
+	submenu = [[NSMenu alloc] initWithTitle:@"Picture area"];
 
 	for (i = 0; i < NUM_VO_PICTURE; i++) {
 		NSString *s = [[NSString alloc] initWithUTF8String:vo_picture_name[i]];
@@ -775,25 +775,25 @@ static void setup_view_menu(void) {
 		[s release];
 	}
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Picture Area" action:nil keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"Picture area" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"60Hz Scaling" action:@selector(do_set_state:) keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"60Hz scaling" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 	[item setTag:TAG_NTSC_SCALING];
 	[view_menu addItem:item];
 	[item release];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
+	submenu = [[NSMenu alloc] initWithTitle:@"Composite rendering"];
 	cocoa_update_radio_menu_from_enum(submenu, vo_cmp_ccr_list, TAG_CCR);
-	item = [[NSMenuItem alloc] initWithTitle:@"Composite Rendering" action:nil keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"Composite rendering" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Composite Options"];
+	submenu = [[NSMenu alloc] initWithTitle:@"Composite options"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.31818 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_CMP_FS | VO_RENDER_FS_14_31818)];
@@ -841,20 +841,20 @@ static void setup_view_menu(void) {
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Colour Killer" action:@selector(do_set_state:) keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"Colour killer" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 	[item setTag:TAG_CMP_COLOUR_KILLER];
 	[submenu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Composite Options" action:nil keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"Composite options" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
 
 	[view_menu addItem:[NSMenuItem separatorItem]];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Inverse Text" action:@selector(do_set_state:) keyEquivalent:@"i"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Inverse text" action:@selector(do_set_state:) keyEquivalent:@"i"];
 	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 	[item setTag:TAG_VDG_INVERSE];
 	[view_menu addItem:item];
@@ -864,12 +864,12 @@ static void setup_view_menu(void) {
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Zoom"];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Zoom In" action:@selector(do_set_state:) keyEquivalent:@"+"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Zoom in" action:@selector(do_set_state:) keyEquivalent:@"+"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_IN)];
 	[submenu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Zoom Out" action:@selector(do_set_state:) keyEquivalent:@"-"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Zoom out" action:@selector(do_set_state:) keyEquivalent:@"-"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_OUT)];
 	[submenu addItem:item];
 	[item release];
@@ -888,7 +888,7 @@ static void setup_view_menu(void) {
 
 	[view_menu addItem:[NSMenuItem separatorItem]];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Full Screen" action:@selector(do_set_state:) keyEquivalent:@"f"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Full screen" action:@selector(do_set_state:) keyEquivalent:@"f"];
 	[item setTag:TAG_FULLSCREEN];
 	[view_menu addItem:item];
 	[item release];
@@ -938,31 +938,31 @@ static void setup_hardware_menu(void) {
 
 	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
-	joy_right_menu = [[NSMenu alloc] initWithTitle:@"Right Joystick"];
-	item = [[NSMenuItem alloc] initWithTitle:@"Right Joystick" action:nil keyEquivalent:@""];
+	joy_right_menu = [[NSMenu alloc] initWithTitle:@"Right joystick"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Right joystick" action:nil keyEquivalent:@""];
 	[item setSubmenu:joy_right_menu];
 	[hardware_menu addItem:item];
 	[item release];
 
-	joy_left_menu = [[NSMenu alloc] initWithTitle:@"Left Joystick"];
-	item = [[NSMenuItem alloc] initWithTitle:@"Left Joystick" action:nil keyEquivalent:@""];
+	joy_left_menu = [[NSMenu alloc] initWithTitle:@"Left joystick"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Left joystick" action:nil keyEquivalent:@""];
 	[item setSubmenu:joy_left_menu];
 	[hardware_menu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Swap Joysticks" action:@selector(do_set_state:) keyEquivalent:@"J"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Swap joysticks" action:@selector(do_set_state:) keyEquivalent:@"J"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_JOY_SWAP)];
 	[hardware_menu addItem:item];
 	[item release];
 
 	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Soft Reset" action:@selector(do_set_state:) keyEquivalent:@"r"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Soft reset" action:@selector(do_set_state:) keyEquivalent:@"r"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_RESET_SOFT)];
 	[hardware_menu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Hard Reset" action:@selector(do_set_state:) keyEquivalent:@"R"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Hard reset" action:@selector(do_set_state:) keyEquivalent:@"R"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_RESET_HARD)];
 	[hardware_menu addItem:item];
 	[item release];
@@ -996,7 +996,7 @@ static void setup_tool_menu(void) {
 	[tool_menu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard Translation" action:@selector(do_set_state:) keyEquivalent:@"z"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard translation" action:@selector(do_set_state:) keyEquivalent:@"z"];
 	[item setTag:TAG_KBD_TRANSLATE];
 	[tool_menu addItem:item];
 	[item release];
