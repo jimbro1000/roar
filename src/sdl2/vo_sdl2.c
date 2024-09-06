@@ -187,7 +187,7 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	vo->show_menubar = !vo->is_fullscreen;
 #ifdef WINDOWS32
 	if (vo->show_menubar) {
-		sdl_windows32_add_menu(uisdl2->vo_window);
+		sdl_windows32_set_menu_visible(uisdl2, 1);
 		SDL_SetWindowSize(uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
 	}
 #endif
@@ -405,12 +405,12 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 
 	if (fullscreen && vo->show_menubar) {
 #ifdef WINDOWS32
-		sdl_windows32_remove_menu(uisdl2->vo_window);
+		sdl_windows32_set_menu_visible(uisdl2, 0);
 #endif
 		vo->show_menubar = 0;
 	} else if (!fullscreen && !vo->show_menubar) {
 #ifdef WINDOWS32
-		sdl_windows32_add_menu(uisdl2->vo_window);
+		sdl_windows32_set_menu_visible(uisdl2, 1);
 #endif
 		vo->show_menubar = 1;
 	}
@@ -430,9 +430,9 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 
 #ifdef WINDOWS32
 	if (show_menubar && !vo->show_menubar) {
-		sdl_windows32_add_menu(uisdl2->vo_window);
+		sdl_windows32_set_menu_visible(uisdl2, 1);
 	} else if (!show_menubar && vo->show_menubar) {
-		sdl_windows32_remove_menu(uisdl2->vo_window);
+		sdl_windows32_set_menu_visible(uisdl2, 0);
 	}
 	if (!vo->is_fullscreen) {
 		SDL_SetWindowSize(uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);

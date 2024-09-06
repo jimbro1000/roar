@@ -756,34 +756,25 @@ void sdl_windows32_set_events_window(SDL_Window *sw) {
 	windows32_main_hwnd = hwnd;
 }
 
-/* Add menubar to window. This will reduce the size of the client area while
- * leaving the window size the same, so the video module should then resize
- * itself to account for this. */
+// Change menubar visibility.  This will change the size of the client area
+// while leaving the window size the same, so the video module should then
+// resize itself to account for this.
 
-void sdl_windows32_add_menu(SDL_Window *sw) {
-	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)global_uisdl2;
-
-	HWND hwnd = get_hwnd(sw);
-	if (GetMenu(hwnd) != NULL) {
+void sdl_windows32_set_menu_visible(struct ui_sdl2_interface *uisdl2, _Bool visible) {
+	if (!uisdl2) {
 		return;
 	}
-	int w, h;
-	SDL_GetWindowSize(sw, &w, &h);
-	SetMenu(hwnd, uiw32->top_menu);
-	SDL_GetWindowSize(sw, &w, &h);
-}
 
-/* Remove menubar from window. */
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)uisdl2;
 
-void sdl_windows32_remove_menu(SDL_Window *sw) {
-	HWND hwnd = get_hwnd(sw);
-	if (GetMenu(hwnd) == NULL) {
-		return;
+	HWND hwnd = get_hwnd(uisdl2->vo_window);
+	_Bool is_visible = (GetMenu(hwnd) != NULL);
+
+	if (!is_visible && visible) {
+		SetMenu(hwnd, uiw32->top_menu);
+	} else if (is_visible && !visible) {
+		SetMenu(hwnd, NULL);
 	}
-	int w, h;
-	SDL_GetWindowSize(sw, &w, &h);
-	SetMenu(hwnd, NULL);
-	SDL_GetWindowSize(sw, &w, &h);
 }
 
 static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {

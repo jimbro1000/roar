@@ -88,8 +88,7 @@ void sdl_x11_handle_syswmevent(SDL_SysWMmsg *);
 
 void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *);
 void sdl_windows32_set_events_window(SDL_Window *);
-void sdl_windows32_add_menu(SDL_Window *);
-void sdl_windows32_remove_menu(SDL_Window *);
+void sdl_windows32_set_menu_visible(struct ui_sdl2_interface *, _Bool visible);
 
 #endif
 
