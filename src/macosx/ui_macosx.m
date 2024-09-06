@@ -38,6 +38,7 @@
 
 #include "logging.h"
 #include "cart.h"
+#include "hkbd.h"
 #include "joystick.h"
 #include "keyboard.h"
 #include "machine.h"
@@ -85,6 +86,8 @@
 #define TAG_CMP_COLOUR_KILLER (23 << 24)
 
 #define TAG_KEYMAP (12 << 24)
+#define TAG_HKBD_LAYOUT (27 << 24)
+#define TAG_HKBD_LANG (28 << 24)
 #define TAG_KBD_TRANSLATE (13 << 24)
 #define TAG_JOY_RIGHT (14 << 24)
 #define TAG_JOY_LEFT (15 << 24)
@@ -150,6 +153,8 @@ static int current_cartridge = 0;
 static int current_joy_right = 0;
 static int current_joy_left = 0;
 static int current_keymap = 0;
+static int current_hkbd_layout = 0;
+static int current_hkbd_lang = 0;
 static int is_fullscreen = 0;
 static int tape_is_playing = 0;
 static int vdg_inverted = 0;
@@ -360,6 +365,14 @@ int cocoa_super_all_keys = 0;
 		current_keymap = tag;
 		xroar_set_keyboard_type(0, tag_value);
 		break;
+	case TAG_HKBD_LAYOUT:
+		current_hkbd_layout = tag;
+		xroar_set_hkbd_layout(0, tag_value);
+		break;
+	case TAG_HKBD_LANG:
+		current_hkbd_lang = tag;
+		xroar_set_hkbd_lang(0, tag_value);
+		break;
 	case TAG_KBD_TRANSLATE:
 		is_kbd_translate = !is_kbd_translate;
 		xroar_set_kbd_translate(1, is_kbd_translate);
@@ -452,6 +465,12 @@ int cocoa_super_all_keys = 0;
 
 	case TAG_KEYMAP:
 		[item setState:((tag == current_keymap) ? NSOnState : NSOffState)];
+		break;
+	case TAG_HKBD_LAYOUT:
+		[item setState:((tag == current_hkbd_layout) ? NSOnState : NSOffState)];
+		break;
+	case TAG_HKBD_LANG:
+		[item setState:((tag == current_hkbd_lang) ? NSOnState : NSOffState)];
 		break;
 	case TAG_KBD_TRANSLATE:
 		[item setState:(is_kbd_translate ? NSOnState : NSOffState)];
@@ -738,19 +757,7 @@ static void setup_view_menu(void) {
 	view_menu = [[NSMenu alloc] initWithTitle:@"View"];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"TV Input"];
-
-	for (i = 0; machine_tv_input_list[i].name; i++) {
-		if (!machine_tv_input_list[i].description)
-			continue;
-		NSString *s = [[NSString alloc] initWithUTF8String:machine_tv_input_list[i].description];
-		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_TV_INPUT | machine_tv_input_list[i].value)];
-		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-		[submenu addItem:item];
-		[item release];
-		[s release];
-	}
-
+	cocoa_update_radio_menu_from_enum(submenu, machine_tv_input_list, TAG_TV_INPUT);
 	item = [[NSMenuItem alloc] initWithTitle:@"TV Input" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
@@ -780,32 +787,7 @@ static void setup_view_menu(void) {
 	[item release];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CCR | VO_CMP_CCR_PALETTE)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Simple (2-bit LUT)" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CCR | VO_CMP_CCR_2BIT)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"5-bit LUT" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CCR | VO_CMP_CCR_5BIT)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Partial NTSC" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CCR | VO_CMP_CCR_PARTIAL)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Simulated" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CCR | VO_CMP_CCR_SIMULATED)];
-	[submenu addItem:item];
-	[item release];
-
+	cocoa_update_radio_menu_from_enum(submenu, vo_cmp_ccr_list, TAG_CCR);
 	item = [[NSMenuItem alloc] initWithTitle:@"Composite Rendering" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
@@ -947,45 +929,9 @@ static void setup_hardware_menu(void) {
 
 	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard Map"];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Dragon Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | dkbd_layout_dragon)];
-	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Dragon 200-E Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | dkbd_layout_dragon200e)];
-	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"CoCo Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | dkbd_layout_coco)];
-	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"CoCo 3 Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | dkbd_layout_coco3)];
-	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"MC-10 Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | dkbd_layout_mc10)];
-	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Alice Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | dkbd_layout_alice)];
-	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard Map" action:nil keyEquivalent:@""];
+	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard type"];
+	cocoa_update_radio_menu_from_enum(submenu, machine_keyboard_list, TAG_KEYMAP);
+	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard type" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[hardware_menu addItem:item];
 	[item release];
@@ -1032,8 +978,23 @@ static void setup_tool_menu(void) {
 	NSMenu *tool_menu;
 	NSMenuItem *tool_menu_item;
 	NSMenuItem *item;
+	NSMenu *submenu;
 
 	tool_menu = [[NSMenu alloc] initWithTitle:@"Tool"];
+
+	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard layout"];
+	cocoa_update_radio_menu_from_enum(submenu, hkbd_layout_list, TAG_HKBD_LAYOUT);
+	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard layout" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[tool_menu addItem:item];
+	[item release];
+
+	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard language"];
+	cocoa_update_radio_menu_from_enum(submenu, hkbd_lang_list, TAG_HKBD_LANG);
+	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard language" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[tool_menu addItem:item];
+	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard Translation" action:@selector(do_set_state:) keyEquivalent:@"z"];
 	[item setTag:TAG_KBD_TRANSLATE];
@@ -1460,6 +1421,14 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 
 	case ui_tag_keymap:
 		current_keymap = TAG_KEYMAP | value;
+		break;
+
+	case ui_tag_hkbd_layout:
+		current_hkbd_layout = TAG_HKBD_LAYOUT | value;
+		break;
+
+	case ui_tag_hkbd_lang:
+		current_hkbd_lang = TAG_HKBD_LANG | value;
 		break;
 
 	/* Joystick */
