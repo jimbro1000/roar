@@ -95,7 +95,8 @@ void sdl_windows32_set_menu_visible(struct ui_sdl2_interface *, _Bool visible);
 /* Now wrap all of the above in inline functions so that common code doesn't
  * need to be littered with these conditionals. */
 
-inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
+inline void sdl_os_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWMmsg *wmmsg) {
+	(void)uisdl2;
 	(void)wmmsg;
 #if defined(HAVE_X11)
 	sdl_x11_handle_syswmevent(wmmsg);

@@ -37,7 +37,7 @@
 // globally.
 struct ui_sdl2_interface *global_uisdl2 = NULL;
 
-extern inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg);
+extern inline void sdl_os_handle_syswmevent(struct ui_sdl2_interface *, SDL_SysWMmsg *wmmsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -146,7 +146,7 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 			break;
 
 		case SDL_SYSWMEVENT:
-			sdl_os_handle_syswmevent(event.syswm.msg);
+			sdl_os_handle_syswmevent(uisdl2, event.syswm.msg);
 			break;
 
 		default:
