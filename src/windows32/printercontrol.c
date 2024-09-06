@@ -103,7 +103,7 @@ void windows32_pc_update_state(struct ui_windows32_interface *uiw32,
 static INT_PTR CALLBACK pc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)global_uisdl2;
 	struct ui_interface *ui = &uiw32->ui_sdl2_interface.ui_interface;
-	// hwnd is the handle for the dialog window, i.e. tc_window
+	// hwnd is the handle for the dialog window, i.e. printer.window
 
 	switch (msg) {
 
@@ -120,7 +120,7 @@ static INT_PTR CALLBACK pc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		switch (LOWORD(wParam)) {
 		case IDC_STM_PRINT_FILENAME:
 			{
-				HWND ctl_hwnd = GetDlgItem(uiw32->printer.window, IDC_STM_PRINT_FILENAME);
+				HWND ctl_hwnd = GetDlgItem(hwnd, IDC_STM_PRINT_FILENAME);
 				LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
 				windows32_drawtext_path(ctl_hwnd, pDIS);
 			}
