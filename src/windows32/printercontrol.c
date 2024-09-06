@@ -40,7 +40,7 @@ void windows32_pc_create_window(struct ui_windows32_interface *uiw32) {
 	// Main dialog window handle
 	uiw32->printer.window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_PRINTER_CONTROLS), windows32_main_hwnd, (DLGPROC)pc_proc);
 
-	CheckRadioButton(uiw32->printer.window, IDC_RB_NONE, IDC_RB_FILE, IDC_RB_NONE);
+	CheckRadioButton(uiw32->printer.window, IDC_RB_PRINTER_NONE, IDC_RB_PRINTER_FILE, IDC_RB_PRINTER_NONE);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -55,7 +55,7 @@ void windows32_pc_update_state(struct ui_windows32_interface *uiw32,
 		break;
 
 	case ui_tag_print_destination:
-		CheckRadioButton(uiw32->printer.window, IDC_RB_NONE, IDC_RB_FILE, IDC_RB_NONE + value);
+		CheckRadioButton(uiw32->printer.window, IDC_RB_PRINTER_NONE, IDC_RB_PRINTER_FILE, IDC_RB_PRINTER_NONE + value);
 		break;
 
 	case ui_tag_print_file:
@@ -138,9 +138,9 @@ static INT_PTR CALLBACK pc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 			// Radio buttons
 
-			case IDC_RB_NONE:
-			case IDC_RB_FILE:
-				xroar_set_printer_destination(1, id - IDC_RB_NONE);
+			case IDC_RB_PRINTER_NONE:
+			case IDC_RB_PRINTER_FILE:
+				xroar_set_printer_destination(1, id - IDC_RB_PRINTER_NONE);
 				break;
 
 			// Attach button
