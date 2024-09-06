@@ -86,7 +86,7 @@ void sdl_x11_handle_syswmevent(SDL_SysWMmsg *);
 
 /* These functions will be in the windows32-specific code. */
 
-void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *);
+void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *, SDL_SysWMmsg *);
 void sdl_windows32_set_events_window(SDL_Window *);
 void sdl_windows32_set_menu_visible(struct ui_sdl2_interface *, _Bool visible);
 
@@ -101,7 +101,7 @@ inline void sdl_os_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 #if defined(HAVE_X11)
 	sdl_x11_handle_syswmevent(wmmsg);
 #elif defined(WINDOWS32)
-	sdl_windows32_handle_syswmevent(wmmsg);
+	sdl_windows32_handle_syswmevent(uisdl2, wmmsg);
 #endif
 }
 

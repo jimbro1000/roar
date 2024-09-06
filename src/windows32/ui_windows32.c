@@ -357,8 +357,8 @@ static void windows32_update_joystick_menus(void *sptr) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
-	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)global_uisdl2;
+void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWMmsg *wmmsg) {
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)uisdl2;
 
 	HWND hwnd = wmmsg->msg.win.hwnd;
 	UINT msg = wmmsg->msg.win.msg;
