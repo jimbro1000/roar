@@ -516,9 +516,17 @@ int sf_close(SNDFILE *sf) {
 	if (!sf)
 		return SF_ERR_SYSTEM;
 	if (sf->mode == SFM_WRITE || sf->mode == SFM_RDWR) {
+		uint32_t data_bytes = sf->data_size * sf->bytes_per_frame;
+		// Turns out the data chunk has to be an even number of bytes:
+		if (data_bytes & 1) {
+			if (fseeko(sf->fd, 0, SEEK_END) < 0)
+				return SF_ERR_SYSTEM;
+			if (!write_uint8(sf, 0))
+				return SF_ERR_SYSTEM;
+			data_bytes++;
+		}
 		if (fseeko(sf->fd, sf->data.wav.data_offset - 4, SEEK_SET) < 0)
 			return SF_ERR_SYSTEM;
-		uint32_t data_bytes = sf->data_size * sf->bytes_per_frame;
 		if (!write_uint32(sf, data_bytes))
 			return SF_ERR_SYSTEM;
 		if (sf->data.wav.fact_offset > 0) {

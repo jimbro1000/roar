@@ -1,3 +1,5 @@
+ * Ensure data chunk in WAV output is of even length [Stacey Vetzal]
+
 Version 1.6.2, Fri  6 Sep 2024
 
  * Add missing menus to Windows/Mac OS X+ UIs
