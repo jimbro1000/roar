@@ -1,6 +1,6 @@
-FROM debian:12.7
-WORKDIR /usr/local/xroar
+FROM xroar/base:12.7
+WORKDIR /usr/local
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y build-essential libgtk-3-dev libpulse-dev libpng-dev
+RUN apt-get update && apt-get upgrade -y 
 
 CMD cd /usr/local/xroar && ./containerbuildapp.sh

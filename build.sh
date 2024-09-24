@@ -1,2 +1,2 @@
 #!/bin/sh
-docker run -v .:/local/app/xroar -it xroar/build
+docker run -v .:/usr/local/xroar -it xroar/build
