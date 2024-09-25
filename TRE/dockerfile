@@ -2,13 +2,12 @@ FROM debian:12.7
 WORKDIR /usr/local/TRE
 
 RUN apt-get update && apt-get upgrade -y 
-RUN apt-get install -y build-essential autoconf automake autotools-dev libtool gettext wget
+RUN apt-get install -y build-essential autotools-dev libtool gettext wget darcs
 
 RUN cd /usr/local/TRE
-RUN wget -O /usr/local/TRE/tre.tar.gz https://github.com/laurikari/tre/releases/download/v0.9.0/tre-0.9.0.tar.gz
+RUN wget -O /usr/local/TRE/tre.tar.gz https://github.com/laurikari/tre/archive/refs/tags/v0.8.0.tar.gz
 RUN tar -xvf tre.tar.gz
 
-RUN cd /usr/local/TRE/tre-0.9.0 && \
-    ./configure && make
-#RUN cd /usr/local/TRE/tre-0.9.0 && make check
-RUN cd /usr/local/TRE/tre-0.9.0 && make install
+RUN cd /usr/local/TRE/tre-0.8.0 && \
+    ./utils/autogen.sh 
+RUN ./configure && make && make install
