@@ -1,6 +1,5 @@
 FROM xroar/base:12.7
 WORKDIR /usr/local
+COPY . /usr/local/xroar
 
-RUN apt-get update && apt-get upgrade -y 
-
-CMD cd /usr/local/xroar && ./containerbuildapp.sh
+CMD cd /usr/local/xroar && /usr/local/xroar/containerbuildapp.sh

@@ -1,13 +1,12 @@
 FROM debian:12.7
 WORKDIR /usr/local/TRE
 
-RUN apt-get update && apt-get upgrade -y 
-RUN apt-get install -y build-essential autotools-dev libtool gettext wget darcs \
-libgtk-3-dev libpulse-dev libpng-dev autoconf \
-g++-mingw-w64 gcc-mingw-w64 mingw-w64-tools cmake
+RUN apt-get update && apt-get upgrade -y && \
+apt-get install -y build-essential autotools-dev libtool gettext wget \
+libgtk-3-dev libpulse-dev libpng-dev autoconf git \
+g++-mingw-w64 gcc-mingw-w64 mingw-w64-tools cmake autopoint
 
-RUN wget -O /usr/local/TRE/tre.tar.gz https://github.com/laurikari/tre/archive/refs/tags/v0.8.0.tar.gz
-RUN cd /usr/local/TRE && tar -xvf tre.tar.gz
-
-RUN cd /usr/local/TRE/tre-0.8.0 && ./utils/autogen.sh 
-RUN ./configure && make && make install
+RUN cd /usr/local/TRE && git clone https://github.com/laurikari/tre.git
+RUN cd /usr/local/TRE/tre && git checkout 6092368aabdd0dbb0fbceb2766a37b98e0ff6911
+RUN cd /usr/local/TRE/tre && ./utils/autogen.sh 
+RUN cd /usr/local/TRE/tre && ./configure && make && make install
