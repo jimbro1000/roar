@@ -1,2 +1,3 @@
 #!/bin/sh
-docker buildx build ./dockerfile -t xroar/build
+rmdir ./tre
+docker buildx build . -t xroar/tre:12.7
