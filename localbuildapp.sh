@@ -1,22 +1,19 @@
 #!/bin/sh
-cd /usr/local/xroar
-pwd | echo
-ls -la | echo
 echo "preparing build-w64"
-if [ -d "build-w64" ]
+if [ -d "./build-w64" ]
 then
   rm -rf build-w64
-  mkdir build-w64
-  mkdir build-w64/bin
 fi
+mkdir build-w64
+mkdir build-w64/bin
 echo "preparing bin"
 if [ -d "bin" ]
 then
   rm -rf bin
-  mkdir bin
 fi
+mkdir bin
 echo "autogen"
-autogen.sh
+./autogen.sh
 echo "configure"
 #/usr/local/xroar/configure
 #echo "make native"
