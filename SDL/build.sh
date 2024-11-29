@@ -1,15 +1,17 @@
 !/bin/sh
-if [ -d "SDL" ]
-then
-  rm -rf SDL
+if [ ! -d "SDL" ]; then
+  echo "clone source"
+  wget "https://github.com/libsdl-org/SDL/archive/refs/tags/release-2.30.8.tar.gz"
+  tar -xvf release-2.30.8.tar.gz
+  mv SDL-release-2.30.8 SDL
+  rm release-2.30.8.tar.gz
 fi
-echo "clone source"
-git clone https://github.com/libsdl-org/SDL.git
 cd SDL
-git checkout 79ec168f3c1e2fe27335cb8886439f7ef676fb49
 ./configure --prefix=/usr/x86_64-w64-mingw32 --host=x86_64-w64-mingw32 \
     --enable-static --disable-shared \
     CFLAGS="-Ofast -g" CPPFLAGS="-D__USE_MINGW_ANSI_STDIO=1"
 echo "make"
-cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=build-scripts/cmake-toolchain-mingw64-x86_64.cmake && cmake --build build && cmake --install build
+cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=build-scripts/cmake-toolchain-mingw64-x86_64.cmake
+cmake --build build
+cmake --install build
 
